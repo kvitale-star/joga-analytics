@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Layout Options - Mockups</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f3f4f6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #1f2937;
+            margin-bottom: 40px;
+            font-size: 2rem;
+        }
+        
+        .option {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 40px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .option-title {
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #6787aa;
+            padding-bottom: 10px;
+        }
+        
+        .option-description {
+            color: #6b7280;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        
+        .mockup {
+            border: 2px solid #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #f9fafb;
+            position: relative;
+        }
+        
+        /* Option 1: Sticky Top Control Bar */
+        .option1-header {
+            background: white;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .option1-title {
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        .option1-controls {
+            background: #f3f4f6;
+            padding: 12px;
+            border-bottom: 2px solid #6787aa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .control-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            font-size: 0.85rem;
+            min-width: 120px;
+            text-align: center;
+        }
+        
+        .option1-content {
+            padding: 20px;
+            min-height: 600px;
+        }
+        
+        .content-section {
+            background: white;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        /* Option 2: Left Sidebar */
+        .option2-container {
+            display: flex;
+            height: 600px;
+        }
+        
+        .option2-sidebar {
+            width: 280px;
+            background: white;
+            border-right: 2px solid #e5e7eb;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .option2-control {
+            margin-bottom: 16px;
+        }
+        
+        .option2-control label {
+            display: block;
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        
+        .option2-control select,
+        .option2-control .control-box {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .option2-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        /* Option 3: Floating Panel */
+        .option3-container {
+            position: relative;
+            height: 600px;
+        }
+        
+        .option3-header {
+            background: white;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .option3-content {
+            padding: 20px;
+        }
+        
+        .option3-panel {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            border: 2px solid #6787aa;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 16px;
+            z-index: 100;
+        }
+        
+        .option3-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .close-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        /* Option 4: Two-Tier Sticky */
+        .option4-header {
+            background: white;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .option4-controls-bar {
+            background: #f3f4f6;
+            padding: 10px;
+            border-bottom: 2px solid #6787aa;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .option4-content {
+            padding: 20px;
+            min-height: 500px;
+        }
+        
+        .pros-cons {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .pros, .cons {
+            padding: 12px;
+            border-radius: 4px;
+        }
+        
+        .pros {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+        
+        .cons {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .pros h3, .cons h3 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+        
+        .pros ul, .cons ul {
+            font-size: 0.85rem;
+            padding-left: 20px;
+        }
+        
+        .pros li, .cons li {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Analytics Page Layout Options</h1>
+        
+        <!-- Option 1 -->
+        <div class="option">
+            <div class="option-title">Option 1: Sticky Top Control Bar ⭐ (Recommended)</div>
+            <div class="option-description">
+                Compact horizontal control bar that stays visible while scrolling. Controls are narrower and centered.
+            </div>
+            <div class="mockup">
+                <div class="option1-header">
+                    <div class="option1-title">JOGA Analytics Dashboard</div>
+                    <div style="font-size: 0.85rem; color: #6b7280;">[Info] [Switch to AI Chat]</div>
+                </div>
+                <div class="option1-controls">
+                    <div class="control-item">Team ▼</div>
+                    <div class="control-item">Opponent ▼</div>
+                    <div class="control-item">Chart Group ▼</div>
+                    <div class="control-item">Charts ✓</div>
+                </div>
+                <div class="option1-content">
+                    <div class="content-section">
+                        <strong>Overview Stats</strong><br>
+                        <small>Total Matches, Shooting stats, etc.</small>
+                    </div>
+                    <div class="content-section">
+                        <strong>Charts Section</strong><br>
+                        <small>Shots, Goals, Possession charts...</small>
+                    </div>
+                    <div class="content-section">
+                        <strong>More Content</strong><br>
+                        <small>Scrolls independently, controls stay visible</small>
+                    </div>
+                </div>
+            </div>
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>✅ Pros</h3>
+                    <ul>
+                        <li>Controls always visible</li>
+                        <li>Compact, efficient</li>
+                        <li>Familiar layout</li>
+                        <li>Easy to implement</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>❌ Cons</h3>
+                    <ul>
+                        <li>May feel cramped</li>
+                        <li>Horizontal scroll on mobile</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Option 2 -->
+        <div class="option">
+            <div class="option-title">Option 2: Left Sidebar with Sticky Controls</div>
+            <div class="option-description">
+                Fixed left sidebar with all controls stacked vertically. Main content area takes remaining space.
+            </div>
+            <div class="mockup">
+                <div class="option2-container">
+                    <div class="option2-sidebar">
+                        <div class="option2-control">
+                            <label>Select Team</label>
+                            <select><option>Team Name ▼</option></select>
+                        </div>
+                        <div class="option2-control">
+                            <label>Filter by Opponent</label>
+                            <select><option>All Opponents ▼</option></select>
+                        </div>
+                        <div class="option2-control">
+                            <label>Chart Groups</label>
+                            <select><option>Select a group... ▼</option></select>
+                        </div>
+                        <div class="option2-control">
+                            <label>Select Charts</label>
+                            <div class="control-box" style="padding: 8px; min-height: 100px;">
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                    <span style="background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Shots</span>
+                                    <span style="background: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Goals</span>
+                                    <span style="background: #d1d5db; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">xG</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="option2-content">
+                        <div class="content-section">
+                            <strong>Overview Stats</strong><br>
+                            <small>Total Matches, Shooting stats, etc.</small>
+                        </div>
+                        <div class="content-section">
+                            <strong>Charts Section</strong><br>
+                            <small>Shots, Goals, Possession charts...</small>
+                        </div>
+                        <div class="content-section">
+                            <strong>More Content</strong><br>
+                            <small>Wider content area, sidebar always visible</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>✅ Pros</h3>
+                    <ul>
+                        <li>Clear separation</li>
+                        <li>Plenty of space</li>
+                        <li>Good for wide screens</li>
+                        <li>Easy to scan</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>❌ Cons</h3>
+                    <ul>
+                        <li>Reduces content width</li>
+                        <li>Less efficient on mobile</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Option 3 -->
+        <div class="option">
+            <div class="option-title">Option 3: Collapsible Floating Panel</div>
+            <div class="option-description">
+                Floating panel in top-right corner that can be expanded/collapsed. Overlays content when open.
+            </div>
+            <div class="mockup">
+                <div class="option3-container">
+                    <div class="option3-header">
+                        <div style="font-weight: bold;">JOGA Analytics Dashboard</div>
+                    </div>
+                    <div class="option3-panel">
+                        <div class="option3-panel-header">
+                            <strong style="font-size: 0.9rem;">Controls</strong>
+                            <button class="close-btn">×</button>
+                        </div>
+                        <div class="option2-control">
+                            <label>Select Team</label>
+                            <select><option>Team Name ▼</option></select>
+                        </div>
+                        <div class="option2-control">
+                            <label>Filter by Opponent</label>
+                            <select><option>All Opponents ▼</option></select>
+                        </div>
+                        <div class="option2-control">
+                            <label>Chart Groups</label>
+                            <select><option>Select a group... ▼</option></select>
+                        </div>
+                        <div class="option2-control">
+                            <label>Select Charts</label>
+                            <div class="control-box" style="padding: 8px; min-height: 80px; font-size: 0.75rem;">
+                                Chart buttons...
+                            </div>
+                        </div>
+                    </div>
+                    <div class="option3-content">
+                        <div class="content-section">
+                            <strong>Overview Stats</strong><br>
+                            <small>Total Matches, Shooting stats, etc.</small>
+                        </div>
+                        <div class="content-section">
+                            <strong>Charts Section</strong><br>
+                            <small>Shots, Goals, Possession charts...</small>
+                        </div>
+                        <div class="content-section">
+                            <strong>More Content</strong><br>
+                            <small>Maximum content space, panel overlays</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>✅ Pros</h3>
+                    <ul>
+                        <li>Maximum content space</li>
+                        <li>Modern, clean look</li>
+                        <li>Flexible positioning</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>❌ Cons</h3>
+                    <ul>
+                        <li>Hidden when collapsed</li>
+                        <li>May overlap content</li>
+                        <li>Extra interaction needed</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Option 4 -->
+        <div class="option">
+            <div class="option-title">Option 4: Two-Tier Sticky Header</div>
+            <div class="option-description">
+                Main header stays at top, secondary sticky bar below with controls. Both remain visible while scrolling.
+            </div>
+            <div class="mockup">
+                <div class="option4-header">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-weight: bold;">JOGA Analytics Dashboard</div>
+                        <div style="font-size: 0.85rem; color: #6b7280;">[Info] [Switch to AI Chat]</div>
+                    </div>
+                </div>
+                <div class="option4-controls-bar">
+                    <div class="control-item" style="min-width: 100px;">Team ▼</div>
+                    <div class="control-item" style="min-width: 100px;">Opponent ▼</div>
+                    <div class="control-item" style="min-width: 120px;">Chart Group ▼</div>
+                    <div class="control-item" style="min-width: 100px;">Charts ✓</div>
+                </div>
+                <div class="option4-content">
+                    <div class="content-section">
+                        <strong>Overview Stats</strong><br>
+                        <small>Total Matches, Shooting stats, etc.</small>
+                    </div>
+                    <div class="content-section">
+                        <strong>Charts Section</strong><br>
+                        <small>Shots, Goals, Possession charts...</small>
+                    </div>
+                    <div class="content-section">
+                        <strong>More Content</strong><br>
+                        <small>Both headers stay visible while scrolling</small>
+                    </div>
+                </div>
+            </div>
+            <div class="pros-cons">
+                <div class="pros">
+                    <h3>✅ Pros</h3>
+                    <ul>
+                        <li>Controls always visible</li>
+                        <li>Clear hierarchy</li>
+                        <li>Good vertical space use</li>
+                        <li>Works on all screens</li>
+                    </ul>
+                </div>
+                <div class="cons">
+                    <h3>❌ Cons</h3>
+                    <ul>
+                        <li>Takes more vertical space</li>
+                        <li>Two sticky elements</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

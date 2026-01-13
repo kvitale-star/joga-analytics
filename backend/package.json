@@ -1,0 +1,35 @@
+{
+  "name": "joga-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend API for JOGA Visualizer",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "migrate": "tsx src/db/migrate.ts",
+    "reset-users": "tsx src/scripts/reset-users.ts",
+    "test-email": "tsx src/scripts/test-email.ts --",
+    "verify-sendgrid": "tsx src/scripts/verify-sendgrid.ts"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "@sendgrid/mail": "^8.1.0",
+    "better-sqlite3": "^9.2.2",
+    "kysely": "^0.27.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/better-sqlite3": "^7.6.9",
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

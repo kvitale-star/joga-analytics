@@ -1,0 +1,396 @@
+import React, { useMemo, useState } from 'react';
+import { MatchData } from '../types';
+import { UserMenu } from './UserMenu';
+
+interface DataAtAGlanceViewProps {
+  matchData: MatchData[];
+  columnKeys: string[];
+}
+
+// Helper function to categorize columns
+const categorizeColumns = (columnKeys: string[]): Record<string, string[]> => {
+  const categories: Record<string, string[]> = {
+    'Game Info': [],
+    'Shooting': [],
+    'Passing': [],
+    'Possession': [],
+    'JOGA Metrics': [],
+    'Defense': [],
+    'Set Pieces': [],
+    'Other': []
+  };
+
+  // Metadata columns (Game Info)
+  const metadataColumns = [
+    'Team', 'team', 
+    'Opponent', 'opponent', 
+    'Date', 'date', 
+    'Match', 'match', 
+    'Game', 'game', 
+    'Competition Type', 'competition type', 'Competition', 'competition',
+    'Match Date', 'match date', 'MatchDate', 'matchDate',
+    'Season', 'season',
+    'Match ID', 'match id', 'MatchId', 'matchId', 
+    'Result', 'result', 
+    'Venue', 'venue', 
+    'Referee', 'referee'
+  ];
+
+  columnKeys.forEach(key => {
+    // Skip metadata columns (they go to Game Info)
+    if (metadataColumns.some(mc => key.toLowerCase() === mc.toLowerCase())) {
+      categories['Game Info'].push(key);
+      return;
+    }
+
+    const keyLower = key.toLowerCase();
+    let categorized = false;
+
+    // Shooting category
+    const isCornerOrFreeKick = keyLower.includes('corner') || 
+                                keyLower.includes('free kick') || 
+                                keyLower.includes('freekick');
+    
+    if (!categorized && !isCornerOrFreeKick && (
+      keyLower.includes('attempt') ||
+      keyLower.includes('shot') ||
+      keyLower.includes('goal') ||
+      keyLower.includes('xg') ||
+      keyLower.includes('conversion') ||
+      keyLower.includes('conv') ||
+      keyLower.includes('inside box') ||
+      keyLower.includes('outside box') ||
+      keyLower === 'tsr' ||
+      (keyLower.includes('tsr') && !keyLower.includes('pass'))
+    )) {
+      categories['Shooting'].push(key);
+      categorized = true;
+    }
+
+    // Passing category
+    if (!categorized && (
+      keyLower.includes('pass') ||
+      keyLower.includes('string') ||
+      keyLower.includes('lpc') ||
+      keyLower.includes('ppm') ||
+      keyLower.includes('zone')
+    )) {
+      categories['Passing'].push(key);
+      categorized = true;
+    }
+
+    // Possession category (exclude "Possessions Won" - those go to Defense)
+    if (!categorized && (
+      (keyLower.includes('possession') && !keyLower.includes('won')) ||
+      (keyLower.includes('poss') && !keyLower.includes('won')) ||
+      keyLower === 'poss'
+    )) {
+      categories['Possession'].push(key);
+      categorized = true;
+    }
+
+    // JOGA Metrics category
+    if (!categorized && (
+      keyLower.includes('spi') ||
+      keyLower.includes('sustained passing')
+    )) {
+      categories['JOGA Metrics'].push(key);
+      categorized = true;
+    }
+
+    // Defense category
+    if (!categorized && (
+      keyLower.includes('tackle') ||
+      keyLower.includes('intercept') ||
+      keyLower.includes('clearance') ||
+      keyLower.includes('block') ||
+      keyLower.includes('defensive') ||
+      keyLower.includes('defense') ||
+      (keyLower.includes('def') && !keyLower.includes('possession')) ||
+      keyLower.includes('possessions won') ||
+      keyLower.includes('possession won') ||
+      (keyLower.includes('poss') && keyLower.includes('won'))
+    )) {
+      categories['Defense'].push(key);
+      categorized = true;
+    }
+
+    // Set Pieces category
+    if (!categorized && (
+      keyLower.includes('corner') ||
+      keyLower.includes('free kick') ||
+      keyLower.includes('freekick') ||
+      keyLower.includes('penalty')
+    )) {
+      categories['Set Pieces'].push(key);
+      categorized = true;
+    }
+
+    // Everything else goes to Other
+    if (!categorized) {
+      categories['Other'].push(key);
+    }
+  });
+
+  // Remove empty categories
+  Object.keys(categories).forEach(cat => {
+    if (categories[cat].length === 0) {
+      delete categories[cat];
+    }
+  });
+
+  return categories;
+};
+
+export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData, columnKeys }) => {
+  const [showColumns, setShowColumns] = useState(false);
+
+  // Calculate stats - same logic as in ChatFirstView
+  const stats = useMemo(() => {
+    const matchCount = matchData.length;
+    
+    // Extract unique teams
+    const teamKey = columnKeys.find(key => 
+      key.toLowerCase().includes('team') && !key.toLowerCase().includes('opponent')
+    ) || 'Team';
+    const teams = [...new Set(matchData.map(m => m[teamKey]).filter(Boolean))];
+    const teamCount = teams.length;
+    
+    // Extract unique opponents
+    const opponentKey = columnKeys.find(key => 
+      key.toLowerCase().includes('opponent')
+    ) || 'Opponent';
+    const opponents = [...new Set(matchData.map(m => m[opponentKey]).filter(Boolean))];
+    const opponentCount = opponents.length;
+    
+    // Extract date range
+    const dateKey = columnKeys.find(key => 
+      key.toLowerCase().includes('date')
+    );
+    let earliestDate: string | null = null;
+    let latestDate: string | null = null;
+    if (dateKey && matchData.length > 0) {
+      const parseDate = (value: string | number): Date | null => {
+        if (value === null || value === undefined || value === '') return null;
+        
+        // Handle Google Sheets date serial numbers
+        if (typeof value === 'number') {
+          if (value <= 0 || value > 1000000) return null;
+          
+          if (value >= 1 && value <= 100000) {
+            const MS_PER_DAY = 86400000;
+            const EPOCH_OFFSET = new Date(1899, 11, 30).getTime();
+            const date = new Date(EPOCH_OFFSET + (value - 1) * MS_PER_DAY);
+            
+            if (value > 59) {
+              date.setTime(date.getTime() - MS_PER_DAY);
+            }
+            
+            if (!isNaN(date.getTime())) {
+              const year = date.getFullYear();
+              if (year >= 2000 && year <= 2100) {
+                return date;
+              }
+            }
+          }
+        }
+        
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (!trimmed) return null;
+          
+          // Try MM/DD/YYYY format
+          const mmddyyyy = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          if (mmddyyyy) {
+            const month = parseInt(mmddyyyy[1], 10) - 1;
+            const day = parseInt(mmddyyyy[2], 10);
+            const year = parseInt(mmddyyyy[3], 10);
+            const date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) {
+              if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                const parsedYear = date.getFullYear();
+                if (parsedYear >= 2000 && parsedYear <= 2100) {
+                  return date;
+                }
+              }
+            }
+          }
+          
+          // Try YYYY-MM-DD format
+          const yyyymmdd = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+          if (yyyymmdd) {
+            const year = parseInt(yyyymmdd[1], 10);
+            const month = parseInt(yyyymmdd[2], 10) - 1;
+            const day = parseInt(yyyymmdd[3], 10);
+            const date = new Date(year, month, day);
+            if (!isNaN(date.getTime())) {
+              if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+                if (year >= 2000 && year <= 2100) {
+                  return date;
+                }
+              }
+            }
+          }
+          
+          // Try standard Date parsing
+          const parsed = new Date(trimmed);
+          if (!isNaN(parsed.getTime())) {
+            const year = parsed.getFullYear();
+            if (year >= 2000 && year <= 2100) {
+              return parsed;
+            }
+          }
+        }
+        
+        return null;
+      };
+      
+      const dates = matchData
+        .map(m => {
+          const dateValue = m[dateKey];
+          if (!dateValue) return null;
+          return parseDate(dateValue);
+        })
+        .filter((d): d is Date => d !== null && d !== undefined);
+      
+      if (dates.length > 0) {
+        dates.sort((a, b) => a.getTime() - b.getTime());
+        const earliest = dates[0];
+        const latest = dates[dates.length - 1];
+        
+        if (earliest.getFullYear() >= 2000 && latest.getFullYear() >= 2000) {
+          earliestDate = earliest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          latestDate = latest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+      }
+    }
+    
+    return { matchCount, teamCount, opponentCount, earliestDate, latestDate };
+  }, [matchData, columnKeys]);
+
+  // Categorize columns for display
+  const categorizedColumns = useMemo(() => {
+    return categorizeColumns(columnKeys);
+  }, [columnKeys]);
+
+  const categoryColors: Record<string, string> = {
+    'Game Info': 'bg-blue-50 border-blue-200 text-blue-800',
+    'Shooting': 'bg-red-50 border-red-200 text-red-800',
+    'Passing': 'bg-green-50 border-green-200 text-green-800',
+    'Possession': 'bg-purple-50 border-purple-200 text-purple-800',
+    'JOGA Metrics': 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    'Defense': 'bg-orange-50 border-orange-200 text-orange-800',
+    'Set Pieces': 'bg-pink-50 border-pink-200 text-pink-800',
+    'Other': 'bg-gray-50 border-gray-200 text-gray-800',
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 relative">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Data at a Glance</h1>
+              <p className="text-sm text-gray-600 mt-1">Overview of your match data</p>
+            </div>
+            <div className="relative">
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-6xl mx-auto w-full">
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Data Overview</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600 font-medium mb-2">Recorded Matches</div>
+                <div className="text-3xl font-bold text-gray-900">{stats.matchCount}</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600 font-medium mb-2">Current Season</div>
+                <div className="text-3xl font-bold text-gray-900">2024</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600 font-medium mb-2">Teams</div>
+                <div className="text-3xl font-bold text-gray-900">{stats.teamCount}</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm text-gray-600 font-medium mb-2">Opponents</div>
+                <div className="text-3xl font-bold text-gray-900">{stats.opponentCount}</div>
+              </div>
+              {stats.earliestDate && (
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600 font-medium mb-2">Earliest Game</div>
+                  <div className="text-base font-semibold text-gray-900">{stats.earliestDate}</div>
+                </div>
+              )}
+              {stats.latestDate && (
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-600 font-medium mb-2">Latest Game</div>
+                  <div className="text-base font-semibold text-gray-900">{stats.latestDate}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Detected Columns Section */}
+          <div className="mt-8 bg-white rounded-lg shadow-md border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Detected Data Columns</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {columnKeys.length} column{columnKeys.length !== 1 ? 's' : ''} detected in your data
+                </p>
+              </div>
+              <button
+                onClick={() => setShowColumns(!showColumns)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                {showColumns ? 'Hide' : 'Show'} Columns
+              </button>
+            </div>
+
+            {showColumns && (
+              <div className="space-y-4">
+                {Object.entries(categorizedColumns).map(([category, columns]) => (
+                  <div key={category} className={`border rounded-lg p-4 ${categoryColors[category] || categoryColors['Other']}`}>
+                    <h3 className="font-semibold text-sm mb-3 flex items-center">
+                      <span className="w-2 h-2 rounded-full bg-current mr-2"></span>
+                      {category}
+                      <span className="ml-2 text-xs font-normal opacity-75">
+                        ({columns.length} {columns.length === 1 ? 'column' : 'columns'})
+                      </span>
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {columns.map((column) => (
+                        <span
+                          key={column}
+                          className="px-3 py-1.5 bg-white rounded-md text-sm font-mono border border-gray-300 shadow-sm"
+                          title={column}
+                        >
+                          {column}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!showColumns && (
+              <div className="text-sm text-gray-600">
+                Click "Show Columns" to see all {columnKeys.length} detected data columns organized by category.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
