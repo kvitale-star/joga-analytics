@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginCredentials } from '../types/auth';
 import { JOGA_COLORS } from '../utils/colors';
-import { resetAuthDatabase } from '../services/authService';
 import { PasswordResetRequest } from './PasswordResetRequest';
 
 export const LoginPage: React.FC = () => {
@@ -122,27 +121,6 @@ export const LoginPage: React.FC = () => {
               >
                 Forgot your password?
               </a>
-            </div>
-            
-            <div className="pt-4 border-t-2 border-gray-300">
-              <p className="text-xs text-gray-500 text-center mb-3">Testing & Development</p>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (confirm('This will reset all user accounts and sessions. You will need to set up a new admin account. Continue?')) {
-                    try {
-                      await resetAuthDatabase();
-                      alert('Auth database reset. Please refresh the page.');
-                      window.location.reload();
-                    } catch (error) {
-                      alert('Failed to reset: ' + (error instanceof Error ? error.message : 'Unknown error'));
-                    }
-                  }
-                }}
-                className="w-full text-sm font-medium px-4 py-3 border-2 border-gray-400 rounded-lg bg-gray-50 hover:bg-gray-100 focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-gray-800 transition-colors shadow-sm"
-              >
-                🔄 Reset Admin Setup (Testing Only)
-              </button>
             </div>
           </div>
         </div>

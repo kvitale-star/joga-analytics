@@ -11,7 +11,7 @@ export const PasswordResetForm: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    // Get token from URL parameters (both query string and hash)
+    // Get token from URL parameters (query string, hash, or path)
     const urlParams = new URLSearchParams(window.location.search);
     let urlToken = urlParams.get('token');
     
@@ -20,10 +20,27 @@ export const PasswordResetForm: React.FC = () => {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       urlToken = hashParams.get('token');
     }
+
+    // Also support path-based token: /reset-password/<token>
+    if (!urlToken) {
+      const path = window.location.pathname;
+      const match = path.match(/\/reset-password\/([^\/?#]+)/i);
+      if (match && match[1]) {
+        urlToken = match[1];
+      }
+    }
+    
+    // Decode and trim the token to handle any URL encoding or whitespace
+    if (urlToken) {
+      urlToken = decodeURIComponent(urlToken).trim();
+    }
     
     setToken(urlToken);
     if (!urlToken) {
       setError('Invalid or missing reset token. Please check the link from your email.');
+      console.error('❌ No token found in URL. Search params:', window.location.search, 'Hash:', window.location.hash);
+    } else {
+      console.log('✅ Token extracted from URL:', urlToken.substring(0, 20) + '...', '(length:', urlToken.length + ')');
     }
   }, []);
 
@@ -49,7 +66,13 @@ export const PasswordResetForm: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const success = await resetPassword(token, password);
+      // Trim token before sending to ensure no whitespace issues
+      const trimmedToken = token?.trim() || '';
+      console.log('🔄 Attempting password reset...');
+      console.log('   Token (first 20 chars):', trimmedToken.substring(0, 20) + '...');
+      console.log('   Token length:', trimmedToken.length);
+      console.log('   Full URL:', window.location.href);
+      const success = await resetPassword(trimmedToken, password);
       if (success) {
         setIsSuccess(true);
         setTimeout(() => {
@@ -60,8 +83,16 @@ export const PasswordResetForm: React.FC = () => {
         setIsLoading(false);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reset password');
+      // Display the actual error message from the backend
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reset password';
+      setError(errorMessage);
       setIsLoading(false);
+      console.error('❌ Password reset error:', err);
+      console.error('   Error details:', {
+        message: err instanceof Error ? err.message : String(err),
+        token: token?.substring(0, 20) + '...',
+        url: window.location.href
+      });
     }
   };
 

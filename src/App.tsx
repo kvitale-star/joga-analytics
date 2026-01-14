@@ -218,6 +218,13 @@ function App() {
   useEffect(() => {
     const prevView = prevViewModeRef.current;
     
+    // Don't clean up URL params if we're on password reset or email verification pages
+    // These pages need to preserve the token parameter
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('/reset-password') || path.includes('/verify-email')) {
+      return; // Don't modify URL on these pages
+    }
+    
     // Define which params belong to which views
     const viewParams: Record<ViewMode, string[]> = {
       'dashboard': ['team', 'opponent', 'date', 'chartGroup', 'charts', 'lastNGames'],
@@ -235,7 +242,8 @@ function App() {
     let changed = false;
 
     // Get all params that should be kept for current view
-    const keepParams = new Set(['view', ...viewParams[viewMode]]);
+    // Always preserve 'token' parameter (for password reset/email verification)
+    const keepParams = new Set(['view', 'token', ...viewParams[viewMode]]);
 
     // Remove all params that don't belong to current view
     const allParams = Array.from(params.keys());

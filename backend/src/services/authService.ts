@@ -381,15 +381,26 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
   const now = new Date().toISOString();
 
+  // Trim token to handle any whitespace issues
+  const trimmedToken = token.trim();
+  
   const user = await db
     .selectFrom('users')
-    .select(['id', 'email_verified'])
-    .where('password_reset_token', '=', token)
+    .select(['id', 'email_verified', 'password_reset_token', 'password_reset_expires'])
+    .where('password_reset_token', '=', trimmedToken)
     .where('password_reset_expires', '>', now)
     .where('is_active', '=', 1)
     .executeTakeFirst();
 
-  if (!user) return false;
+  if (!user) {
+    console.error('Password reset failed:', {
+      tokenLength: trimmedToken.length,
+      tokenPreview: trimmedToken.substring(0, 10) + '...',
+      now,
+      reason: 'Token not found or expired'
+    });
+    return false;
+  }
 
   const passwordHash = await hashPassword(newPassword);
 

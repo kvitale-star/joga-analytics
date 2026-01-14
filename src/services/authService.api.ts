@@ -181,13 +181,30 @@ export async function generatePasswordResetToken(email: string): Promise<string 
  */
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
   try {
-    const response = await apiPost<{ success: boolean }>('/auth/reset-password', {
+    console.log('📡 Calling API: POST /auth/reset-password');
+    const response = await apiPost<{ success: boolean; error?: string }>('/auth/reset-password', {
       token,
       password: newPassword,
     });
-    return response.success;
-  } catch (error) {
+    console.log('📥 API Response:', response);
+    if (response.success) {
+      console.log('✅ Password reset successful!');
+      return true;
+    }
+    // If there's an error message, throw it so the UI can display it
+    if (response.error) {
+      console.error('❌ API returned error:', response.error);
+      throw new Error(response.error);
+    }
+    console.warn('⚠️ API returned success=false without error message');
     return false;
+  } catch (error) {
+    console.error('❌ API call failed:', error);
+    // Re-throw the error so the UI can display the actual error message
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to reset password');
   }
 }
 

@@ -9,9 +9,28 @@ export const EmailVerification: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    // Get token from URL parameters
+    // Get token from URL parameters (query string, hash, or path)
     const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
+    let urlToken = params.get('token');
+
+    // Also check hash for token (in case URL uses hash routing)
+    if (!urlToken && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      urlToken = hashParams.get('token');
+    }
+
+    // Also support path-based token: /verify-email/<token>
+    if (!urlToken) {
+      const path = window.location.pathname;
+      const match = path.match(/\/verify-email\/([^\/?#]+)/i);
+      if (match && match[1]) {
+        urlToken = match[1];
+      }
+    }
+
+    if (urlToken) {
+      urlToken = decodeURIComponent(urlToken).trim();
+    }
     setToken(urlToken);
 
     const verify = async () => {
