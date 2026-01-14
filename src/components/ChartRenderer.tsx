@@ -21,10 +21,10 @@ interface ChartRendererProps {
 export const ChartRenderer: React.FC<ChartRendererProps> = ({ chartData }) => {
   // Support both 'type' and 'chartType' for compatibility
   const chartType = chartData.type || chartData.chartType || 'bar';
-  const { title, data, xKey, yKeys, colors = getDefaultChartColors(), xAxisLabel, yAxisLabel } = chartData;
+  const { title, data, xKey, yKeys, colors = getDefaultChartColors(), xAxisLabel } = chartData;
 
   // Calculate Y-axis domain with padding to ensure bars are tall enough
-  const calculateYAxisDomain = () => {
+  const calculateYAxisDomain = (): [number, number] | [number, 'auto'] => {
     if (!data || data.length === 0) return [0, 'auto'];
     
     const allValues: number[] = [];

@@ -22,7 +22,7 @@ export async function hasUsers(): Promise<boolean> {
 /**
  * Get user by ID
  */
-export async function getUserById(userId: number): Promise<User | null> {
+export async function getUserById(_userId: number): Promise<User | null> {
   try {
     const userData = await apiGet<User>('/auth/me');
     // Convert date strings to Date objects
@@ -109,7 +109,7 @@ export async function getSession(sessionId: string): Promise<Session | null> {
 /**
  * Delete a session (logout)
  */
-export async function deleteSession(sessionId: string): Promise<void> {
+export async function deleteSession(_sessionId: string): Promise<void> {
   try {
     await apiPost('/auth/logout', {});
     sessionHelpers.removeSessionId();
@@ -195,7 +195,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
  * Change password for logged-in user
  */
 export async function changePassword(
-  userId: number,
+  _userId: number,
   currentPassword: string,
   newPassword: string
 ): Promise<void> {
@@ -209,7 +209,7 @@ export async function changePassword(
  * Update user preferences
  */
 export async function updateUserPreferences(
-  userId: number,
+  _userId: number,
   preferences: Record<string, any>
 ): Promise<void> {
   await apiPut('/preferences', { preferences });
@@ -227,20 +227,21 @@ export function generateSessionId(): string {
 }
 
 // Functions not needed in API version (handled by backend)
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(_password: string): Promise<string> {
   throw new Error('hashPassword should not be called in API mode - backend handles password hashing');
 }
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(_password: string, _hash: string): Promise<boolean> {
   throw new Error('verifyPassword should not be called in API mode - backend handles password verification');
 }
 
-export async function createSession(userId: number): Promise<Session> {
+export async function createSession(_userId: number): Promise<Session> {
   throw new Error('createSession should not be called directly in API mode - use login() instead');
 }
 
-export async function deleteUserSessions(userId: number): Promise<void> {
+export async function deleteUserSessions(_userId: number): Promise<void> {
   // Not needed in API mode - backend handles this
+  return Promise.resolve();
 }
 
 export async function cleanupExpiredSessions(): Promise<void> {
@@ -252,14 +253,14 @@ export async function resetAuthDatabase(): Promise<void> {
 }
 
 export async function createUser(
-  email: string,
-  password: string,
-  name: string,
-  role: UserRole
+  _email: string,
+  _password: string,
+  _name: string,
+  _role: UserRole
 ): Promise<User> {
   throw new Error('createUser not available in API mode - use admin endpoints');
 }
 
-export async function getUserByEmailForAuth(email: string): Promise<any> {
+export async function getUserByEmailForAuth(_email: string): Promise<any> {
   throw new Error('getUserByEmailForAuth not available in API mode - backend handles authentication');
 }

@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { MatchData, SheetConfig } from '../types';
 import { getCoachingSystemInstructions, coachingRules } from '../config/coachingRules';
-import { fetchColumnMetadata, mergeColumnMetadata, formatMetadataForAI, ColumnMetadataMap } from './metadataService';
+import { fetchColumnMetadata, mergeColumnMetadata, formatMetadataForAI } from './metadataService';
 import { findImageColumns } from '../utils/imageUtils';
 
 // Initialize Gemini with API key

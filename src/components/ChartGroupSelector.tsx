@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChartGroup, CHART_GROUPS } from '../utils/chartGroups';
+import { CHART_GROUPS } from '../utils/chartGroups';
 
 interface ChartGroupSelectorProps {
   selectedGroup: string | null;

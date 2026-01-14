@@ -22,7 +22,7 @@ git commit -m "Initial commit - ready for Railway deployment"
 
 1. Go to [GitHub](https://github.com) and sign in
 2. Click "+" → "New repository"
-3. Name it: `joga-visualizer` (or your preferred name)
+3. Name it: `joga-analytics` (or your preferred name)
 4. **Don't** initialize with README, .gitignore, or license (we already have these)
 5. Click "Create repository"
 
@@ -30,7 +30,7 @@ git commit -m "Initial commit - ready for Railway deployment"
 
 ```bash
 # Add your GitHub repository as remote
-git remote add origin https://github.com/YOUR_USERNAME/joga-visualizer.git
+git remote add origin https://github.com/kvitale-star/joga-analytics.git
 
 # Push to GitHub
 git branch -M main
@@ -45,7 +45,7 @@ Replace `YOUR_USERNAME` with your GitHub username.
 2. Click "New Project"
 3. Select "Deploy from GitHub repo"
 4. Authorize Railway to access your GitHub account
-5. Select your `joga-visualizer` repository
+5. Select your `joga-analytics` repository
 6. Click "Deploy Now"
 
 ## Step 3: Deploy Backend Service
@@ -115,26 +115,25 @@ ENABLE_PASSWORD_VALIDATION=true
 
 ### 4.3 Install `serve` Package
 
-Add to `package.json` in the root:
+**Note:** This has already been added to your `package.json`! You can skip this step if you've already run `npm install` locally.
 
-```json
-{
-  "scripts": {
-    "start": "serve -s dist -l $PORT"
-  },
-  "dependencies": {
-    "serve": "^14.2.1"
-  }
-}
-```
-
-Then commit and push:
+If you haven't installed it yet, run:
 
 ```bash
-git add package.json
+npm install
+```
+
+This will install the `serve` package that's already listed in your `package.json`.
+
+Then commit and push your changes:
+
+```bash
+git add package.json package-lock.json
 git commit -m "Add serve package for Railway deployment"
 git push
 ```
+
+**What this does:** The `serve` package is needed to serve your built frontend files (in the `dist` folder) on Railway. The `start` script in `package.json` tells Railway how to serve your static files.
 
 ### 4.4 Configure Build Settings
 
@@ -154,11 +153,15 @@ VITE_API_URL=https://your-backend-production.up.railway.app/api
 
 Replace `your-backend-production.up.railway.app` with your actual backend URL from Step 3.5.
 
-### 4.6 Get Frontend URL
+### 4.6 Generate Frontend Domain
 
-1. Go to "Settings" → "Domains"
-2. Railway provides a URL like: `your-frontend-production.up.railway.app`
-3. Copy this URL
+1. Go to your frontend service in Railway
+2. Click on the **"Networking"** tab (or "Settings" → "Networking")
+3. Click **"Generate Domain"** button
+4. Railway will create a URL like: `your-frontend-production.up.railway.app`
+5. Copy this URL - you'll need it for the backend CORS configuration
+
+**Note:** Railway automatically assigns a port via the `$PORT` environment variable. Your `start` script (`serve -s dist -l $PORT`) uses this automatically - you don't need to configure a port manually.
 
 ### 4.7 Update Backend CORS
 

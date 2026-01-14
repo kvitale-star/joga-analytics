@@ -3,7 +3,7 @@ import { verifyEmail } from '../services/authService';
 import { JOGA_COLORS } from '../utils/colors';
 
 export const EmailVerification: React.FC = () => {
-  const [token, setToken] = useState<string | null>(null);
+  const [, setToken] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSuccess, setIsSuccess] = useState(false);

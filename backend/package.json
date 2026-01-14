@@ -2,7 +2,7 @@
   "name": "joga-backend",
   "version": "1.0.0",
   "type": "module",
-  "description": "Backend API for JOGA Visualizer",
+  "description": "Backend API for JOGA Analytics",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",

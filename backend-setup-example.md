@@ -7,7 +7,7 @@ This is a minimal working example using raw SQL. If you prefer cleaner code, use
 ## Project Structure
 
 ```
-joga-visualizer/
+joga-analytics/
 ├── backend/
 │   ├── src/
 │   │   ├── db/

@@ -20,7 +20,7 @@ export const PasswordResetRequest: React.FC<PasswordResetRequestProps> = ({ onBa
 
     try {
       // Backend handles email sending automatically
-      const token = await generatePasswordResetToken(email);
+      await generatePasswordResetToken(email);
       
       // Always show success (don't reveal if user exists)
       // Backend sends email if user exists, otherwise silently succeeds

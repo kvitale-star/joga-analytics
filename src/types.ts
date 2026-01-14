@@ -1,5 +1,5 @@
 export interface MatchData {
-  [key: string]: string | number;
+  [key: string]: string | number | undefined;
   // Common fields (will be populated from sheet)
   opponent?: string;
   date?: string;

@@ -159,7 +159,7 @@ export async function appendRowToSheet(
  * Alternative method using service account credentials
  * This requires the googleapis package and proper authentication
  */
-export async function fetchSheetDataWithAuth(config: SheetConfig): Promise<MatchData[]> {
+export async function fetchSheetDataWithAuth(_config: SheetConfig): Promise<MatchData[]> {
   // This would use the googleapis library for authenticated access
   // Implementation would go here if using service account
   throw new Error('Service account authentication not yet implemented. Use fetchSheetData for public sheets.');

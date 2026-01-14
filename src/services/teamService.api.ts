@@ -46,7 +46,7 @@ export async function getUserTeams(userId: number): Promise<Team[]> {
 export async function assignTeamToUser(
   userId: number,
   teamId: number,
-  assignedBy: number
+  _assignedBy: number
 ): Promise<void> {
   await apiPost(`/teams/users/${userId}/teams`, { teamId });
 }

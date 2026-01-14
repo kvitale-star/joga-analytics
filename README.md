@@ -1,4 +1,4 @@
-# Joga Visualizer
+# JOGA Analytics
 
 A modern web application for coaches to visualize match data from Google Sheets. This app provides interactive charts and analytics for shots, possession, xG, conversion rates, and more.
 

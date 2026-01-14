@@ -9,7 +9,6 @@ interface WelcomeMessageProps {
 }
 
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ 
-  matchData, 
   onQuestionClick 
 }) => {
   const { examplePrompts } = coachingRules;

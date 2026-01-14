@@ -37,7 +37,7 @@ This guide covers migrating from browser-based SQL.js to a backend server with a
 
 2. **Create Backend Directory Structure:**
    ```
-   joga-visualizer/
+   joga-analytics/
    ├── frontend/          # Your existing React app
    │   └── src/
    ├── backend/          # New backend server
@@ -254,7 +254,7 @@ joga-visualizer/
 **Root `package.json`:**
 ```json
 {
-  "name": "joga-visualizer",
+  "name": "joga-analytics",
   "private": true,
   "workspaces": ["packages/*"],
   "scripts": {

@@ -309,7 +309,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
           )}
 
           <form onSubmit={handleSubmit}>
-            {Object.entries(formFields).map(([category, fields], index) => (
+            {Object.entries(formFields).map(([category, fields]) => (
               <div key={category} className="mb-6">
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">

@@ -86,7 +86,7 @@ VITE_API_URL=http://localhost:3001/api
 ### 2. Create API Key
 1. Go to **Settings** → **API Keys**
 2. Click **Create API Key**
-3. Name it (e.g., "JOGA Visualizer")
+3. Name it (e.g., "JOGA Analytics")
 4. When asked about language: **Select "Node.js"**
 5. When asked about Node.js version: **Select Node.js 18, 20, or 22** (any LTS version works - the backend uses Node.js 22)
 6. Select **Full Access** or **Restricted Access** with "Mail Send" permissions

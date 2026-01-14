@@ -25,8 +25,6 @@ function matchesPattern(columnName: string, patterns: string[]): boolean {
  * Determines chart type and styling based on column name
  */
 export function getChartConfig(columnName: string, hasPair: boolean = false): ChartConfig {
-  const name = columnName.toLowerCase();
-
   // Determine if this is JOGA team data or opponent data
   const isJogaData = isJogaTeamData(columnName, columnName);
   
@@ -217,9 +215,6 @@ export function getPairTitle(columnKey: string, pairColumnKey: string | null): s
     const regex = new RegExp(`\\s+${suffixLower}\\s*$`, 'i');
     return text.replace(regex, '').trim();
   };
-  
-  const lower1 = columnKey.toLowerCase();
-  const lower2 = pairColumnKey.toLowerCase();
   
   // Extract base metric name (remove "for" and "against" carefully)
   let base1 = removeSuffix(columnKey, 'for');

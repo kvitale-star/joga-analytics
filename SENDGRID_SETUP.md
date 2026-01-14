@@ -17,7 +17,7 @@ Since this is a browser-only application, you cannot directly call SendGrid from
 1. Log in to your SendGrid dashboard
 2. Navigate to **Settings** → **API Keys**
 3. Click **Create API Key**
-4. Name it (e.g., "Joga Visualizer")
+4. Name it (e.g., "JOGA Analytics")
 5. Select **Full Access** or **Restricted Access** with "Mail Send" permissions
 6. Click **Create & View**
 7. **Copy the API key immediately** - you won't be able to see it again!

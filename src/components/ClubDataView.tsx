@@ -294,7 +294,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   <TeamComparisonRadialChart
                     data={matchData || []}
                     teamKey={teamKeyForCharts}
-                    availableClubTeams={availableClubTeams || []}
+                    availableTeams={availableClubTeams || []}
                     getTSRKey={getTSRKey}
                     getPossessionKey={getPossessionKey}
                     getSPIKey={getSPIKey}

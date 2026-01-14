@@ -12,7 +12,7 @@ interface ChatMessageProps {
   charts?: ChartData[];
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, timestamp, charts = [] }) => {
+export const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, timestamp }) => {
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };

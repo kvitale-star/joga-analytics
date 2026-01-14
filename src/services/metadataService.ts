@@ -46,14 +46,14 @@ export async function fetchColumnMetadata(config: SheetConfig): Promise<ColumnMe
           const metadata: ColumnMetadataMap = {};
           
           // Find column indices
-          const colNameIdx = headers.findIndex(h => h.includes('column') || h.includes('name') || h === '');
-          const descIdx = headers.findIndex(h => h.includes('description') || h.includes('desc'));
-          const unitsIdx = headers.findIndex(h => h.includes('unit'));
-          const calcIdx = headers.findIndex(h => h.includes('calculation') || h.includes('calc') || h.includes('formula'));
-          const notesIdx = headers.findIndex(h => h.includes('note'));
-          const exampleIdx = headers.findIndex(h => h.includes('example'));
-          const typeIdx = headers.findIndex(h => h.includes('type') || h.includes('data type'));
-          const availIdx = headers.findIndex(h => h.includes('availability') || h.includes('available'));
+          const colNameIdx = headers.findIndex((h: string) => h.includes('column') || h.includes('name') || h === '');
+          const descIdx = headers.findIndex((h: string) => h.includes('description') || h.includes('desc'));
+          const unitsIdx = headers.findIndex((h: string) => h.includes('unit'));
+          const calcIdx = headers.findIndex((h: string) => h.includes('calculation') || h.includes('calc') || h.includes('formula'));
+          const notesIdx = headers.findIndex((h: string) => h.includes('note'));
+          const exampleIdx = headers.findIndex((h: string) => h.includes('example'));
+          const typeIdx = headers.findIndex((h: string) => h.includes('type') || h.includes('data type'));
+          const availIdx = headers.findIndex((h: string) => h.includes('availability') || h.includes('available'));
           
           rows.forEach((row: string[]) => {
             const columnName = row[colNameIdx]?.trim();

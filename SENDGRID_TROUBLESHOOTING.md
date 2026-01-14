@@ -11,7 +11,7 @@ This error means SendGrid is rejecting your API key. Here's how to fix it:
    - Navigate to **Settings** → **API Keys**
 
 2. **Check Your API Key:**
-   - Find the API key you created (e.g., "JOGA Visualizer")
+   - Find the API key you created (e.g., "JOGA Analytics")
    - If you can't see it, you may need to create a new one
    - **Note:** SendGrid only shows the API key once when you create it
 
@@ -48,7 +48,7 @@ If you can't find your original API key:
 
 1. Go to **Settings** → **API Keys** in SendGrid
 2. Click **Create API Key**
-3. Name it (e.g., "JOGA Visualizer")
+3. Name it (e.g., "JOGA Analytics")
 4. Select **Full Access** or **Restricted Access** with "Mail Send" permissions
 5. **Copy the key immediately** (you won't see it again!)
 6. Update `backend/.env` with the new key
