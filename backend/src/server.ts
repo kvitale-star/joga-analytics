@@ -232,10 +232,15 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 async function startServer() {
   await initializeDatabase();
   
-  app.listen(PORT, () => {
-    console.log(`🚀 Backend server running on http://localhost:${PORT}`);
-    console.log(`📊 API available at http://localhost:${PORT}/api`);
-    console.log(`💚 Health check: http://localhost:${PORT}/api/health`);
+  // Railway requires binding to 0.0.0.0, not just localhost
+  const HOST = process.env.HOST || '0.0.0.0';
+  
+  app.listen(PORT, HOST, () => {
+    console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
+    console.log(`📊 API available at http://${HOST}:${PORT}/api`);
+    console.log(`💚 Health check: http://${HOST}:${PORT}/api/health`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔒 CORS origin: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
   });
 }
 
