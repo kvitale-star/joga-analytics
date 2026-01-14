@@ -77,7 +77,6 @@ Railway should auto-detect your backend. If not:
 Go to "Variables" tab and add:
 
 ```env
-PORT=3001
 NODE_ENV=production
 FRONTEND_URL=https://your-frontend.railway.app
 DATABASE_PATH=./data/joga.db
@@ -86,6 +85,8 @@ SENDGRID_API_KEY=SG.your_api_key_here
 SENDGRID_FROM_EMAIL=kvitale@gmail.com
 ENABLE_PASSWORD_VALIDATION=true
 ```
+
+**Note:** Do NOT set `PORT` manually - Railway automatically sets this environment variable. Setting it manually will cause the backend to be unreachable.
 
 **Important:**
 - Replace `your-production-secret-key-here` with a strong random string (generate one)

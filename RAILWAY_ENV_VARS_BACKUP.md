@@ -5,7 +5,6 @@
 Copy these into Railway → Backend Service → Variables:
 
 ```env
-PORT=3001
 NODE_ENV=production
 FRONTEND_URL=https://joga-analytics-production.up.railway.app
 DATABASE_PATH=./data/joga.db
@@ -14,6 +13,8 @@ SENDGRID_API_KEY=SG.your_api_key_here
 SENDGRID_FROM_EMAIL=kvitale@gmail.com
 ENABLE_PASSWORD_VALIDATION=true
 ```
+
+**Important:** Do NOT set `PORT` - Railway automatically sets this. Setting it manually will cause connection issues.
 
 ## Frontend Service Environment Variables
 

@@ -117,7 +117,7 @@ This deployment plan prioritizes **free or very low-cost** options suitable for 
 **Backend `.env` (set in Railway):**
 ```env
 # Server
-PORT=3001
+# Note: Do NOT set PORT - Railway automatically sets this
 NODE_ENV=production
 FRONTEND_URL=https://your-frontend.railway.app
 
