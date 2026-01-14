@@ -18,12 +18,21 @@ const PORT = process.env.PORT || 3001;
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 console.log('🔒 CORS configured for origin:', frontendUrl);
 
-app.use(cors({
+// CORS configuration
+const corsOptions = {
   origin: frontendUrl,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID'],
-}));
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+
+// Explicitly handle OPTIONS requests (preflight)
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 
 // Request logging (development)
