@@ -1,4 +1,4 @@
-import { db, sqliteDb } from './database.js';
+import { db, getSqliteDb } from './database.js';
 import { sql } from 'kysely';
 import fs from 'fs';
 import path from 'path';
@@ -219,7 +219,7 @@ export async function runMigrations(): Promise<void> {
       if (statement.trim()) {
         try {
           // Use prepare/run for individual statements (better error handling)
-          sqliteDb.prepare(statement).run();
+          getSqliteDb().prepare(statement).run();
         } catch (error: any) {
           // Ignore "already exists" errors for tables and indexes
           const errorMsg = error?.message || '';
@@ -242,6 +242,7 @@ export async function runMigrations(): Promise<void> {
       .values({
         version: 1,
         description: 'Initial schema - users, teams, matches, sessions',
+        applied_at: new Date().toISOString(),
       })
       .execute();
     

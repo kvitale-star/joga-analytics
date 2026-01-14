@@ -38,4 +38,8 @@ export function getDatabase() {
 }
 
 // Export the SQLite instance for raw SQL if needed
-export { sqliteDb };
+// Use a getter function to avoid TS4023 export type error
+// Using InstanceType to avoid type naming issues
+export function getSqliteDb(): InstanceType<typeof Database> {
+  return sqliteDb;
+}

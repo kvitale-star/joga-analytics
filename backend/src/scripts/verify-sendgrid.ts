@@ -60,16 +60,16 @@ async function verifySendGrid() {
     });
     
     if (response.ok) {
-      const data = await response.json();
+      const data = await response.json() as { username?: string; email?: string };
       console.log('✅ API Key is valid!');
       console.log(`   Account: ${data.username || 'N/A'}`);
       console.log(`   Email: ${data.email || 'N/A'}`);
     } else {
-      const errorData = await response.json();
+      const errorData = await response.json() as { errors?: Array<{ message: string }> };
       console.error('❌ API Key validation failed:');
       console.error(`   Status: ${response.status}`);
       if (errorData.errors) {
-        errorData.errors.forEach((err: any) => {
+        errorData.errors.forEach((err) => {
           console.error(`   - ${err.message}`);
         });
       }
