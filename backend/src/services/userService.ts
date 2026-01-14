@@ -77,10 +77,11 @@ export async function deleteUser(userId: number): Promise<void> {
 
 /**
  * Create user (admin only)
+ * @param password - Optional. If not provided, user will receive email to set password
  */
 export async function createUserByAdmin(
   email: string,
-  password: string,
+  password: string | null,
   name: string,
   role: 'admin' | 'coach' | 'viewer'
 ) {

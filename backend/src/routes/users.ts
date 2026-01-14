@@ -35,11 +35,12 @@ router.post('/', async (req, res) => {
   try {
     const { email, password, name, role } = req.body;
 
-    if (!email || !password || !name || !role) {
-      return res.status(400).json({ error: 'Email, password, name, and role required' });
+    if (!email || !name || !role) {
+      return res.status(400).json({ error: 'Email, name, and role required' });
     }
 
-    const user = await createUserByAdmin(email, password, name, role);
+    // Password is optional - if not provided, user will receive email to set password
+    const user = await createUserByAdmin(email, password || null, name, role);
     res.status(201).json(user);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to create user' });

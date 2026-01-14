@@ -111,22 +111,37 @@ export async function getUserByEmailForAuth(email: string) {
 
 /**
  * Create a new user
+ * @param password - Optional. If not provided, a password setup token will be generated and sent via email
  */
 export async function createUser(
   email: string,
-  password: string,
+  password: string | null,
   name: string,
   role: 'admin' | 'coach' | 'viewer'
 ) {
-  // Validate password
-  const validation = validatePassword(password);
-  if (!validation.isValid) {
-    throw new Error(validation.error || 'Invalid password');
+  const emailVerificationToken = generateToken();
+  const passwordSetupToken = password ? null : generateToken();
+  const now = new Date().toISOString();
+  
+  // If password is provided, validate and hash it
+  // If not provided, we'll use a placeholder hash (user must set password via email link)
+  let passwordHash: string;
+  if (password) {
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      throw new Error(validation.error || 'Invalid password');
+    }
+    passwordHash = await hashPassword(password);
+  } else {
+    // Generate a random hash that can never be matched (user must set password via email)
+    // This ensures the user cannot login until they set a password
+    passwordHash = await hashPassword(generateToken() + Date.now().toString());
   }
 
-  const passwordHash = await hashPassword(password);
-  const emailVerificationToken = generateToken();
-  const now = new Date().toISOString();
+  // Set password reset token and expiry if password not provided (for password setup)
+  const passwordResetExpires = passwordSetupToken 
+    ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
+    : null;
 
   const result = await db
     .insertInto('users')
@@ -138,6 +153,8 @@ export async function createUser(
       email_verified: role === 'admin' ? 1 : 0,
       email_verification_token: emailVerificationToken,
       email_verification_sent_at: role === 'admin' ? null : now,
+      password_reset_token: passwordSetupToken,
+      password_reset_expires: passwordResetExpires,
       preferences: JSON.stringify({}),
       is_active: 1,
     })
@@ -146,13 +163,23 @@ export async function createUser(
 
   const user = await getUserById(result.id);
   
-  // Send verification email for non-admin users
-  if (user && role !== 'admin' && emailVerificationToken) {
-    const { sendVerificationEmail } = await import('./emailService.js');
-    sendVerificationEmail(user.email, emailVerificationToken).catch(err => {
-      console.error('Failed to send verification email:', err);
-      // Don't throw - user creation succeeded, email is optional
-    });
+  // Send appropriate email based on whether password was provided
+  if (user) {
+    const { sendVerificationEmail, sendPasswordSetupEmail } = await import('./emailService.js');
+    
+    if (passwordSetupToken) {
+      // No password provided - send password setup email (which also verifies email)
+      sendPasswordSetupEmail(user.email, passwordSetupToken, user.name).catch(err => {
+        console.error('Failed to send password setup email:', err);
+        // Don't throw - user creation succeeded, email is optional
+      });
+    } else if (role !== 'admin' && emailVerificationToken) {
+      // Password provided - send verification email only
+      sendVerificationEmail(user.email, emailVerificationToken).catch(err => {
+        console.error('Failed to send verification email:', err);
+        // Don't throw - user creation succeeded, email is optional
+      });
+    }
   }
 
   return user;
@@ -343,6 +370,7 @@ export async function generatePasswordResetToken(email: string): Promise<string 
 
 /**
  * Reset password with token
+ * Also verifies email if it hasn't been verified yet (for new users setting initial password)
  */
 export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
   // Validate password
@@ -355,7 +383,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
   const user = await db
     .selectFrom('users')
-    .select('id')
+    .select(['id', 'email_verified'])
     .where('password_reset_token', '=', token)
     .where('password_reset_expires', '>', now)
     .where('is_active', '=', 1)
@@ -365,12 +393,16 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
   const passwordHash = await hashPassword(newPassword);
 
+  // If email hasn't been verified yet, verify it when setting password
+  // This handles the case where admin creates user and they set password via email link
   await db
     .updateTable('users')
     .set({
       password_hash: passwordHash,
       password_reset_token: null,
       password_reset_expires: null,
+      email_verified: user.email_verified ? 1 : 1, // Always verify email when setting password
+      email_verification_token: null, // Clear verification token if it exists
       updated_at: now,
     })
     .where('id', '=', user.id)

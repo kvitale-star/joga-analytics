@@ -137,6 +137,72 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
 }
 
 /**
+ * Send password setup email (for new users created by admin)
+ * This email allows the user to set their initial password and verifies their email
+ */
+export async function sendPasswordSetupEmail(email: string, token: string, name: string): Promise<void> {
+  const setupUrl = `${getBaseUrl()}/reset-password?token=${token}`;
+
+  // Ensure API key is set (in case env vars loaded after module import)
+  const hasApiKey = ensureApiKeySet();
+  
+  if (!hasApiKey) {
+    console.log('=== PASSWORD SETUP EMAIL (Development Mode) ===');
+    console.log('To:', email);
+    console.log('Subject: Set Your Password - JOGA Analytics');
+    console.log('Setup Link:', setupUrl);
+    console.log('=============================================');
+    return;
+  }
+
+  const logoDataUri = getLogoDataUri();
+  const footer = getEmailFooter();
+  const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
+  const msg = {
+    to: email,
+    from: {
+      email: fromEmail,
+      name: 'JOGA Analytics',
+    },
+    subject: 'Set Your Password - JOGA Analytics',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="${logoDataUri}" alt="JOGA Analytics" style="max-width: 200px; height: auto;" />
+        </div>
+        <h2 style="color: #6787aa; margin-top: 0;">Welcome to JOGA Analytics, ${name}!</h2>
+        <p>An account has been created for you on JOGA Analytics. To get started, please set your password by clicking the link below:</p>
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${setupUrl}" 
+             style="display: inline-block; padding: 12px 24px; background-color: #ceff00; color: #000; text-decoration: none; border-radius: 4px; font-weight: bold;">
+            Set Your Password
+          </a>
+        </p>
+        <p>Or copy and paste this URL into your browser:</p>
+        <p style="word-break: break-all; color: #666; background-color: #f5f5f5; padding: 10px; border-radius: 4px;">${setupUrl}</p>
+        <p style="color: #666; font-size: 12px; margin-top: 30px;">
+          This link will expire in 7 days. Setting your password will also verify your email address.
+        </p>
+        ${footer}
+      </div>
+    `,
+    text: `Welcome to JOGA Analytics, ${name}!\n\nSet your password by visiting: ${setupUrl}\n\nThis link will expire in 7 days. Setting your password will also verify your email address.\n\nJOGA FC - Training leaders through the joy of the beautiful game\nWebsite: www.jogafc.org | Instagram: @jogabonito.slo`,
+  };
+
+  try {
+    await sgMail.send(msg);
+  } catch (error: any) {
+    console.error('SendGrid error:', error);
+    // Re-throw with more context
+    if (error.response?.body?.errors) {
+      const errorMessages = error.response.body.errors.map((e: any) => e.message).join(', ');
+      throw new Error(`Failed to send password setup email: ${errorMessages}`);
+    }
+    throw new Error('Failed to send password setup email');
+  }
+}
+
+/**
  * Send email verification email
  */
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {

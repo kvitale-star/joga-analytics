@@ -1473,16 +1473,33 @@ function App() {
     // Check for password reset or email verification routes
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    const path = window.location.pathname;
-    const hash = window.location.hash;
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
     
-    // Check for password reset
-    if (path.includes('/reset-password') || hash.includes('reset-password') || (token && hash.includes('reset'))) {
+    // Check for password reset - be more flexible with path matching
+    // Allow /reset-password, /reset-password/, or token in query string
+    const isResetPassword = 
+      path === '/reset-password' || 
+      path === '/reset-password/' ||
+      path.includes('/reset-password') ||
+      hash.includes('reset-password') || 
+      hash.includes('#reset-password') ||
+      (token && (hash.includes('reset') || hash.includes('#reset')));
+    
+    // Check for email verification
+    const isVerifyEmail = 
+      path === '/verify-email' || 
+      path === '/verify-email/' ||
+      path.includes('/verify-email') ||
+      hash.includes('verify-email') || 
+      hash.includes('#verify-email') ||
+      (token && (hash.includes('verify') || hash.includes('#verify')));
+    
+    if (isResetPassword) {
       return <PasswordResetForm />;
     }
     
-    // Check for email verification
-    if (path.includes('/verify-email') || hash.includes('verify-email') || (token && hash.includes('verify'))) {
+    if (isVerifyEmail) {
       return <EmailVerification />;
     }
     

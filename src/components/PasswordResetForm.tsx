@@ -11,12 +11,19 @@ export const PasswordResetForm: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    // Get token from URL parameters
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('token');
+    // Get token from URL parameters (both query string and hash)
+    const urlParams = new URLSearchParams(window.location.search);
+    let urlToken = urlParams.get('token');
+    
+    // Also check hash for token (in case URL uses hash routing)
+    if (!urlToken && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      urlToken = hashParams.get('token');
+    }
+    
     setToken(urlToken);
     if (!urlToken) {
-      setError('Invalid or missing reset token');
+      setError('Invalid or missing reset token. Please check the link from your email.');
     }
   }, []);
 

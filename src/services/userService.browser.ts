@@ -109,10 +109,14 @@ export async function deleteUser(userId: number): Promise<void> {
  */
 export async function createUserByAdmin(
   email: string,
-  password: string,
+  password: string | null,
   name: string,
   role: UserRole
 ): Promise<User> {
+  // Browser mode doesn't support email sending, so password is required
+  if (!password) {
+    throw new Error('Password is required in browser mode (email service not available)');
+  }
   const { createUser } = await import('./authService');
   return createUser(email, password, name, role);
 }

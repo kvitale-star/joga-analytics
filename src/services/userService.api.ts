@@ -46,22 +46,25 @@ export async function deleteUser(userId: number): Promise<void> {
 
 /**
  * Create user (admin only)
+ * @param password - Optional. If not provided, user will receive email to set password
  */
 export async function createUserByAdmin(
   email: string,
-  password: string,
+  password: string | null,
   name: string,
   role: UserRole
 ): Promise<User> {
-  // Validate password on frontend (backend also validates)
-  const validation = validatePassword(password);
-  if (!validation.isValid) {
-    throw new Error(validation.error || 'Invalid password');
+  // Only validate password if provided
+  if (password) {
+    const validation = validatePassword(password);
+    if (!validation.isValid) {
+      throw new Error(validation.error || 'Invalid password');
+    }
   }
 
   const user = await apiPost<User>('/users', {
     email,
-    password,
+    ...(password && { password }), // Only include password if provided
     name,
     role,
   });

@@ -231,7 +231,6 @@ const CreateUserModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: '',
     role: 'coach' as UserRole,
   });
   const [error, setError] = useState<string>('');
@@ -243,7 +242,8 @@ const CreateUserModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
-      await createUserByAdmin(formData.email, formData.password, formData.name, formData.role);
+      // Password is not required - user will receive email to set password
+      await createUserByAdmin(formData.email, null, formData.name, formData.role);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
@@ -280,17 +280,9 @@ const CreateUserModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               required
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
-              required
-              minLength={8}
-            />
+            <p className="mt-1 text-sm text-gray-500">
+              The user will receive an email with a link to set their password.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
