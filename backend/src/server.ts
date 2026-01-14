@@ -12,7 +12,8 @@ import matchRoutes from './routes/matches.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+// Railway automatically sets PORT - use it or default to 3001 for local dev
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // Middleware
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';

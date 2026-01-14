@@ -7,7 +7,7 @@ Copy these into Railway → Backend Service → Variables:
 ```env
 PORT=3001
 NODE_ENV=production
-FRONTEND_URL=https://your-frontend.railway.app
+FRONTEND_URL=https://joga-analytics-production.up.railway.app
 DATABASE_PATH=./data/joga.db
 JWT_SECRET=your-production-secret-key-here
 SENDGRID_API_KEY=SG.your_api_key_here
@@ -21,7 +21,7 @@ Copy these into Railway → Frontend Service → Variables:
 
 ```env
 VITE_USE_BACKEND_API=true
-VITE_API_URL=https://your-backend.railway.app/api
+VITE_API_URL=https://joga-analytics.up.railway.app/api
 ```
 
 ## Important Notes
