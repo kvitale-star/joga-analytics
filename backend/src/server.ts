@@ -33,6 +33,10 @@ const app = express();
 // Railway automatically sets PORT - use it or default to 3001 for local dev
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
+// Trust proxy - required for Railway (and other reverse proxies)
+// This allows Express to correctly identify client IPs from X-Forwarded-For header
+app.set('trust proxy', true);
+
 // Middleware
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 console.log('🔒 CORS configured for origin:', frontendUrl);
