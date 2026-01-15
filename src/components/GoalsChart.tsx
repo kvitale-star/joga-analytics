@@ -2,6 +2,10 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import { MatchData } from '../types';
 import { JOGA_COLORS, OPPONENT_COLORS } from '../utils/colors';
+import { DEFAULT_GOALS_CONFIG, getChartTitle } from '../types/chartConfig';
+import { ChartConfigPanel } from './ChartConfigPanel';
+import { ChartExpandButton } from './ChartExpandButton';
+import { useChartConfig } from '../hooks/useChartConfig';
 
 interface GoalsChartProps {
   data: MatchData[];
@@ -9,6 +13,13 @@ interface GoalsChartProps {
   goalsAgainstKey: string;
   opponentKey: string;
   showLabels?: boolean;
+  // Optional metrics (if available in data)
+  xGKey?: string;
+  xGAKey?: string;
+  shotsForKey?: string;
+  shotsAgainstKey?: string;
+  globalIncludeOpponents?: boolean; // Global override for includeOpponent
+  onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
 
 export const GoalsChart: React.FC<GoalsChartProps> = ({
@@ -17,16 +28,139 @@ export const GoalsChart: React.FC<GoalsChartProps> = ({
   goalsAgainstKey,
   opponentKey,
   showLabels = false,
+  xGKey,
+  xGAKey,
+  shotsForKey,
+  shotsAgainstKey,
+  globalIncludeOpponents,
+  onExpansionChange,
 }) => {
-  const chartData = data.map((match) => ({
-    name: match[opponentKey] || 'Opponent',
-    'Goals For': typeof match[goalsForKey] === 'number' ? match[goalsForKey] : 0,
-    'Goals Against': typeof match[goalsAgainstKey] === 'number' ? match[goalsAgainstKey] : 0,
-  }));
+  const { config, isLoading, handleConfigChange, handleSave, handleReset, handleExpandToggle, isExpanded } = useChartConfig({
+    chartType: 'goals',
+    defaultConfig: DEFAULT_GOALS_CONFIG,
+    globalIncludeOpponents,
+    onExpansionChange,
+  });
+
+  // Build chart data based on configuration
+  const chartData = data.map((match) => {
+    const base: any = {
+      name: match[opponentKey] || 'Opponent',
+    };
+
+    // Add JOGA team metrics
+    if (config.visibleMetrics.includes('goalsFor')) {
+      base['Goals For'] = typeof match[goalsForKey] === 'number' ? match[goalsForKey] : 0;
+    }
+    if (config.visibleMetrics.includes('goalsAgainst')) {
+      base['Goals Against'] = typeof match[goalsAgainstKey] === 'number' ? match[goalsAgainstKey] : 0;
+    }
+    if (config.visibleMetrics.includes('xG') && xGKey) {
+      base['xG'] = typeof match[xGKey] === 'number' ? match[xGKey] : 0;
+    }
+    if (config.visibleMetrics.includes('xGA') && xGAKey) {
+      base['xGA'] = typeof match[xGAKey] === 'number' ? match[xGAKey] : 0;
+    }
+    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
+      base['Shots For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
+    }
+    if (config.visibleMetrics.includes('shotsAgainst') && shotsAgainstKey) {
+      base['Shots Against'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
+    }
+
+    return base;
+  });
+
+  // Determine which bars to render based on config
+  const renderBars = () => {
+    const bars: JSX.Element[] = [];
+
+    if (config.visibleMetrics.includes('goalsFor')) {
+      bars.push(
+        <Bar key="Goals For" dataKey="Goals For" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Goals For" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('goalsAgainst')) {
+      bars.push(
+        <Bar key="Goals Against" dataKey="Goals Against" fill={OPPONENT_COLORS.primary} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Goals Against" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('xG') && xGKey) {
+      bars.push(
+        <Bar key="xG" dataKey="xG" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="xG" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('xGA') && xGAKey) {
+      bars.push(
+        <Bar key="xGA" dataKey="xGA" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
+          {showLabels && <LabelList dataKey="xGA" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
+      bars.push(
+        <Bar key="Shots For" dataKey="Shots For" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Shots For" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('shotsAgainst') && shotsAgainstKey) {
+      bars.push(
+        <Bar key="Shots Against" dataKey="Shots Against" fill={OPPONENT_COLORS.dark} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Shots Against" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+
+    return bars;
+  };
+
+  // Available metrics
+  const availableMetrics = [
+    { id: 'goalsFor', label: 'Goals For', required: false },
+    { id: 'goalsAgainst', label: 'Goals Against', required: false },
+    ...(xGKey ? [{ id: 'xG', label: 'Expected Goals (xG)', required: false }] : []),
+    ...(xGAKey ? [{ id: 'xGA', label: 'Expected Goals Against (xGA)', required: false }] : []),
+    ...(shotsForKey ? [{ id: 'shotsFor', label: 'Shots For', required: false }] : []),
+    ...(shotsAgainstKey ? [{ id: 'shotsAgainst', label: 'Shots Against', required: false }] : []),
+  ];
+
+  // Generate dynamic title
+  const chartTitle = getChartTitle('goals', config.visibleMetrics);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h3 className="text-xl font-bold mb-2 text-gray-800">{chartTitle}</h3>
+        <div className="flex items-center justify-center h-96">
+          <p className="text-gray-500">Loading chart configuration...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-bold mb-2 text-gray-800">Goals</h3>
+    <div className="bg-white rounded-lg shadow-md p-6 relative group">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xl font-bold text-gray-800">{chartTitle}</h3>
+        <div className="flex items-center gap-2">
+          <ChartExpandButton isExpanded={isExpanded} onToggle={handleExpandToggle} />
+          <ChartConfigPanel
+            chartType="goals"
+            config={config}
+            availableMetrics={availableMetrics}
+            onConfigChange={handleConfigChange}
+            onSave={handleSave}
+            onReset={handleReset}
+          />
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={chartData} margin={{ top: 5, right: 30, left: 30, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -47,12 +181,7 @@ export const GoalsChart: React.FC<GoalsChartProps> = ({
               padding: '12px'
             }}
           />
-          <Bar dataKey="Goals For" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Goals For" position="top" fill="#666" fontSize={12} />}
-          </Bar>
-          <Bar dataKey="Goals Against" fill={OPPONENT_COLORS.primary} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Goals Against" position="top" fill="#666" fontSize={12} />}
-          </Bar>
+          {renderBars()}
         </BarChart>
       </ResponsiveContainer>
     </div>

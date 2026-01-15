@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MatchData } from '../types';
 import { ChartType, CHART_GROUPS, CHART_LABELS } from '../utils/chartGroups';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
@@ -144,6 +144,28 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
 }) => {
   const teamKeyForCharts = getTeamKey();
   const showLabels = additionalOptions.includes('showChartLabels');
+  const globalIncludeOpponents = additionalOptions.includes('includeOpponents');
+  
+  // Chart expansion state - synced with chart configs (loaded from saved preferences)
+  const [expandedCharts, setExpandedCharts] = useState<Record<string, boolean>>({});
+  
+  // Load initial expansion states from saved configs
+  React.useEffect(() => {
+    const loadExpansionStates = async () => {
+      // Note: We need user from AuthContext, but ClubDataView doesn't have direct access
+      // The charts will load their own configs via useChartConfig hook
+      // We'll sync via callbacks
+    };
+    
+    loadExpansionStates();
+  }, []);
+  
+  const handleChartExpansionChange = (chartType: string) => (isExpanded: boolean) => {
+    setExpandedCharts(prev => ({
+      ...prev,
+      [chartType]: isExpanded,
+    }));
+  };
 
   return (
     <>
@@ -248,7 +270,8 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   { value: 'boys', label: 'Boys Teams' },
                   { value: 'girls', label: 'Girls Teams' },
                   { value: 'blackTeams', label: 'Black Teams' },
-                  { value: 'showChartLabels', label: 'Show Chart Labels' }
+                  { value: 'showChartLabels', label: 'Show Chart Labels' },
+                  { value: 'includeOpponents', label: 'Include Opponents' }
                 ]}
                 selectedValues={additionalOptions}
                 onSelectionChange={setAdditionalOptions}
@@ -322,78 +345,95 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
             )
           ) : (
             <>
+              {/* Charts Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Shots Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey())}
-                className="mb-6"
-              >
-                <ShotsChart
-                  data={clubDataByTeam}
-                  shotsForKey={getShotsForKey()}
-                  shotsAgainstKey={getShotsAgainstKey()}
-                  opponentKey={teamKeyForCharts}
-                  showLabels={showLabels}
-                  attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
-                  attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
-                  goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                  goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey()) && (
+                <div className={expandedCharts['shots'] ? 'lg:col-span-2' : ''}>
+                  <ShotsChart
+                    data={clubDataByTeam}
+                    shotsForKey={getShotsForKey()}
+                    shotsAgainstKey={getShotsAgainstKey()}
+                    opponentKey={teamKeyForCharts}
+                    showLabels={showLabels}
+                    attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                    attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                    onExpansionChange={handleChartExpansionChange('shots')}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                  />
+                </div>
+              )}
 
               {/* Goals Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('goals') && columnKeys.includes(getGoalsForKey()) && columnKeys.includes(getGoalsAgainstKey())}
-                className="mb-6"
-              >
-                <GoalsChart
-                  data={clubDataByTeam}
-                  goalsForKey={getGoalsForKey()}
-                  goalsAgainstKey={getGoalsAgainstKey()}
-                  opponentKey={teamKeyForCharts}
-                  showLabels={showLabels}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('goals') && columnKeys.includes(getGoalsForKey()) && columnKeys.includes(getGoalsAgainstKey()) && (
+                <div className={expandedCharts['goals'] ? 'lg:col-span-2' : ''}>
+                  <GoalsChart
+                    data={clubDataByTeam}
+                    goalsForKey={getGoalsForKey()}
+                    goalsAgainstKey={getGoalsAgainstKey()}
+                    opponentKey={teamKeyForCharts}
+                    showLabels={showLabels}
+                    xGKey={columnKeys.includes(getxGKey()) ? getxGKey() : undefined}
+                    xGAKey={columnKeys.includes(getxGAKey()) ? getxGAKey() : undefined}
+                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                    onExpansionChange={handleChartExpansionChange('goals')}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                  />
+                </div>
+              )}
 
               {/* Possession Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('possession') && columnKeys.includes(getPossessionKey())}
-                className="mb-6"
-              >
-                <PossessionChart
-                  data={clubDataByTeam}
-                  possessionKey={getPossessionKey()}
-                  passShareKey={getPassShareKey()}
-                  opponentKey={teamKeyForCharts}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('possession') && columnKeys.includes(getPossessionKey()) && (
+                <div className={expandedCharts['possession'] ? 'lg:col-span-2' : ''}>
+                  <PossessionChart
+                    data={clubDataByTeam}
+                    possessionKey={getPossessionKey()}
+                    passShareKey={getPassShareKey()}
+                    opponentKey={teamKeyForCharts}
+                    onExpansionChange={handleChartExpansionChange('possession')}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                  />
+                </div>
+              )}
 
               {/* xG Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('xg') && columnKeys.includes(getxGKey()) && columnKeys.includes(getxGAKey())}
-                className="mb-6"
-              >
-                <XGChart
-                  data={clubDataByTeam}
-                  xGKey={getxGKey()}
-                  xGAKey={getxGAKey()}
-                  opponentKey={teamKeyForCharts}
-                  showLabels={showLabels}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('xg') && columnKeys.includes(getxGKey()) && columnKeys.includes(getxGAKey()) && (
+                <div className={expandedCharts['xg'] ? 'lg:col-span-2' : ''}>
+                  <XGChart
+                    data={clubDataByTeam}
+                    xGKey={getxGKey()}
+                    xGAKey={getxGAKey()}
+                    opponentKey={teamKeyForCharts}
+                    showLabels={showLabels}
+                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                    onExpansionChange={handleChartExpansionChange('xg')}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                  />
+                </div>
+              )}
 
               {/* TSR Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('tsr') && (columnKeys.includes(getTSRKey()) || columnKeys.includes(getOppTSRKey()))}
-                className="mb-6"
-              >
-                <TSRChart
-                  data={clubDataByTeam}
-                  tsrKey={columnKeys.includes(getTSRKey()) ? getTSRKey() : undefined}
-                  oppTSRKey={columnKeys.includes(getOppTSRKey()) ? getOppTSRKey() : undefined}
-                  opponentKey={teamKeyForCharts}
-                  showLabels={showLabels}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('tsr') && (columnKeys.includes(getTSRKey()) || columnKeys.includes(getOppTSRKey())) && (
+                <div className={expandedCharts['tsr'] ? 'lg:col-span-2' : ''}>
+                  <TSRChart
+                    data={clubDataByTeam}
+                    tsrKey={columnKeys.includes(getTSRKey()) ? getTSRKey() : undefined}
+                    oppTSRKey={columnKeys.includes(getOppTSRKey()) ? getOppTSRKey() : undefined}
+                    opponentKey={teamKeyForCharts}
+                    showLabels={showLabels}
+                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                    onExpansionChange={handleChartExpansionChange('tsr')}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                  />
+                </div>
+              )}
 
               {/* SPI Chart */}
               <FadeTransition
@@ -415,18 +455,23 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
               </FadeTransition>
 
               {/* Conversion Rate Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey()))}
-                className="mb-6"
-              >
-                <ConversionRateChart
-                  data={clubDataByTeam}
-                  conversionRateKey={getConversionRateKey()}
-                  oppConversionRateKey={getOppConversionRateKey()}
-                  opponentKey={teamKeyForCharts}
-                  showLabels={showLabels}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey())) && (
+                <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : ''}>
+                  <ConversionRateChart
+                    data={clubDataByTeam}
+                    conversionRateKey={getConversionRateKey()}
+                    oppConversionRateKey={getOppConversionRateKey()}
+                    opponentKey={teamKeyForCharts}
+                    showLabels={showLabels}
+                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                    onExpansionChange={handleChartExpansionChange('conversionRate')}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                  />
+                </div>
+              )}
 
               {/* Attempts Chart */}
               <FadeTransition
@@ -572,17 +617,17 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
               </FadeTransition>
 
               {/* Pass Share Chart */}
-              <FadeTransition
-                show={selectedCharts.includes('passShare') && (columnKeys.includes(getPassShareKey()) || columnKeys.includes(getOppPassShareKey()))}
-                className="mb-6"
-              >
-                <PassShareChart
-                  data={clubDataByTeam}
-                  passShareKey={getPassShareKey()}
-                  oppPassShareKey={getOppPassShareKey()}
-                  opponentKey={teamKeyForCharts}
-                />
-              </FadeTransition>
+              {selectedCharts.includes('passShare') && (columnKeys.includes(getPassShareKey()) || columnKeys.includes(getOppPassShareKey())) && (
+                <div className={expandedCharts['passShare'] ? 'lg:col-span-2' : ''}>
+                  <PassShareChart
+                    data={clubDataByTeam}
+                    passShareKey={getPassShareKey()}
+                    oppPassShareKey={getOppPassShareKey()}
+                    opponentKey={teamKeyForCharts}
+                  />
+                </div>
+              )}
+              </div>
 
               {/* Auto-Generated Charts */}
               {/* Defense Section */}

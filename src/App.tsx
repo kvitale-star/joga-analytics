@@ -99,6 +99,55 @@ function App() {
     },
   });
   
+  // Dashboard options for Team Data: 'showChartLabels', 'includeOpponents'
+  const [dashboardOptions, setDashboardOptions] = useURLState<string[]>('dashboardOptions', ['showChartLabels'], {
+    serialize: (v) => JSON.stringify(v),
+    deserialize: (v) => {
+      try {
+        const parsed = JSON.parse(v);
+        return Array.isArray(parsed) ? parsed : ['showChartLabels'];
+      } catch {
+        return ['showChartLabels'];
+      }
+    },
+  });
+  
+  // Chart expansion state - synced with chart configs (loaded from saved preferences)
+  const [expandedCharts, setExpandedCharts] = useState<Record<string, boolean>>({});
+  
+  // Load initial expansion states from saved configs
+  useEffect(() => {
+    const loadExpansionStates = async () => {
+      if (!user) return;
+      
+      try {
+        const { getChartPreferences } = await import('./services/chartPreferencesService');
+        const preferences = await getChartPreferences(user.id);
+        const expansionStates: Record<string, boolean> = {};
+        
+        Object.keys(preferences).forEach(chartType => {
+          const config = preferences[chartType];
+          if (config?.isExpanded !== undefined) {
+            expansionStates[chartType] = config.isExpanded;
+          }
+        });
+        
+        setExpandedCharts(expansionStates);
+      } catch (error) {
+        console.error('Error loading chart expansion states:', error);
+      }
+    };
+    
+    loadExpansionStates();
+  }, [user]);
+  
+  const handleChartExpansionChange = (chartType: string) => (isExpanded: boolean) => {
+    setExpandedCharts(prev => ({
+      ...prev,
+      [chartType]: isExpanded,
+    }));
+  };
+  
   // Selected teams for Club Data (multiselect)
   const [selectedClubTeams, setSelectedClubTeams] = useURLState<string[]>('selectedClubTeams', [], {
     serialize: (v) => JSON.stringify(v),
@@ -1821,6 +1870,21 @@ function App() {
               />
             </div>
 
+            {/* Options */}
+            <div className="flex-shrink-0">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Options</label>
+              <MultiSelectDropdown
+                options={[
+                  { value: 'showChartLabels', label: 'Show Chart Labels' },
+                  { value: 'includeOpponents', label: 'Include Opponents' }
+                ]}
+                selectedValues={dashboardOptions}
+                onSelectionChange={setDashboardOptions}
+                placeholder="Select options..."
+                className="min-w-[180px]"
+              />
+            </div>
+
             {/* Last N Games Filter - Last in the group */}
             <div className="flex-shrink-0">
               <label className="block text-xs font-medium text-gray-600 mb-1">Last N Games</label>
@@ -1875,8 +1939,17 @@ function App() {
           </div>
         ) : (
           <>
-            {/* Summary Stats */}
-            <div className="mb-8">
+            {/* Extract global dashboard options */}
+            {(() => {
+              const showLabels = dashboardOptions.includes('showChartLabels');
+              // Note: globalIncludeOpponent is available for future use when implementing
+              // global opponent data toggle that works with chart-specific configs
+              // const globalIncludeOpponent = dashboardOptions.includes('includeOpponents');
+              
+              return (
+                <>
+                  {/* Summary Stats */}
+                  <div className="mb-8">
               {/* Shooting Section */}
               {selectedChartGroup === 'shooting' && (
                 <>
@@ -2494,75 +2567,111 @@ function App() {
               )}
             </div>
 
-            {/* Special Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                  {/* Special Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {(() => {
+                const showLabels = dashboardOptions.includes('showChartLabels');
+                const globalIncludeOpponents = dashboardOptions.includes('includeOpponents');
+                return (
+                  <>
               {selectedCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <ShotsChart
-                    data={dataToDisplay}
-                    shotsForKey={getShotsForKey()}
-                    shotsAgainstKey={getShotsAgainstKey()}
-                    opponentKey={opponentKey}
-                    attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
-                    attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
-                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                  />
-                )
+                <div className={expandedCharts['shots'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <ShotsChart
+                      data={dataToDisplay}
+                      shotsForKey={getShotsForKey()}
+                      shotsAgainstKey={getShotsAgainstKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                      attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                      goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                      goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('shots')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('goals') && columnKeys.includes(getGoalsForKey()) && columnKeys.includes(getGoalsAgainstKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <GoalsChart
-                    data={dataToDisplay}
-                    goalsForKey={getGoalsForKey()}
-                    goalsAgainstKey={getGoalsAgainstKey()}
-                    opponentKey={opponentKey}
-                  />
-                )
+                <div className={expandedCharts['goals'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <GoalsChart
+                      data={dataToDisplay}
+                      goalsForKey={getGoalsForKey()}
+                      goalsAgainstKey={getGoalsAgainstKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      xGKey={columnKeys.includes(getxGKey()) ? getxGKey() : undefined}
+                      xGAKey={columnKeys.includes(getxGAKey()) ? getxGAKey() : undefined}
+                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('goals')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('possession') && columnKeys.includes(getPossessionKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PossessionChart
-                    data={dataToDisplay}
-                    possessionKey={getPossessionKey()}
-                    passShareKey={getPassShareKey()}
-                    opponentKey={opponentKey}
-                  />
-                )
+                <div className={expandedCharts['possession'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PossessionChart
+                      data={dataToDisplay}
+                      possessionKey={getPossessionKey()}
+                      passShareKey={getPassShareKey()}
+                      opponentKey={opponentKey}
+                      onExpansionChange={handleChartExpansionChange('possession')}
+                      globalIncludeOpponents={globalIncludeOpponents}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('xg') && columnKeys.includes(getxGKey()) && columnKeys.includes(getxGAKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <XGChart
-                    data={dataToDisplay}
-                    xGKey={getxGKey()}
-                    xGAKey={getxGAKey()}
-                    opponentKey={opponentKey}
-                  />
-                )
+                <div className={expandedCharts['xg'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <XGChart
+                      data={dataToDisplay}
+                      xGKey={getxGKey()}
+                      xGAKey={getxGAKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                      goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('xg')}
+                      globalIncludeOpponents={globalIncludeOpponents}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('tsr') && (columnKeys.includes(getTSRKey()) || columnKeys.includes(getOppTSRKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <TSRChart
-                    data={dataToDisplay}
-                    tsrKey={columnKeys.includes(getTSRKey()) ? getTSRKey() : undefined}
-                    oppTSRKey={columnKeys.includes(getOppTSRKey()) ? getOppTSRKey() : undefined}
-                    opponentKey={opponentKey}
-                  />
-                )
+                <div className={expandedCharts['tsr'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <TSRChart
+                      data={dataToDisplay}
+                      tsrKey={columnKeys.includes(getTSRKey()) ? getTSRKey() : undefined}
+                      oppTSRKey={columnKeys.includes(getOppTSRKey()) ? getOppTSRKey() : undefined}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('tsr')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('spi') && (columnKeys.includes(getSPIKey()) || 
@@ -2579,22 +2688,35 @@ function App() {
                     oppSpiKey={getOppSPIKey()}
                     oppSpiWKey={getOppSPIWKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
 
               {selectedCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <ConversionRateChart
-                    data={dataToDisplay}
-                    conversionRateKey={getConversionRateKey()}
-                    oppConversionRateKey={getOppConversionRateKey()}
-                    opponentKey={opponentKey}
-                  />
-                )
+                <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <ConversionRateChart
+                      data={dataToDisplay}
+                      conversionRateKey={getConversionRateKey()}
+                      oppConversionRateKey={getOppConversionRateKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                      goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                      goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('conversionRate')}
+                      globalIncludeOpponents={globalIncludeOpponents}
+                    />
+                  )}
+                </div>
               )}
+                  </>
+                );
+              })()}
 
               {selectedCharts.includes('attempts') && columnKeys.includes(getAttemptsKey()) && columnKeys.includes(getOppAttemptsKey()) && (
                 selectedTeam === null ? (
@@ -2605,6 +2727,7 @@ function App() {
                     attemptsKey={getAttemptsKey()}
                     oppAttemptsKey={getOppAttemptsKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2622,6 +2745,7 @@ function App() {
                     oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
                     oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2639,6 +2763,7 @@ function App() {
                     freeKickForKey={getFreeKickForKey()}
                     freeKickAgainstKey={getFreeKickAgainstKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2652,6 +2777,7 @@ function App() {
                     passesForKey={getPassesForKey()}
                     oppPassesKey={getOppPassesKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2665,6 +2791,7 @@ function App() {
                     avgPassLengthKey={getAvgPassLengthKey()}
                     oppAvgPassLengthKey={getOppAvgPassLengthKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2682,6 +2809,7 @@ function App() {
                     passStrings6PlusKey={getTeamPassStrings6PlusKey()}
                     lpcKey={getLPCAvgKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2700,6 +2828,7 @@ function App() {
                     oppSpiKey={getOppSPIKey()}
                     oppSpiWKey={getOppSPIWKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2713,6 +2842,7 @@ function App() {
                     passByZoneKeys={getPassByZoneKeys()}
                     oppPassByZoneKeys={getOppPassByZoneKeys()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2726,6 +2856,7 @@ function App() {
                     ppmKey={getPPMKey()}
                     oppPPMKey={getOppPPMKey()}
                     opponentKey={opponentKey}
+                    showLabels={showLabels}
                   />
                 )
               )}
@@ -2742,17 +2873,17 @@ function App() {
                   />
                 )
               )}
-            </div>
+                  </div>
 
-            {/* Defense Section */}
-            {selectedChartGroup === 'defense' && selectedCharts.includes('auto') && autoChartColumns.length > 0 && (
-              <>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Defense</h2>
-              </>
-            )}
+                        {/* Defense Section */}
+                  {selectedChartGroup === 'defense' && selectedCharts.includes('auto') && autoChartColumns.length > 0 && (
+                    <>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-4">Defense</h2>
+                    </>
+                  )}
 
-            {/* Auto-Generated Charts for All Other Columns */}
-            {selectedCharts.includes('auto') && autoChartColumns.length > 0 && (() => {
+                        {/* Auto-Generated Charts for All Other Columns */}
+                  {selectedCharts.includes('auto') && autoChartColumns.length > 0 && (() => {
               const processedPairs = new Set<string>();
               // Filter to defense-related columns when Defense group is selected
               const columnsToShow = selectedChartGroup === 'defense' 
@@ -2772,12 +2903,12 @@ function App() {
               
               if (columnsToShow.length === 0) return null;
               
-              return (
-                <>
-                  <h2 className={`text-2xl font-bold text-gray-900 mb-6 ${selectedChartGroup === 'defense' ? 'mt-0' : 'mt-8'}`}>
-                    {selectedChartGroup === 'defense' ? 'Defensive Statistics' : 'Additional Statistics'}
-                  </h2>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    return (
+                      <>
+                        <h2 className={`text-2xl font-bold text-gray-900 mb-6 ${selectedChartGroup === 'defense' ? 'mt-0' : 'mt-8'}`}>
+                          {selectedChartGroup === 'defense' ? 'Defensive Statistics' : 'Additional Statistics'}
+                        </h2>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {columnsToShow.map((columnKey) => {
                       // Skip if this column was already processed as part of a pair
                       if (processedPairs.has(columnKey)) {
@@ -2814,19 +2945,23 @@ function App() {
                             opponentKey={opponentKey}
                             config={config}
                             pairColumnKey={pairColumn || undefined}
+                            showLabels={showLabels}
                           />
                         )
                       );
-                    })}
-                  </div>
+                        })}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               );
             })()}
           </>
         )}
 
-          </div>
-        </main>
+        </div>
+      </main>
       </div>
     </div>
   );

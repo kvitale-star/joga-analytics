@@ -1,0 +1,215 @@
+# JOGA Analytics - Cursor Rules
+
+## Project Overview
+JOGA Analytics is a web application for coaches to visualize match data from Google Sheets. It provides interactive charts, analytics, and an AI-powered chatbot for natural language data queries.
+
+## Tech Stack
+
+### Frontend
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
+- **Charts**: Recharts
+- **State Management**: React Context API
+- **HTTP Client**: Fetch API with custom apiClient wrapper
+
+### Backend
+- **Framework**: Express.js + TypeScript
+- **Database**: SQLite with Kysely (type-safe query builder)
+- **Authentication**: Session-based with HttpOnly cookies + CSRF protection
+- **Email**: SendGrid
+- **AI**: Google Gemini API
+- **Rate Limiting**: express-rate-limit
+
+### Deployment
+- **Platform**: Railway
+- **Database**: SQLite (persistent filesystem on Railway)
+
+## Project Structure
+
+```
+joga-visualizer/
+├── backend/              # Backend Express API
+│   ├── src/
+│   │   ├── db/          # Database schema, migrations, Kysely setup
+│   │   ├── middleware/  # Auth, CSRF, rate limiting
+│   │   ├── routes/      # API route handlers
+│   │   ├── services/   # Business logic (auth, sheets, AI, etc.)
+│   │   └── server.ts    # Express app setup
+│   └── package.json
+├── src/                  # Frontend React app
+│   ├── components/      # React components
+│   ├── contexts/        # React contexts (AuthContext)
+│   ├── services/        # API clients and business logic
+│   ├── types/           # TypeScript type definitions
+│   ├── utils/           # Utility functions
+│   └── config.ts        # Configuration
+├── docs/                # Documentation
+└── package.json
+```
+
+## Coding Conventions
+
+### TypeScript
+- Use strict TypeScript with proper types
+- Prefer interfaces over types for object shapes
+- Use type-safe database queries with Kysely
+- Avoid `any` - use `unknown` if type is truly unknown
+
+### React
+- Use functional components with hooks
+- Prefer `useCallback` and `useMemo` for performance optimization
+- Use Context API for global state (AuthContext)
+- Keep components focused and single-purpose
+- Use TypeScript for all component props
+
+### Backend
+- Use async/await for all async operations
+- Use Kysely for all database queries (type-safe)
+- Validate all user input
+- Use middleware for cross-cutting concerns (auth, CSRF, rate limiting)
+- Return consistent error responses: `{ error: string }`
+
+### File Naming
+- Components: PascalCase (e.g., `LoginPage.tsx`)
+- Services/utilities: camelCase (e.g., `authService.ts`)
+- Types: camelCase (e.g., `types.ts`, `auth.ts`)
+- Routes: camelCase (e.g., `auth.ts`, `sheets.ts`)
+
+## Architecture Patterns
+
+### Authentication
+- **Session-based** with HttpOnly cookies (secure, not accessible to JavaScript)
+- **CSRF protection** using tokens in non-HttpOnly cookies
+- **Middleware**: `authenticateSession` checks for session cookie or `X-Session-ID` header
+- **Production**: Cookies use `sameSite: 'none'` for cross-origin (Railway frontend/backend on different domains)
+- **Roles**: admin, coach, viewer with role-based access control
+
+### Database
+- **SQLite** with Kysely for type-safe queries
+- **Migrations**: Automatic on server start, also manual via `npm run migrate`
+- **Schema**: Defined in `backend/src/db/schema.ts` using Kysely types
+- **Queries**: All database access through service layer, never direct queries in routes
+
+### API Design
+- **RESTful** endpoints under `/api/*`
+- **Authentication**: Required for most endpoints (except `/auth/login`, `/auth/setup`)
+- **Error Handling**: Consistent JSON error responses
+- **CORS**: Configured for frontend origin, credentials enabled
+
+### Frontend-Backend Communication
+- **API Client**: `src/services/apiClient.ts` handles all HTTP requests
+- **Credentials**: Always include cookies (`credentials: 'include'`)
+- **CSRF**: Automatically included for state-changing requests (POST, PUT, DELETE)
+- **Error Handling**: Centralized in apiClient, throws errors with messages
+
+### Google Sheets Integration
+- **Backend-only**: API keys stored in backend environment variables
+- **Proxy Pattern**: Frontend calls backend API, backend calls Google Sheets API
+- **Authentication**: Sheet routes require user authentication
+- **Public Sheets**: API key authentication (no OAuth needed)
+
+## Key Patterns
+
+### Service Layer Pattern
+- Business logic in services (e.g., `authService.ts`, `sheetsService.ts`)
+- Routes are thin - they call services and return responses
+- Services handle validation, database queries, external API calls
+
+### Error Handling
+- **Backend**: Try-catch in routes, return appropriate HTTP status codes
+- **Frontend**: Try-catch in service calls, display user-friendly error messages
+- **Logging**: Console logs for debugging (use emoji prefixes: 📊, 🔒, ❌, ✅)
+
+### Environment Variables
+- **Backend**: `.env` file in `backend/` directory
+- **Frontend**: `VITE_*` prefix for Vite environment variables
+- **Production**: Set in Railway dashboard
+- **Never commit**: Add to `.gitignore`
+
+### Type Safety
+- **Database**: Kysely provides full type safety for queries
+- **API**: TypeScript interfaces for request/response types
+- **Frontend**: Type-safe API client with generics
+
+## Important Notes
+
+### Railway Deployment
+- **Trust Proxy**: Set to `1` (trust only first proxy)
+- **Rate Limiting**: Configured with `validate: { trustProxy: false }` to avoid warnings
+- **Cookies**: `sameSite: 'none'` in production for cross-origin support
+- **Port**: Railway sets `PORT` automatically, don't set manually
+- **Database**: SQLite file persists on Railway filesystem
+
+### Security
+- **Passwords**: Hashed with bcryptjs
+- **Sessions**: HttpOnly cookies (not accessible to JavaScript)
+- **CSRF**: Token-based protection for state-changing requests
+- **Rate Limiting**: Applied to auth endpoints
+- **CORS**: Restricted to frontend origin
+- **API Keys**: Never in frontend code, only backend environment variables
+
+### Google Sheets
+- **Environment Variables**: `GOOGLE_SHEETS_SPREADSHEET_ID` and `GOOGLE_SHEETS_API_KEY`
+- **Public Sheets**: API key is sufficient
+- **Private Sheets**: Would require OAuth/service account (not currently implemented)
+- **Diagnostic Endpoint**: `/api/sheets/test` for troubleshooting
+
+### AI Integration
+- **Gemini API**: Used for chatbot functionality
+- **Environment Variable**: `GEMINI_API_KEY` in backend
+- **Service**: `backend/src/services/aiService.ts` and `src/services/geminiService.ts`
+
+## Common Tasks
+
+### Adding a New API Endpoint
+1. Create route handler in `backend/src/routes/`
+2. Add business logic to service in `backend/src/services/`
+3. Add route to `backend/src/server.ts`
+4. Create frontend service function in `src/services/`
+5. Use `apiGet`, `apiPost`, etc. from `apiClient.ts`
+
+### Adding a New Chart Component
+1. Create component in `src/components/`
+2. Use Recharts for visualization
+3. Handle missing data gracefully
+4. Add to chart selector/grouping logic
+5. Follow existing chart component patterns
+
+### Database Migration
+1. Create migration file in `backend/src/db/migrations/`
+2. Use Kysely migration API
+3. Run `npm run migrate` in backend directory
+4. Migrations run automatically on server start
+
+### Adding Environment Variables
+1. **Backend**: Add to `backend/.env` and Railway dashboard
+2. **Frontend**: Add with `VITE_` prefix, add to Railway dashboard
+3. **Documentation**: Update relevant README or docs
+
+## Code Style Preferences
+
+- **Indentation**: 2 spaces
+- **Quotes**: Single quotes for JavaScript/TypeScript
+- **Semicolons**: Yes
+- **Trailing Commas**: Yes in objects/arrays
+- **Arrow Functions**: Preferred for callbacks
+- **Async/Await**: Preferred over Promises.then()
+- **Console Logs**: Use emoji prefixes for easy log filtering (📊, 🔒, ✅, ❌, ⚠️)
+
+## Testing & Debugging
+
+- **Backend Logs**: Check Railway deployment logs
+- **Frontend Logs**: Browser console
+- **Database**: SQLite file at `backend/data/joga.db` (local) or Railway filesystem (production)
+- **API Testing**: Use `/api/health` and `/api/config/check` endpoints
+- **Sheets Testing**: Use `/api/sheets/test` diagnostic endpoint
+
+## When Making Changes
+
+1. **Follow existing patterns** - look at similar code for consistency
+2. **Update types** - ensure TypeScript types are updated
+3. **Handle errors** - always include error handling
+4. **Log appropriately** - use console logs with emoji prefixes
+5. **Test locally** - verify changes work before pushing
+6. **Update docs** - if adding features, update relevant documentation

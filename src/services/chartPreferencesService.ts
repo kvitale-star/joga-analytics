@@ -3,13 +3,17 @@
  * Handles saving and loading chart configurations
  */
 
-import { ChartConfig, ChartPreferences, DEFAULT_SHOTS_CONFIG, DEFAULT_POSSESSION_CONFIG } from '../types/chartConfig';
+import { ChartConfig, ChartPreferences, DEFAULT_SHOTS_CONFIG, DEFAULT_POSSESSION_CONFIG, DEFAULT_GOALS_CONFIG, DEFAULT_XG_CONFIG, DEFAULT_CONVERSION_RATE_CONFIG, DEFAULT_TSR_CONFIG } from '../types/chartConfig';
 import { updateUserPreferences } from './authService';
 import { getUserById } from './authService';
 
 const CHART_DEFAULTS: Record<string, ChartConfig> = {
   shots: DEFAULT_SHOTS_CONFIG,
   possession: DEFAULT_POSSESSION_CONFIG,
+  goals: DEFAULT_GOALS_CONFIG,
+  xg: DEFAULT_XG_CONFIG,
+  conversionRate: DEFAULT_CONVERSION_RATE_CONFIG,
+  tsr: DEFAULT_TSR_CONFIG,
 };
 
 /**
@@ -60,18 +64,30 @@ export async function saveChartConfig(
     const currentPreferences = user.preferences || {};
     const chartPreferences = currentPreferences.chartPreferences || {};
 
+    // Ensure isExpanded is always a boolean (not undefined)
+    const normalizedConfig: ChartConfig = {
+      ...config,
+      isExpanded: config.isExpanded ?? false,
+    };
+
     const updatedPreferences = {
       ...currentPreferences,
       chartPreferences: {
         ...chartPreferences,
-        [chartType]: config,
+        [chartType]: normalizedConfig,
       },
     };
 
+    console.log('Saving chart config:', { chartType, config: normalizedConfig, updatedPreferences });
     await updateUserPreferences(userId, updatedPreferences);
+    console.log('Chart config saved successfully');
   } catch (error) {
     console.error('Error saving chart preferences:', error);
-    throw error;
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to save chart preferences: Unknown error');
   }
 }
 

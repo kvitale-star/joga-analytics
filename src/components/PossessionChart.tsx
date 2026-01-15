@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { MatchData } from '../types';
 import { JOGA_COLORS, OPPONENT_COLORS } from '../utils/colors';
-import { ChartConfig, DEFAULT_POSSESSION_CONFIG, getChartTitle } from '../types/chartConfig';
+import { DEFAULT_POSSESSION_CONFIG, getChartTitle } from '../types/chartConfig';
 import { ChartConfigPanel } from './ChartConfigPanel';
-import { useAuth } from '../contexts/AuthContext';
-import { getChartConfig, saveChartConfig, resetChartConfig } from '../services/chartPreferencesService';
+import { ChartExpandButton } from './ChartExpandButton';
+import { useChartConfig } from '../hooks/useChartConfig';
 
 interface PossessionChartProps {
   data: MatchData[];
@@ -16,6 +16,8 @@ interface PossessionChartProps {
   timeInPossessionKey?: string;
   oppPossessionKey?: string;
   oppPassShareKey?: string;
+  globalIncludeOpponents?: boolean; // Global override for includeOpponent
+  onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
 
 export const PossessionChart: React.FC<PossessionChartProps> = ({
@@ -26,52 +28,15 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
   timeInPossessionKey,
   oppPossessionKey,
   oppPassShareKey,
+  globalIncludeOpponents,
+  onExpansionChange,
 }) => {
-  const { user } = useAuth();
-  const [config, setConfig] = useState<ChartConfig>(DEFAULT_POSSESSION_CONFIG);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load user preferences on mount
-  useEffect(() => {
-    const loadConfig = async () => {
-      if (user) {
-        try {
-          const savedConfig = await getChartConfig(user.id, 'possession');
-          setConfig(savedConfig);
-        } catch (error) {
-          console.error('Error loading chart config:', error);
-        }
-      }
-      setIsLoading(false);
-    };
-    loadConfig();
-  }, [user]);
-
-  const handleConfigChange = (newConfig: ChartConfig) => {
-    setConfig(newConfig);
-  };
-
-  const handleSave = async () => {
-    if (user) {
-      try {
-        await saveChartConfig(user.id, 'possession', config);
-      } catch (error) {
-        console.error('Error saving chart config:', error);
-        alert('Failed to save chart preferences');
-      }
-    }
-  };
-
-  const handleReset = async () => {
-    if (user) {
-      try {
-        await resetChartConfig(user.id, 'possession');
-        setConfig(DEFAULT_POSSESSION_CONFIG);
-      } catch (error) {
-        console.error('Error resetting chart config:', error);
-      }
-    }
-  };
+  const { config, isLoading, handleConfigChange, handleSave, handleReset, handleExpandToggle, isExpanded } = useChartConfig({
+    chartType: 'possession',
+    defaultConfig: DEFAULT_POSSESSION_CONFIG,
+    globalIncludeOpponents,
+    onExpansionChange,
+  });
 
   // Build chart data based on configuration
   const chartData = data.map((match) => {
@@ -187,14 +152,17 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
     <div className="bg-white rounded-lg shadow-md p-6 relative group">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xl font-bold text-gray-800">{chartTitle}</h3>
-        <ChartConfigPanel
-          chartType="possession"
-          config={config}
-          availableMetrics={availableMetrics}
-          onConfigChange={handleConfigChange}
-          onSave={handleSave}
-          onReset={handleReset}
-        />
+        <div className="flex items-center gap-2">
+          <ChartExpandButton isExpanded={isExpanded} onToggle={handleExpandToggle} />
+          <ChartConfigPanel
+            chartType="possession"
+            config={config}
+            availableMetrics={availableMetrics}
+            onConfigChange={handleConfigChange}
+            onSave={handleSave}
+            onReset={handleReset}
+          />
+        </div>
       </div>
       <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 30, bottom: 10 }}>

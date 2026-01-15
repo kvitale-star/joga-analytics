@@ -235,7 +235,22 @@ export async function updateUserPreferences(
   _userId: number,
   preferences: Record<string, any>
 ): Promise<void> {
-  await apiPut('/preferences', { preferences });
+  try {
+    const response = await apiPut<{ success?: boolean }>('/preferences', { preferences });
+    // Backend returns { success: true } on success
+    // If success is explicitly false, that's an error
+    if (response && response.success === false) {
+      throw new Error('Failed to update preferences: Server returned error');
+    }
+    // If response exists (even without success field), consider it successful
+    // The apiClient already throws on HTTP errors, so if we get here, it's likely successful
+  } catch (error) {
+    // Re-throw with more context if it's an API error
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to update preferences: Unknown error');
+  }
 }
 
 // Helper functions that don't need API (client-side only)

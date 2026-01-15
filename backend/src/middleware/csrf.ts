@@ -117,12 +117,15 @@ export function setCsrfTokenCookie(
     }
     
     const isProduction = process.env.NODE_ENV === 'production';
+    // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
+    // 'none' requires 'secure: true' which is set in production
+    const sameSite = isProduction ? 'none' : 'strict';
     
     // Set CSRF token in a non-HttpOnly cookie so JavaScript can read it
     res.cookie('csrfToken', csrfToken, {
       httpOnly: false, // Must be readable by JavaScript
-      secure: isProduction,
-      sameSite: 'strict',
+      secure: isProduction, // Required for sameSite: 'none' in production
+      sameSite: sameSite as 'none' | 'strict',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
     });

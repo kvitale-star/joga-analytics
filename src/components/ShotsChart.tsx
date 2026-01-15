@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import { MatchData } from '../types';
 import { JOGA_COLORS, OPPONENT_COLORS } from '../utils/colors';
-import { ChartConfig, DEFAULT_SHOTS_CONFIG, getChartTitle } from '../types/chartConfig';
+import { DEFAULT_SHOTS_CONFIG, getChartTitle } from '../types/chartConfig';
 import { ChartConfigPanel } from './ChartConfigPanel';
-import { useAuth } from '../contexts/AuthContext';
-import { getChartConfig, saveChartConfig, resetChartConfig } from '../services/chartPreferencesService';
+import { ChartExpandButton } from './ChartExpandButton';
+import { useChartConfig } from '../hooks/useChartConfig';
 
 interface ShotsChartProps {
   data: MatchData[];
@@ -18,6 +18,10 @@ interface ShotsChartProps {
   attemptsAgainstKey?: string; // Opponent attempts (will be used when includeOpponent is true)
   goalsForKey?: string;
   goalsAgainstKey?: string; // Opponent goals (will be used when includeOpponent is true)
+  isExpanded?: boolean;
+  onExpandToggle?: () => void;
+  globalIncludeOpponents?: boolean; // Global override for includeOpponent
+  onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
 
 export const ShotsChart: React.FC<ShotsChartProps> = ({
@@ -30,52 +34,15 @@ export const ShotsChart: React.FC<ShotsChartProps> = ({
   attemptsAgainstKey,
   goalsForKey,
   goalsAgainstKey,
+  globalIncludeOpponents,
+  onExpansionChange,
 }) => {
-  const { user } = useAuth();
-  const [config, setConfig] = useState<ChartConfig>(DEFAULT_SHOTS_CONFIG);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Load user preferences on mount
-  useEffect(() => {
-    const loadConfig = async () => {
-      if (user) {
-        try {
-          const savedConfig = await getChartConfig(user.id, 'shots');
-          setConfig(savedConfig);
-        } catch (error) {
-          console.error('Error loading chart config:', error);
-        }
-      }
-      setIsLoading(false);
-    };
-    loadConfig();
-  }, [user]);
-
-  const handleConfigChange = (newConfig: ChartConfig) => {
-    setConfig(newConfig);
-  };
-
-  const handleSave = async () => {
-    if (user) {
-      try {
-        await saveChartConfig(user.id, 'shots', config);
-      } catch (error) {
-        console.error('Error saving chart config:', error);
-        alert('Failed to save chart preferences');
-      }
-    }
-  };
-
-  const handleReset = async () => {
-    if (user) {
-      try {
-        await resetChartConfig(user.id, 'shots');
-        setConfig(DEFAULT_SHOTS_CONFIG);
-      } catch (error) {
-        console.error('Error resetting chart config:', error);
-      }
-    }
-  };
+  const { config, isLoading, handleConfigChange, handleSave, handleReset, handleExpandToggle, isExpanded } = useChartConfig({
+    chartType: 'shots',
+    defaultConfig: DEFAULT_SHOTS_CONFIG,
+    globalIncludeOpponents,
+    onExpansionChange: onExpansionChange,
+  });
 
   // Build chart data based on configuration
   const chartData = data.map((match) => {
@@ -190,14 +157,17 @@ export const ShotsChart: React.FC<ShotsChartProps> = ({
     <div className="bg-white rounded-lg shadow-md p-6 relative group">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-xl font-bold text-gray-800">{chartTitle}</h3>
-        <ChartConfigPanel
-          chartType="shots"
-          config={config}
-          availableMetrics={availableMetrics}
-          onConfigChange={handleConfigChange}
-          onSave={handleSave}
-          onReset={handleReset}
-        />
+        <div className="flex items-center gap-2">
+          <ChartExpandButton isExpanded={isExpanded} onToggle={handleExpandToggle} />
+          <ChartConfigPanel
+            chartType="shots"
+            config={config}
+            availableMetrics={availableMetrics}
+            onConfigChange={handleConfigChange}
+            onSave={handleSave}
+            onReset={handleReset}
+          />
+        </div>
       </div>
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={chartData} margin={{ top: 5, right: 30, left: 30, bottom: 10 }}>

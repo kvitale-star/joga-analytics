@@ -83,7 +83,7 @@ export const coachingRules: CoachingRules = {
 - Make sure to add a blank line between different sections
 - For longer analyses, use headings to structure the content: # for main sections, ## for subsections, ### for sub-subsections
 - When creating charts do not group percentages with other numbers, always keep them separate.
-- Include opponent data in charts when available, unless the question specifically asks for the team's own data.
+- Include opponents in charts when available, unless the question specifically asks for the team's own data.
 - **CRITICAL - SHOTS vs ATTEMPTS**: In this data, "Shots" (and "Shots For", "Shots Against") means ONLY shots that DO NOT result in goals (missed shots). "Attempts" (and "Attempts For", "Attempts Against") means ALL shots including those that resulted in goals. When users ask for "shots" data, ALWAYS use "Attempts" columns instead unless they specifically ask for shots that don't result in goals. This is different from standard soccer terminology where "shots" includes goals.
 - Do not ever display Match ID unless specifically asked for.`,
   

@@ -60,7 +60,7 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
     - Optionally add "Attempts Against" metric
     - Optionally add "Goals For" metric
     - Optionally add "Goals Against" metric
-    - Toggle "Include Opponent Data" (show opponent's shots in same chart)
+    - Toggle "Include Opponents" (show opponent's shots in same chart)
   
   - **Goals Chart:**
     - Toggle "Goals For" on/off
@@ -153,7 +153,7 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
     - ☐ Attempts Against (optional)
     - ☐ Goals For (optional)
     - ☐ Goals Against (optional)
-    - ☑ Include Opponent Data
+    - ☑ Include Opponents
   - "Save" and "Reset to Defaults" buttons
 
 ---

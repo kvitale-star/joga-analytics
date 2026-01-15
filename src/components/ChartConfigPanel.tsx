@@ -3,7 +3,7 @@ import { ChartConfig } from '../types/chartConfig';
 import { JOGA_COLORS } from '../utils/colors';
 
 interface ChartConfigPanelProps {
-  chartType: 'shots' | 'possession';
+  chartType: 'shots' | 'possession' | 'goals' | 'xg' | 'conversionRate' | 'tsr';
   config: ChartConfig;
   availableMetrics: {
     id: string;
@@ -137,7 +137,7 @@ export const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({
                 onChange={handleOpponentToggle}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
-              <span className="text-sm text-gray-700">Include Opponent Data</span>
+              <span className="text-sm text-gray-700">Include Opponents</span>
             </label>
           </div>
 
