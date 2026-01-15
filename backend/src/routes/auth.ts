@@ -42,10 +42,13 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 
     // Set HttpOnly Secure cookie with session ID
     const isProduction = process.env.NODE_ENV === 'production';
+    // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
+    // 'none' requires 'secure: true' which is set in production
+    const sameSite = isProduction ? 'none' : 'lax';
     res.cookie('sessionId', result.session.id, {
       httpOnly: true,
-      secure: isProduction, // Only send over HTTPS in production
-      sameSite: 'lax', // Allow cookies for same-site and top-level navigation (needed for email links)
+      secure: isProduction, // Only send over HTTPS in production (required for sameSite: 'none')
+      sameSite: sameSite as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
     });
@@ -56,7 +59,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     res.cookie('csrfToken', csrfToken, {
       httpOnly: false, // Must be readable by JavaScript
       secure: isProduction,
-      sameSite: 'strict',
+      sameSite: sameSite as 'none' | 'strict', // 'none' for cross-origin, 'strict' for same-origin
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
     });
@@ -80,8 +83,27 @@ router.post('/login', loginRateLimiter, async (req, res) => {
  */
 router.post('/logout', authenticateSession, async (req, res) => {
   try {
-    const sessionId = req.headers['x-session-id'] as string;
-    await deleteSession(sessionId);
+    const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] as string;
+    if (sessionId) {
+      await deleteSession(sessionId);
+    }
+    
+    // Clear cookies
+    const isProduction = process.env.NODE_ENV === 'production';
+    const sameSite = isProduction ? 'none' : 'lax';
+    res.clearCookie('sessionId', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: sameSite as 'none' | 'lax',
+      path: '/',
+    });
+    res.clearCookie('csrfToken', {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: sameSite as 'none' | 'strict',
+      path: '/',
+    });
+    
     res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Logout failed' });
@@ -156,10 +178,13 @@ router.post('/setup', async (req, res) => {
 
     // Set HttpOnly Secure cookie with session ID
     const isProduction = process.env.NODE_ENV === 'production';
+    // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
+    // 'none' requires 'secure: true' which is set in production
+    const sameSite = isProduction ? 'none' : 'lax';
     res.cookie('sessionId', result.session.id, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      secure: isProduction, // Only send over HTTPS in production (required for sameSite: 'none')
+      sameSite: sameSite as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
     });
@@ -170,7 +195,7 @@ router.post('/setup', async (req, res) => {
     res.cookie('csrfToken', csrfToken, {
       httpOnly: false, // Must be readable by JavaScript
       secure: isProduction,
-      sameSite: 'strict',
+      sameSite: sameSite as 'none' | 'strict', // 'none' for cross-origin, 'strict' for same-origin
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
     });
