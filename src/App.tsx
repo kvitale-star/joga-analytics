@@ -49,6 +49,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [columnKeys, setColumnKeys] = useState<string[]>([]);
+  
+  const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
 
   // URL-persisted state
   const [viewMode, setViewMode] = useURLState<ViewMode>('view', 'dashboard');
@@ -289,10 +291,33 @@ function App() {
   }, [viewMode]); // Only depend on viewMode - setters are stable from useCallback
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Don't try to load data while auth is still checking
+    if (isLoading) {
+      return;
+    }
+
+    // Only load data if user is authenticated (in API mode)
+    // In browser mode, data can be loaded without auth
+    if (!USE_BACKEND_API) {
+      // Browser mode - load data without auth
+      loadData();
+    } else if (user) {
+      // API mode - user is authenticated, load data
+      loadData();
+    } else {
+      // API mode - not authenticated, don't try to load (will show login page)
+      setError(null); // Clear any previous errors
+      setLoading(false);
+    }
+  }, [user, isLoading, USE_BACKEND_API]);
 
   const loadData = async () => {
+    // Don't load if we're in API mode and not authenticated
+    if (USE_BACKEND_API && !user) {
+      console.log('Skipping data load - not authenticated in API mode');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -1375,67 +1400,6 @@ function App() {
   // Don't auto-initialize with all charts - let user select charts explicitly
   // This prevents empty charts from being auto-filled and written to URL
 
-
-  // Show data loading state (separate from auth loading)
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading match data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Data</h2>
-          <p className="text-gray-700 mb-4">{error}</p>
-          <div className="bg-gray-100 p-4 rounded text-sm text-gray-600">
-            <p className="font-semibold mb-2">To fix this:</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Update the spreadsheet ID in <code className="bg-gray-200 px-1 rounded">src/config.ts</code></li>
-              <li>Add your Google API key in <code className="bg-gray-200 px-1 rounded">src/config.ts</code></li>
-              <li>Make sure your sheet is public or you have proper authentication</li>
-            </ol>
-          </div>
-          <button
-            onClick={loadData}
-            className="mt-4 w-full bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (matchData.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">No match data found.</p>
-          <button
-            onClick={loadData}
-            className="mt-4 text-white px-4 py-2 rounded-lg transition-colors"
-            style={{ backgroundColor: '#6787aa' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#557799';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#6787aa';
-            }}
-          >
-            Reload
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Handle navigation from sidebar
   const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings') => {
     if (view === 'chat') {
@@ -1458,7 +1422,7 @@ function App() {
     }
   };
 
-  // Show loading state
+  // Show loading state (auth check in progress)
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1471,12 +1435,12 @@ function App() {
     );
   }
 
-  // Show setup wizard if no users exist
+  // Show setup wizard if no users exist (check BEFORE any data loading)
   if (isSetupRequired) {
     return <SetupWizard />;
   }
 
-  // Show login page if not authenticated
+  // Show login page if not authenticated (check BEFORE any data loading)
   if (!user) {
     // Check for password reset or email verification routes
     const urlParams = new URLSearchParams(window.location.search);
@@ -1512,6 +1476,72 @@ function App() {
     }
     
     return <LoginPage />;
+  }
+
+  // Show data loading state (separate from auth loading)
+  // Only show this if user is authenticated
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading match data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Data</h2>
+          <p className="text-gray-700 mb-4">{error}</p>
+          <div className="bg-gray-100 p-4 rounded text-sm text-gray-600">
+            <p className="font-semibold mb-2">To fix this:</p>
+            <ol className="list-decimal list-inside space-y-1">
+              <li>Ensure <code className="bg-gray-200 px-1 rounded">GOOGLE_SHEETS_SPREADSHEET_ID</code> is set in backend environment variables</li>
+              <li>Ensure <code className="bg-gray-200 px-1 rounded">GOOGLE_SHEETS_API_KEY</code> is set in backend environment variables</li>
+              <li>Make sure your sheet is public or the API key has proper permissions</li>
+              <li>Verify you are logged in (sheets API requires authentication)</li>
+              <li>Check backend logs for detailed error messages</li>
+            </ol>
+            <p className="mt-2 text-xs">
+              Note: Credentials are now managed by the backend for security. Contact your administrator if you need access.
+            </p>
+          </div>
+          <button
+            onClick={loadData}
+            className="mt-4 w-full bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (matchData.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">No match data found.</p>
+          <button
+            onClick={loadData}
+            className="mt-4 text-white px-4 py-2 rounded-lg transition-colors"
+            style={{ backgroundColor: '#6787aa' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#557799';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#6787aa';
+            }}
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Render chat-first view if selected

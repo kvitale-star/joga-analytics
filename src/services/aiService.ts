@@ -1,67 +1,12 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { MatchData, SheetConfig } from '../types';
 import { getCoachingSystemInstructions, coachingRules } from '../config/coachingRules';
 import { fetchColumnMetadata, mergeColumnMetadata, formatMetadataForAI } from './metadataService';
 import { findImageColumns } from '../utils/imageUtils';
+import { apiGet, apiPost } from './apiClient';
 
-// Initialize Gemini with API key
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-const HUGGINGFACE_API_KEY = import.meta.env.VITE_HUGGINGFACE_API_KEY || '';
-
-let genAI: GoogleGenerativeAI | null = null;
-
-if (GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-}
-
-// Request queue to manage rate limiting (Gemini free tier: 15 RPM max for flash-lite)
-class RequestQueue {
-  private queue: Array<{ fn: () => Promise<any>, resolve: (value: any) => void, reject: (error: any) => void }> = [];
-  private processing = false;
-  private lastRequestTime = 0;
-  private readonly minInterval = 4000; // 4 seconds between requests (15 per minute = 1 per 4 seconds)
-
-  async enqueue<T>(fn: () => Promise<T>, onStatusUpdate?: (status: string) => void): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push({ fn, resolve, reject });
-      this.processQueue(onStatusUpdate);
-    });
-  }
-
-  private async processQueue(onStatusUpdate?: (status: string) => void) {
-    if (this.processing || this.queue.length === 0) return;
-
-    this.processing = true;
-
-    while (this.queue.length > 0) {
-      const now = Date.now();
-      const timeSinceLastRequest = now - this.lastRequestTime;
-      
-      if (timeSinceLastRequest < this.minInterval) {
-        const waitTime = this.minInterval - timeSinceLastRequest;
-        if (onStatusUpdate) {
-          onStatusUpdate(`Waiting ${Math.ceil(waitTime / 1000)}s before next request...`);
-        }
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
-
-      const task = this.queue.shift();
-      if (task) {
-        this.lastRequestTime = Date.now();
-        try {
-          const result = await task.fn();
-          task.resolve(result);
-        } catch (error) {
-          task.reject(error);
-        }
-      }
-    }
-
-    this.processing = false;
-  }
-}
-
-const requestQueue = new RequestQueue();
+// Cache for AI configuration status
+let aiConfiguredCache: boolean | null = null;
+let aiConfiguredCheckPromise: Promise<boolean> | null = null;
 
 /**
  * Formats match data into a readable string for the AI
@@ -219,232 +164,9 @@ ${dataContext}${metadataContext}
 Answer the coach's question based on this data. Include charts when visualization would be helpful:`;
 }
 
-/**
- * Retry with exponential backoff
- */
-async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries: number = 3,
-  initialDelay: number = 1000,
-  onStatusUpdate?: (status: string) => void
-): Promise<T> {
-  let lastError: any = null;
-  
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error: any) {
-      lastError = error;
-      
-      // Check if error is retryable
-      const isRetryable = error?.message?.includes('503') || 
-                         error?.message?.includes('429') ||
-                         error?.message?.includes('quota') ||
-                         error?.message?.includes('rate limit') ||
-                         error?.message?.includes('busy') ||
-                         error?.message?.includes('resource exhausted');
-      
-      if (!isRetryable || attempt === maxRetries - 1) {
-        throw error;
-      }
-      
-      // Exponential backoff: 1s, 2s, 4s
-      const delay = initialDelay * Math.pow(2, attempt);
-      if (onStatusUpdate) {
-        onStatusUpdate(`Service busy. Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
-      }
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
-  }
-  
-  throw lastError || new Error('Max retries exceeded');
-}
 
 /**
- * Try Gemini API with optimized model selection
- */
-async function tryGemini(
-  prompt: string,
-  onStatusUpdate?: (status: string) => void
-): Promise<string | null> {
-  if (!genAI) {
-    return null;
-  }
-
-  // Optimized model order - prioritize higher limit models first
-  // Flash-Lite has 15 RPM (highest free tier limit)
-  const modelNames = [
-    'gemini-2.5-flash-lite',  // 15 RPM, 250K TPM, 1000 RPD (BEST for free tier)
-    'gemini-2.0-flash',       // 15 RPM, 1M TPM, 200 RPD
-    'gemini-2.5-flash',       // 10 RPM, 250K TPM, 250 RPD
-    'gemini-1.5-flash',       // Fallback to older models
-    'gemini-2.5-pro',         // 5 RPM, 125K TPM, 100 RPD (lowest priority)
-    'gemini-1.5-pro',
-    'gemini-pro',
-  ];
-
-  for (const modelName of modelNames) {
-    try {
-      if (onStatusUpdate) {
-        onStatusUpdate(`Trying Gemini ${modelName}...`);
-      }
-      
-      const result = await retryWithBackoff(
-        async () => {
-          const model = genAI!.getGenerativeModel({ model: modelName });
-          const result = await model.generateContent(prompt);
-          return result.response.text();
-        },
-        3,
-        1000,
-        onStatusUpdate
-      );
-      
-      if (onStatusUpdate) {
-        onStatusUpdate(`Success with Gemini ${modelName}`);
-      }
-      return result;
-    } catch (err: any) {
-      // If it's a 404/model not found, try next model
-      if (err?.message?.includes('404') || err?.message?.includes('not found')) {
-        continue;
-      }
-      // If it's a quota/rate limit error, try next model
-      if (err?.message?.includes('quota') || err?.message?.includes('rate limit') || 
-          err?.message?.includes('busy') || err?.message?.includes('429') || 
-          err?.message?.includes('503')) {
-        if (onStatusUpdate) {
-          onStatusUpdate(`${modelName} is busy, trying next model...`);
-        }
-        continue;
-      }
-      // For other errors, log and continue to next model
-      console.warn(`Gemini ${modelName} error:`, err);
-      continue;
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Try Hugging Face Inference API as fallback
- */
-async function tryHuggingFace(
-  prompt: string,
-  onStatusUpdate?: (status: string) => void
-): Promise<string | null> {
-  if (!HUGGINGFACE_API_KEY) {
-    return null;
-  }
-
-  // Use a free, capable model for chat
-  // meta-llama/Llama-3.1-8B-Instruct is free and good quality
-  const model = 'meta-llama/Llama-3.1-8B-Instruct';
-  
-  try {
-    if (onStatusUpdate) {
-      onStatusUpdate(`Trying Hugging Face ${model}...`);
-    }
-
-    const response = await fetch(
-      `https://api-inference.huggingface.co/models/${model}`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 2048,
-            temperature: 0.7,
-            return_full_text: false,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 503) {
-        // Model is loading, wait and retry once
-        if (onStatusUpdate) {
-          onStatusUpdate('Hugging Face model is loading, waiting 10s...');
-        }
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        
-        const retryResponse = await fetch(
-          `https://api-inference.huggingface.co/models/${model}`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${HUGGINGFACE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              inputs: prompt,
-              parameters: {
-                max_new_tokens: 2048,
-                temperature: 0.7,
-                return_full_text: false,
-              },
-            }),
-          }
-        );
-        
-        if (!retryResponse.ok) {
-          return null;
-        }
-        
-        const retryData = await retryResponse.json();
-        // Handle different response formats
-        let generatedText: string | null = null;
-        if (Array.isArray(retryData) && retryData[0]) {
-          generatedText = retryData[0].generated_text || retryData[0].text || null;
-        } else if (retryData.generated_text) {
-          generatedText = retryData.generated_text;
-        } else if (retryData.text) {
-          generatedText = retryData.text;
-        }
-        
-        if (generatedText) {
-          if (onStatusUpdate) {
-            onStatusUpdate('Success with Hugging Face');
-          }
-          return generatedText;
-        }
-      }
-      return null;
-    }
-
-    const data = await response.json();
-    // Handle different response formats
-    let generatedText: string | null = null;
-    if (Array.isArray(data) && data[0]) {
-      generatedText = data[0].generated_text || data[0].text || null;
-    } else if (data.generated_text) {
-      generatedText = data.generated_text;
-    } else if (data.text) {
-      generatedText = data.text;
-    }
-    
-    if (generatedText) {
-      if (onStatusUpdate) {
-        onStatusUpdate('Success with Hugging Face');
-      }
-      return generatedText;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Hugging Face API error:', error);
-    return null;
-  }
-}
-
-/**
- * Main chat function with hybrid fallback system
+ * Main chat function using backend API
  */
 export async function chatWithAI(
   message: string,
@@ -475,58 +197,76 @@ export async function chatWithAI(
   }
   
   const systemPrompt = buildSystemPrompt(dataContext, metadataContext);
-  const prompt = `${systemPrompt}\n\nCoach's question: ${message}`;
+  const context = `${systemPrompt}\n\nCoach's question: ${message}`;
 
-  // Try Gemini first (queue the request to respect rate limits)
-  if (genAI) {
-    try {
-      if (onStatusUpdate) {
-        onStatusUpdate('Requesting from Gemini API...');
-      }
-      
-      const result = await requestQueue.enqueue(
-        async () => {
-          return await tryGemini(prompt, onStatusUpdate);
-        },
-        onStatusUpdate
-      );
-      
-      if (result) {
-        return result;
-      }
-    } catch (error) {
-      console.warn('Gemini failed, trying fallback:', error);
-      if (onStatusUpdate) {
-        onStatusUpdate('Gemini unavailable, trying alternative...');
-      }
+  try {
+    if (onStatusUpdate) {
+      onStatusUpdate('Requesting from AI service...');
     }
-  }
 
-  // Fallback to Hugging Face
-  if (HUGGINGFACE_API_KEY) {
-    try {
-      const result = await tryHuggingFace(prompt, onStatusUpdate);
-      if (result) {
-        return result;
-      }
-    } catch (error) {
-      console.error('Hugging Face fallback failed:', error);
+    // Call backend API which handles AI API calls
+    // Send only the formatted context string, not the raw matchData array to avoid payload size issues
+    const result = await apiPost<{ response: string }>('/ai/chat', {
+      message,
+      context, // Send formatted context instead of raw matchData
+    });
+
+    return result.response;
+  } catch (error: any) {
+    console.error('AI service error:', error);
+    if (error.message?.includes('not configured')) {
+      return 'Error: AI service is not configured. Please contact your administrator.';
     }
+    throw error;
   }
-
-  // If both fail
-  if (!genAI && !HUGGINGFACE_API_KEY) {
-    return 'Error: No AI service configured. Please add VITE_GEMINI_API_KEY or VITE_HUGGINGFACE_API_KEY to your .env file.';
-  }
-
-  return 'Error: All AI services are currently unavailable. Please try again in a moment.';
 }
 
 /**
- * Check if any AI service is configured
+ * Check if AI service is configured (via backend)
+ * Returns cached value synchronously, updates cache in background
  */
 export function isAIConfigured(): boolean {
-  return !!(GEMINI_API_KEY || HUGGINGFACE_API_KEY);
+  // Return cached value if available
+  if (aiConfiguredCache !== null) {
+    return aiConfiguredCache;
+  }
+
+  // Start async check if not already in progress
+  if (!aiConfiguredCheckPromise) {
+    aiConfiguredCheckPromise = (async () => {
+      try {
+        const status = await apiGet<{ configured: boolean }>('/ai/status');
+        aiConfiguredCache = status.configured;
+        return status.configured;
+      } catch (error) {
+        // If backend is unavailable, assume not configured
+        aiConfiguredCache = false;
+        return false;
+      } finally {
+        aiConfiguredCheckPromise = null;
+      }
+    })();
+  }
+
+  // Return false while checking (will update cache when done)
+  return false;
+}
+
+/**
+ * Force refresh of AI configuration status
+ */
+export async function refreshAIConfigured(): Promise<boolean> {
+  aiConfiguredCache = null;
+  aiConfiguredCheckPromise = null;
+  
+  try {
+    const status = await apiGet<{ configured: boolean }>('/ai/status');
+    aiConfiguredCache = status.configured;
+    return status.configured;
+  } catch (error) {
+    aiConfiguredCache = false;
+    return false;
+  }
 }
 
 /**
@@ -542,6 +282,6 @@ export async function chatWithGemini(
 }
 
 export function isGeminiConfigured(): boolean {
-  return !!GEMINI_API_KEY && !!genAI;
+  return isAIConfigured();
 }
 

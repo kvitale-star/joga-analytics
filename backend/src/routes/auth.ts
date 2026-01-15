@@ -13,6 +13,12 @@ import {
 } from '../services/authService.js';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../services/emailService.js';
 import { authenticateSession } from '../middleware/auth.js';
+import {
+  loginRateLimiter,
+  passwordResetRateLimiter,
+  emailVerificationRateLimiter,
+  authRateLimiter,
+} from '../middleware/rateLimit.js';
 
 const router = express.Router();
 
@@ -20,7 +26,7 @@ const router = express.Router();
  * POST /api/auth/login
  * Login with email and password
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -34,7 +40,35 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    res.json(result);
+    // Set HttpOnly Secure cookie with session ID
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('sessionId', result.session.id, {
+      httpOnly: true,
+      secure: isProduction, // Only send over HTTPS in production
+      sameSite: 'lax', // Allow cookies for same-site and top-level navigation (needed for email links)
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+
+    // Set CSRF token cookie (non-HttpOnly so JS can read it)
+    const { generateCsrfToken } = await import('../middleware/csrf.js');
+    const csrfToken = generateCsrfToken(result.session.id);
+    res.cookie('csrfToken', csrfToken, {
+      httpOnly: false, // Must be readable by JavaScript
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/',
+    });
+
+    // Return user and session info (but session ID is in cookie)
+    res.json({
+      user: result.user,
+      session: {
+        ...result.session,
+        id: undefined, // Don't send session ID in response body
+      },
+    });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Login failed' });
   }
@@ -91,13 +125,24 @@ router.get('/setup-required', async (req, res) => {
 /**
  * POST /api/auth/setup
  * Create initial admin user
+ * Requires bootstrap secret to prevent race-to-first-admin vulnerability
  */
 router.post('/setup', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, bootstrapSecret } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Email, password, and name required' });
+    }
+
+    // Validate bootstrap secret
+    const expectedSecret = process.env.BOOTSTRAP_SECRET;
+    if (!expectedSecret) {
+      return res.status(500).json({ error: 'Bootstrap secret not configured. Please contact administrator.' });
+    }
+
+    if (!bootstrapSecret || bootstrapSecret !== expectedSecret) {
+      return res.status(403).json({ error: 'Invalid bootstrap secret' });
     }
 
     const admin = await createInitialAdmin({ email, password, name });
@@ -105,7 +150,39 @@ router.post('/setup', async (req, res) => {
     // Auto-login after setup
     const result = await login(email, password);
     
-    res.json(result);
+    if (!result) {
+      return res.status(500).json({ error: 'Failed to login after setup' });
+    }
+
+    // Set HttpOnly Secure cookie with session ID
+    const isProduction = process.env.NODE_ENV === 'production';
+    res.cookie('sessionId', result.session.id, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+
+    // Set CSRF token cookie (non-HttpOnly so JS can read it)
+    const { generateCsrfToken } = await import('../middleware/csrf.js');
+    const csrfToken = generateCsrfToken(result.session.id);
+    res.cookie('csrfToken', csrfToken, {
+      httpOnly: false, // Must be readable by JavaScript
+      secure: isProduction,
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/',
+    });
+
+    // Return user and session info (but session ID is in cookie)
+    res.json({
+      user: result.user,
+      session: {
+        ...result.session,
+        id: undefined, // Don't send session ID in response body
+      },
+    });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Setup failed' });
   }
@@ -115,7 +192,7 @@ router.post('/setup', async (req, res) => {
  * POST /api/auth/verify-email
  * Verify email with token
  */
-router.post('/verify-email', async (req, res) => {
+router.post('/verify-email', emailVerificationRateLimiter, async (req, res) => {
   try {
     const { token } = req.body;
 
@@ -138,7 +215,7 @@ router.post('/verify-email', async (req, res) => {
  * POST /api/auth/request-password-reset
  * Request password reset (sends email)
  */
-router.post('/request-password-reset', async (req, res) => {
+router.post('/request-password-reset', passwordResetRateLimiter, async (req, res) => {
   try {
     const { email } = req.body;
 
@@ -166,7 +243,7 @@ router.post('/request-password-reset', async (req, res) => {
  * POST /api/auth/reset-password
  * Reset password with token
  */
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', passwordResetRateLimiter, async (req, res) => {
   try {
     const { token, password } = req.body;
 

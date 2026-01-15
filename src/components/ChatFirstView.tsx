@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MatchData } from '../types';
-import { chatWithAI, isAIConfigured } from '../services/aiService';
+import { MatchData, SheetConfig } from '../types';
+import { chatWithAI, refreshAIConfigured } from '../services/aiService';
 import { ChatMessage } from './ChatMessage';
 import { ChartData } from './ChartRenderer';
 import { WelcomeMessage } from './WelcomeMessage';
@@ -13,8 +13,6 @@ interface Message {
   charts?: ChartData[];
 }
 
-import { SheetConfig } from '../types';
-
 interface ChatFirstViewProps {
   matchData: MatchData[];
   columnKeys: string[];
@@ -22,6 +20,7 @@ interface ChatFirstViewProps {
 }
 
 export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnKeys, sheetConfig }) => {
+  const [aiConfigured, setAiConfigured] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [showWelcome, setShowWelcome] = useState(true);
   const [input, setInput] = useState('');
@@ -30,9 +29,19 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Check AI configuration status on mount
+  useEffect(() => {
+    const checkAIConfig = async () => {
+      const configured = await refreshAIConfigured();
+      setAiConfigured(configured);
+    };
+    
+    checkAIConfig();
+  }, []);
+
   
   const handleSendQuestion = async (question: string) => {
-    if (!question.trim() || isLoading || !isAIConfigured()) return;
+    if (!question.trim() || isLoading || !aiConfigured) return;
 
     const userMessage: Message = {
       role: 'user',
@@ -101,7 +110,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
   }, []);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !isAIConfigured()) return;
+    if (!input.trim() || isLoading || !aiConfigured) return;
     
     setShowWelcome(false);
     handleSendQuestion(input.trim());
@@ -134,7 +143,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
         <div className="max-w-6xl mx-auto w-full">
-          {!isAIConfigured() ? (
+          {!aiConfigured ? (
             <div className="bg-white rounded-lg p-6 border border-red-200 shadow-sm">
               <div className="text-red-600 font-semibold mb-2">⚠️ AI service is not configured</div>
               <p className="text-gray-600">
@@ -192,29 +201,29 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={isAIConfigured() ? "Ask about your match data..." : "API key required"}
-              disabled={isLoading || !isAIConfigured()}
+              placeholder={aiConfigured ? "Ask about your match data..." : "AI service not configured"}
+              disabled={isLoading || !aiConfigured}
               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             <button
               onClick={handleSend}
-              disabled={!input.trim() || isLoading || !isAIConfigured()}
+              disabled={!input.trim() || isLoading || !aiConfigured}
               className="px-6 py-3 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
               style={{
-                backgroundColor: isLoading || !input.trim() || !isAIConfigured() 
+                backgroundColor: isLoading || !input.trim() || !aiConfigured 
                   ? '#d1d5db' 
                   : '#ceff00', // Nike Volt Yellow
-                color: isLoading || !input.trim() || !isAIConfigured()
+                color: isLoading || !input.trim() || !aiConfigured
                   ? '#6b7280'
                   : '#000000', // Black text on Volt Yellow
               }}
               onMouseEnter={(e) => {
-                if (!isLoading && input.trim() && isAIConfigured()) {
+                if (!isLoading && input.trim() && aiConfigured) {
                   e.currentTarget.style.backgroundColor = '#b8e600'; // Darker Volt Yellow
                 }
               }}
               onMouseLeave={(e) => {
-                if (!isLoading && input.trim() && isAIConfigured()) {
+                if (!isLoading && input.trim() && aiConfigured) {
                   e.currentTarget.style.backgroundColor = '#ceff00'; // Volt Yellow
                 }
               }}
@@ -222,9 +231,9 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
               Send
             </button>
           </div>
-          {!isAIConfigured() && (
+          {!aiConfigured && (
             <p className="text-xs text-gray-500 mt-2">
-              Add VITE_GEMINI_API_KEY or VITE_HUGGINGFACE_API_KEY to your .env file to enable the chatbot
+              AI service requires GEMINI_API_KEY in backend .env file. Contact your administrator.
             </p>
           )}
         </div>

@@ -45,9 +45,11 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
   try {
     const response = await apiPost<{ user: User; session: Session }>('/auth/login', credentials);
     
-    if (response && response.user && response.session) {
-      // Store session ID
-      sessionHelpers.setSessionId(response.session.id);
+    if (response && response.user) {
+      // Session ID is now in HttpOnly cookie, not in response
+      // Create session object for frontend state
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
       
       // Convert date strings to Date objects
       return {
@@ -58,10 +60,11 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
           lastLoginAt: response.user.lastLoginAt ? new Date(response.user.lastLoginAt) : null,
         },
         session: {
-          ...response.session,
-          expiresAt: new Date(response.session.expiresAt),
-          lastActivityAt: new Date(response.session.lastActivityAt),
-          createdAt: new Date(response.session.createdAt),
+          id: 'cookie-based', // Placeholder - actual ID is in HttpOnly cookie
+          userId: response.user.id,
+          expiresAt,
+          lastActivityAt: new Date(),
+          createdAt: new Date(),
         },
       };
     }
@@ -77,21 +80,22 @@ export async function login(credentials: LoginCredentials): Promise<{ user: User
 
 /**
  * Get session by ID and validate it
+ * In API mode, session is validated via HttpOnly cookie
+ * sessionId parameter is kept for backward compatibility but not used
  */
-export async function getSession(sessionId: string): Promise<Session | null> {
+export async function getSession(_sessionId: string): Promise<Session | null> {
   try {
-    // The backend validates the session automatically via the X-Session-ID header
+    // The backend validates the session automatically via HttpOnly cookie
     // So we just need to check if we can get the current user
     const user = await apiGet<User>('/auth/me');
     
     if (user) {
       // Session is valid, return a session object
-      // Note: We don't get full session details from /auth/me, so we construct it
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
       
       return {
-        id: sessionId,
+        id: 'cookie-based', // Placeholder - actual ID is in HttpOnly cookie
         userId: user.id,
         expiresAt,
         lastActivityAt: new Date(),
@@ -127,10 +131,8 @@ export async function createInitialAdmin(data: SetupWizardData): Promise<User> {
   try {
     const response = await apiPost<{ user: User; session: Session }>('/auth/setup', data);
     
-    if (response && response.user && response.session) {
-      // Store session ID
-      sessionHelpers.setSessionId(response.session.id);
-      
+    if (response && response.user) {
+      // Session ID is now in HttpOnly cookie, not in response
       // Convert date strings to Date objects
       return {
         ...response.user,

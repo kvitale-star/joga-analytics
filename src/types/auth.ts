@@ -66,5 +66,6 @@ export interface SetupWizardData {
   email: string;
   password: string;
   name: string;
+  bootstrapSecret?: string;
 }
 

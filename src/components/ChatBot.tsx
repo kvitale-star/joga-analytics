@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MatchData } from '../types';
-import { chatWithAI, isAIConfigured } from '../services/aiService';
+import { chatWithAI, isAIConfigured, refreshAIConfigured } from '../services/aiService';
 
 interface ChatBotProps {
   matchData: MatchData[];
@@ -14,12 +14,11 @@ interface Message {
 }
 
 export const ChatBot: React.FC<ChatBotProps> = ({ matchData, columnKeys }) => {
+  const [aiConfigured, setAiConfigured] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: isAIConfigured()
-        ? "Hello! I'm your AI coaching assistant. I can help you analyze your match data. Try asking me questions like:\n\n• \"Show me possession stats from the last 5 games\"\n• \"Compare shots and SPI across all teams\"\n• \"What's the average xG for recent matches?\"\n• \"Which games had the highest conversion rate?\""
-        : "⚠️ AI service is not configured. Please add your VITE_GEMINI_API_KEY or VITE_HUGGINGFACE_API_KEY to your .env file or environment variables to use the chatbot.",
+      content: "Loading AI service status...",
       timestamp: new Date(),
     },
   ]);
@@ -29,6 +28,25 @@ export const ChatBot: React.FC<ChatBotProps> = ({ matchData, columnKeys }) => {
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Check AI configuration status on mount
+  useEffect(() => {
+    const checkAIConfig = async () => {
+      const configured = await refreshAIConfigured();
+      setAiConfigured(configured);
+      
+      // Update welcome message based on configuration
+      setMessages([{
+        role: 'assistant',
+        content: configured
+          ? "Hello! I'm your AI coaching assistant. I can help you analyze your match data. Try asking me questions like:\n\n• \"Show me possession stats from the last 5 games\"\n• \"Compare shots and SPI across all teams\"\n• \"What's the average xG for recent matches?\"\n• \"Which games had the highest conversion rate?\""
+          : "⚠️ AI service is not configured. Please ensure GEMINI_API_KEY is set in the backend .env file. Contact your administrator for assistance.",
+        timestamp: new Date(),
+      }]);
+    };
+    
+    checkAIConfig();
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,7 +63,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ matchData, columnKeys }) => {
   }, [isOpen]);
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !isAIConfigured()) return;
+    if (!input.trim() || isLoading || !aiConfigured) return;
 
     const userMessage: Message = {
       role: 'user',
@@ -216,7 +234,7 @@ export const ChatBot: React.FC<ChatBotProps> = ({ matchData, columnKeys }) => {
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isLoading || !isAIConfigured()}
+            disabled={!input.trim() || isLoading || !aiConfigured}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
             aria-label="Send message"
           >
@@ -236,9 +254,9 @@ export const ChatBot: React.FC<ChatBotProps> = ({ matchData, columnKeys }) => {
             </svg>
           </button>
         </div>
-        {!isAIConfigured() && (
+        {!aiConfigured && (
           <p className="text-xs text-gray-500 mt-2">
-            Add VITE_GEMINI_API_KEY or VITE_HUGGINGFACE_API_KEY to your .env file
+            AI service requires GEMINI_API_KEY in backend .env file. Contact your administrator.
           </p>
         )}
       </div>

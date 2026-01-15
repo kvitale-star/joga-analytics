@@ -11,6 +11,7 @@ export const SetupWizard: React.FC = () => {
     name: '',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [bootstrapSecret, setBootstrapSecret] = useState('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,9 +40,14 @@ export const SetupWizard: React.FC = () => {
       return;
     }
 
+    if (!bootstrapSecret) {
+      setError('Bootstrap secret is required');
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await setupAdmin(formData);
+      await setupAdmin({ ...formData, bootstrapSecret });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create admin account');
       setIsLoading(false);
@@ -128,6 +134,25 @@ export const SetupWizard: React.FC = () => {
                 required
                 disabled={isLoading}
               />
+            </div>
+
+            <div>
+              <label htmlFor="bootstrapSecret" className="block text-sm font-medium text-gray-700 mb-1">
+                Bootstrap Secret
+              </label>
+              <input
+                id="bootstrapSecret"
+                type="password"
+                value={bootstrapSecret}
+                onChange={(e) => setBootstrapSecret(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter bootstrap secret"
+                required
+                disabled={isLoading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Required to create the first admin account. Check your deployment configuration.
+              </p>
             </div>
 
             <button

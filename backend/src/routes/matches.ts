@@ -8,7 +8,7 @@ import {
   getMatchEvents,
   createGameEvent,
 } from '../services/matchService.js';
-import { authenticateSession } from '../middleware/auth.js';
+import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -69,8 +69,9 @@ router.get('/:id', async (req, res) => {
 /**
  * POST /api/matches
  * Create a new match
+ * Requires: Admin (any team) or Coach (assigned teams only)
  */
-router.post('/', async (req, res) => {
+router.post('/', canModifyMatch, async (req, res) => {
   try {
     const {
       teamId,
@@ -120,8 +121,9 @@ router.post('/', async (req, res) => {
 /**
  * PUT /api/matches/:id
  * Update a match
+ * Requires: Admin (any team) or Coach (assigned teams only)
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', canModifyMatch, async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
     const {
@@ -168,8 +170,9 @@ router.put('/:id', async (req, res) => {
 /**
  * DELETE /api/matches/:id
  * Delete a match
+ * Requires: Admin (any team) or Coach (assigned teams only)
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', canModifyMatch, async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
     await deleteMatch(matchId);
@@ -196,8 +199,9 @@ router.get('/:id/events', async (req, res) => {
 /**
  * POST /api/matches/:id/events
  * Create a game event for a match
+ * Requires: Admin (any team) or Coach (assigned teams only)
  */
-router.post('/:id/events', async (req, res) => {
+router.post('/:id/events', canModifyMatch, async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
     const {

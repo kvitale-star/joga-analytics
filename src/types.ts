@@ -12,9 +12,9 @@ export interface MatchData {
 }
 
 export interface SheetConfig {
-  spreadsheetId: string;
+  spreadsheetId?: string; // Optional - now handled by backend
   range: string;
-  apiKey?: string;
+  apiKey?: string; // Optional - now handled by backend
   credentials?: {
     client_email: string;
     private_key: string;

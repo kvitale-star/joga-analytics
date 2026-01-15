@@ -123,6 +123,11 @@ export async function createUser(
   const passwordSetupToken = password ? null : generateToken();
   const now = new Date().toISOString();
   
+  // Set email verification token expiry (7 days)
+  const emailVerificationExpires = role === 'admin' 
+    ? null // Admins don't need verification
+    : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+  
   // If password is provided, validate and hash it
   // If not provided, we'll use a placeholder hash (user must set password via email link)
   let passwordHash: string;
@@ -152,6 +157,7 @@ export async function createUser(
       role,
       email_verified: role === 'admin' ? 1 : 0,
       email_verification_token: emailVerificationToken,
+      email_verification_expires: emailVerificationExpires,
       email_verification_sent_at: role === 'admin' ? null : now,
       password_reset_token: passwordSetupToken,
       password_reset_expires: passwordResetExpires,
@@ -326,15 +332,46 @@ export async function cleanupExpiredSessions(): Promise<void> {
 
 /**
  * Verify email with token
+ * Checks token expiry before verifying
  */
 export async function verifyEmail(token: string): Promise<boolean> {
+  const now = new Date().toISOString();
+  
+  // Check if token exists and is not expired
+  const user = await db
+    .selectFrom('users')
+    .select(['id', 'email_verification_expires'])
+    .where('email_verification_token', '=', token)
+    .where('email_verified', '=', 0)
+    .executeTakeFirst();
+
+  if (!user) {
+    return false; // Token not found or already verified
+  }
+
+  // Check if token has expired
+  if (user.email_verification_expires && user.email_verification_expires < now) {
+    // Token expired - clear it
+    await db
+      .updateTable('users')
+      .set({
+        email_verification_token: null,
+        email_verification_expires: null,
+      })
+      .where('id', '=', user.id)
+      .execute();
+    return false; // Token expired
+  }
+
+  // Token is valid - verify email
   const result = await db
     .updateTable('users')
     .set({
       email_verified: 1,
       email_verification_token: null,
+      email_verification_expires: null,
     })
-    .where('email_verification_token', '=', token)
+    .where('id', '=', user.id)
     .execute();
 
   return result.length > 0;

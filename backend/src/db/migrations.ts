@@ -249,5 +249,61 @@ export async function runMigrations(): Promise<void> {
     console.log('✓ Migration 001 completed successfully');
   }
 
+  // Run migration 002 if needed - Add email_verification_expires column
+  if (version < 2) {
+    console.log('Running migration 002: Add email_verification_expires column...');
+    
+    try {
+      // Add email_verification_expires column to users table
+      getSqliteDb().prepare(`
+        ALTER TABLE users 
+        ADD COLUMN email_verification_expires TIMESTAMP
+      `).run();
+      
+      // Set expiry for existing unverified tokens (7 days from now)
+      const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      getSqliteDb().prepare(`
+        UPDATE users 
+        SET email_verification_expires = ?
+        WHERE email_verification_token IS NOT NULL 
+        AND email_verified = 0
+        AND email_verification_expires IS NULL
+      `).run(sevenDaysFromNow);
+      
+      // Record migration
+      await db
+        .insertInto('schema_migrations')
+        .values({
+          version: 2,
+          description: 'Add email_verification_expires column for token expiry',
+          applied_at: new Date().toISOString(),
+        })
+        .execute();
+      
+      console.log('✓ Migration 002 completed successfully');
+    } catch (error: any) {
+      const errorMsg = error?.message || '';
+      if (errorMsg.includes('duplicate column name') || errorMsg.includes('already exists')) {
+        console.log('Column already exists, skipping...');
+        // Record migration anyway to mark it as applied
+        try {
+          await db
+            .insertInto('schema_migrations')
+            .values({
+              version: 2,
+              description: 'Add email_verification_expires column for token expiry',
+              applied_at: new Date().toISOString(),
+            })
+            .execute();
+        } catch (e) {
+          // Migration already recorded, ignore
+        }
+      } else {
+        console.error('Migration 002 failed:', errorMsg);
+        throw error;
+      }
+    }
+  }
+
   console.log('All migrations completed!');
 }

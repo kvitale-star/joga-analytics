@@ -4,41 +4,43 @@
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-const SESSION_STORAGE_KEY = 'joga_session_id';
 
 /**
- * Get the current session ID from localStorage
+ * Get CSRF token from cookie (non-HttpOnly cookie)
  */
-function getSessionId(): string | null {
-  return localStorage.getItem(SESSION_STORAGE_KEY);
-}
-
-/**
- * Set the session ID in localStorage
- */
-function setSessionId(sessionId: string): void {
-  localStorage.setItem(SESSION_STORAGE_KEY, sessionId);
-}
-
-/**
- * Remove the session ID from localStorage
- */
-function removeSessionId(): void {
-  localStorage.removeItem(SESSION_STORAGE_KEY);
+function getCsrfToken(): string | null {
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === 'csrfToken') {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
 }
 
 /**
  * Make an API request to the backend
+ * Uses HttpOnly cookies for session management (more secure than localStorage)
+ * Includes CSRF token for state-changing requests
  */
 export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const sessionId = getSessionId();
+  const method = options.method || 'GET';
+  const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
+  const needsCsrf = stateChangingMethods.includes(method);
+  
+  // Skip CSRF for certain endpoints that don't require it
+  const skipCsrfPaths = ['/auth/login', '/auth/setup', '/auth/verify-email', '/auth/reset-password'];
+  const shouldSkipCsrf = skipCsrfPaths.some(path => endpoint.includes(path));
+  
+  const csrfToken = (needsCsrf && !shouldSkipCsrf) ? getCsrfToken() : null;
   
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
-    ...(sessionId && { 'X-Session-ID': sessionId }),
+    ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
     ...options.headers,
   };
 
@@ -48,6 +50,7 @@ export async function apiRequest<T = any>(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include', // Required to send/receive cookies
     });
 
     // Handle non-JSON responses
@@ -112,10 +115,11 @@ export async function apiDelete<T = any>(endpoint: string): Promise<T> {
 }
 
 /**
- * Session management helpers (exported for use in authService)
+ * Session management helpers (no longer needed - using HttpOnly cookies)
+ * Kept for backward compatibility but functions are no-ops
  */
 export const sessionHelpers = {
-  getSessionId,
-  setSessionId,
-  removeSessionId,
+  getSessionId: () => null, // Cookies are handled automatically
+  setSessionId: () => {}, // Cookies are set by backend
+  removeSessionId: () => {}, // Cookies are cleared by backend on logout
 };

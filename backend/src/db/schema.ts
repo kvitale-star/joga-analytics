@@ -65,6 +65,7 @@ export interface UsersTable {
   role: 'admin' | 'coach' | 'viewer';
   email_verified: Generated<number>;
   email_verification_token: string | null;
+  email_verification_expires: string | null;
   email_verification_sent_at: string | null;
   password_reset_token: string | null;
   password_reset_expires: string | null;

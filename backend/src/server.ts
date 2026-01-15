@@ -1,15 +1,33 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { runMigrations } from './db/migrations.js';
+import { requireCsrfToken, setCsrfTokenCookie } from './middleware/csrf.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import teamRoutes from './routes/teams.js';
 import preferenceRoutes from './routes/preferences.js';
 import matchRoutes from './routes/matches.js';
+import sheetsRoutes from './routes/sheets.js';
+import aiRoutes from './routes/ai.js';
 
 // Load environment variables
-dotenv.config();
+// Try to load from backend/.env explicitly
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '..', '.env') });
+
+// Log environment variable status (for debugging)
+console.log('🔧 Environment Variables Check:');
+console.log('  GOOGLE_SHEETS_SPREADSHEET_ID:', process.env.GOOGLE_SHEETS_SPREADSHEET_ID ? '✓ Set' : '✗ Not set');
+console.log('  GOOGLE_SHEETS_API_KEY:', process.env.GOOGLE_SHEETS_API_KEY ? '✓ Set' : '✗ Not set');
+console.log('  GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? '✓ Set' : '✗ Not set');
+console.log('  BOOTSTRAP_SECRET:', process.env.BOOTSTRAP_SECRET ? '✓ Set' : '✗ Not set');
 
 const app = express();
 // Railway automatically sets PORT - use it or default to 3001 for local dev
@@ -22,9 +40,10 @@ console.log('🔒 CORS configured for origin:', frontendUrl);
 // CORS configuration
 const corsOptions = {
   origin: frontendUrl,
-  credentials: true,
+  credentials: true, // Required for cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID'], // Keep X-Session-ID for backward compatibility
+  exposedHeaders: [],
   preflightContinue: false,
   optionsSuccessStatus: 204,
 };
@@ -34,7 +53,31 @@ app.use(cors(corsOptions));
 // Explicitly handle OPTIONS requests (preflight)
 app.options('*', cors(corsOptions));
 
+// Cookie parser (must be before routes)
+app.use(cookieParser());
+
 app.use(express.json());
+
+// CSRF protection (after cookie parser, before routes)
+app.use(setCsrfTokenCookie); // Set CSRF token cookie for authenticated requests
+app.use(requireCsrfToken); // Validate CSRF token for state-changing requests
+
+// Content Security Policy headers
+app.use((req, res, next) => {
+  // CSP for API endpoints - allow same origin only
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+  );
+  
+  // Additional security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  next();
+});
 
 // Request logging (development)
 if (process.env.NODE_ENV !== 'production') {
@@ -61,12 +104,30 @@ app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/preferences', preferenceRoutes);
 app.use('/api/matches', matchRoutes);
+app.use('/api/sheets', sheetsRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
+  });
+});
+
+// Configuration check endpoint (for debugging - shows if env vars are set without revealing values)
+app.get('/api/config/check', (req, res) => {
+  res.json({
+    googleSheets: {
+      spreadsheetId: !!process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
+      apiKey: !!process.env.GOOGLE_SHEETS_API_KEY,
+    },
+    gemini: {
+      apiKey: !!process.env.GEMINI_API_KEY,
+    },
+    bootstrap: {
+      secret: !!process.env.BOOTSTRAP_SECRET,
+    },
   });
 });
 

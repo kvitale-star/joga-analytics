@@ -1,4 +1,5 @@
 import { SheetConfig } from '../types';
+import { apiGet } from './apiClient';
 
 export interface ColumnMetadata {
   description?: string;
@@ -15,64 +16,21 @@ export interface ColumnMetadataMap {
 }
 
 /**
- * Fetches column metadata from a "Metadata" tab in Google Sheets
+ * Fetches column metadata from a "Metadata" tab in Google Sheets using the backend API
  * Expected format:
  * Column Name | Description | Units | Calculation | Notes | Example | Data Type | Availability
  */
-export async function fetchColumnMetadata(config: SheetConfig): Promise<ColumnMetadataMap> {
-  const { spreadsheetId, apiKey } = config;
-  
-  if (!spreadsheetId) {
-    return {};
-  }
-
+export async function fetchColumnMetadata(_config: SheetConfig): Promise<ColumnMetadataMap> {
   try {
     // Try to fetch from a "Metadata" tab
     const metadataRanges = ['Metadata!A1:Z100', 'Column Definitions!A1:Z100', 'Metadata!A:Z'];
     
     for (const range of metadataRanges) {
       try {
-        const encodedRange = encodeURIComponent(range);
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}?key=${apiKey || ''}`;
+        const metadata = await apiGet<ColumnMetadataMap>(`/sheets/metadata?range=${encodeURIComponent(range)}`);
         
-        const response = await fetch(url);
-        const data = await response.json();
-        
-        if (response.ok && data.values && data.values.length > 1) {
-          // First row is headers, second row onwards is data
-          const headers = data.values[0].map((h: string) => h.trim().toLowerCase());
-          const rows = data.values.slice(1);
-          
-          const metadata: ColumnMetadataMap = {};
-          
-          // Find column indices
-          const colNameIdx = headers.findIndex((h: string) => h.includes('column') || h.includes('name') || h === '');
-          const descIdx = headers.findIndex((h: string) => h.includes('description') || h.includes('desc'));
-          const unitsIdx = headers.findIndex((h: string) => h.includes('unit'));
-          const calcIdx = headers.findIndex((h: string) => h.includes('calculation') || h.includes('calc') || h.includes('formula'));
-          const notesIdx = headers.findIndex((h: string) => h.includes('note'));
-          const exampleIdx = headers.findIndex((h: string) => h.includes('example'));
-          const typeIdx = headers.findIndex((h: string) => h.includes('type') || h.includes('data type'));
-          const availIdx = headers.findIndex((h: string) => h.includes('availability') || h.includes('available'));
-          
-          rows.forEach((row: string[]) => {
-            const columnName = row[colNameIdx]?.trim();
-            if (!columnName) return;
-            
-            metadata[columnName] = {
-              description: descIdx >= 0 ? row[descIdx]?.trim() : undefined,
-              units: unitsIdx >= 0 ? row[unitsIdx]?.trim() : undefined,
-              calculation: calcIdx >= 0 ? row[calcIdx]?.trim() : undefined,
-              notes: notesIdx >= 0 ? row[notesIdx]?.trim() : undefined,
-              example: exampleIdx >= 0 ? row[exampleIdx]?.trim() : undefined,
-              dataType: typeIdx >= 0 ? (row[typeIdx]?.trim().toLowerCase() as any) : undefined,
-              availability: availIdx >= 0 ? row[availIdx]?.trim() : undefined,
-            };
-          });
-          
-          if (Object.keys(metadata).length > 0) {
-            return metadata;
-          }
+        if (metadata && Object.keys(metadata).length > 0) {
+          return metadata;
         }
       } catch (err) {
         // Try next range
