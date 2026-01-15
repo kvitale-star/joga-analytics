@@ -41,8 +41,17 @@ router.post('/', async (req, res) => {
 
     // Password is optional - if not provided, user will receive email to set password
     const user = await createUserByAdmin(email, password || null, name, role);
+    
+    if (user) {
+      console.log(`✅ User created: ${user.email} (${user.role})`);
+      if (!password) {
+        console.log(`📧 Password setup email should be sent to ${user.email}`);
+      }
+    }
+    
     res.status(201).json(user);
   } catch (error: any) {
+    console.error('❌ Failed to create user:', error);
     res.status(400).json({ error: error.message || 'Failed to create user' });
   }
 });

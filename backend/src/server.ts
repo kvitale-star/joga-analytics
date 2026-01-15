@@ -42,7 +42,7 @@ const corsOptions = {
   origin: frontendUrl,
   credentials: true, // Required for cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID'], // Keep X-Session-ID for backward compatibility
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID', 'X-CSRF-Token'], // Keep X-Session-ID for backward compatibility, add X-CSRF-Token for CSRF protection
   exposedHeaders: [],
   preflightContinue: false,
   optionsSuccessStatus: 204,

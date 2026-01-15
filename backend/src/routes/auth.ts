@@ -226,10 +226,17 @@ router.post('/request-password-reset', passwordResetRateLimiter, async (req, res
     const token = await generatePasswordResetToken(email);
     
     if (token) {
+      console.log(`📧 Sending password reset email to ${email}`);
       // Send email (don't wait for it)
-      sendPasswordResetEmail(email, token).catch(err => {
-        console.error('Failed to send password reset email:', err);
-      });
+      sendPasswordResetEmail(email, token)
+        .then(() => {
+          console.log(`✅ Password reset email sent to ${email}`);
+        })
+        .catch(err => {
+          console.error('❌ Failed to send password reset email:', err);
+        });
+    } else {
+      console.log(`⚠️ No password reset token generated for ${email} (user may not exist)`);
     }
 
     // Always return success (don't reveal if user exists)

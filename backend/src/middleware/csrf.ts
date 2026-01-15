@@ -87,6 +87,7 @@ export function requireCsrfToken(
 
 /**
  * Middleware to set CSRF token cookie (non-HttpOnly so JS can read it)
+ * Only generates a new token if one doesn't exist or is expired
  */
 export function setCsrfTokenCookie(
   req: Request,
@@ -96,7 +97,25 @@ export function setCsrfTokenCookie(
   const sessionId = req.cookies?.sessionId as string;
   
   if (sessionId) {
-    const csrfToken = generateCsrfToken(sessionId);
+    // Check if we already have a valid token for this session
+    const stored = csrfTokens.get(sessionId);
+    const existingToken = req.cookies?.csrfToken as string;
+    
+    // Only generate a new token if:
+    // 1. We don't have a stored token, OR
+    // 2. The stored token is expired, OR
+    // 3. The cookie token doesn't match the stored token (token was cleared/reset)
+    const needsNewToken = !stored || 
+                          stored.expiresAt < Date.now() ||
+                          (existingToken && existingToken !== stored.token);
+    
+    let csrfToken: string;
+    if (needsNewToken) {
+      csrfToken = generateCsrfToken(sessionId);
+    } else {
+      csrfToken = stored.token;
+    }
+    
     const isProduction = process.env.NODE_ENV === 'production';
     
     // Set CSRF token in a non-HttpOnly cookie so JavaScript can read it
