@@ -9,13 +9,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Database file path
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '../../data/joga.db');
+// On Railway, use persistent volume if available, otherwise use DATABASE_PATH or default
+// Railway provides RAILWAY_VOLUME_MOUNT_PATH for persistent storage
+const railwayVolumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH;
+const customDbPath = process.env.DATABASE_PATH;
+const defaultDbPath = path.join(__dirname, '../../data/joga.db');
+
+// Priority: Railway volume > Custom DATABASE_PATH > Default
+// If Railway volume is mounted, it sets RAILWAY_VOLUME_MOUNT_PATH automatically
+// If DATABASE_PATH is set, use it (can be relative or absolute)
+// Otherwise use default local path
+const dbPath = railwayVolumePath 
+  ? path.join(railwayVolumePath, 'joga.db')  // Use Railway persistent volume (absolute path)
+  : (customDbPath 
+      ? (path.isAbsolute(customDbPath) ? customDbPath : path.resolve(process.cwd(), customDbPath))
+      : defaultDbPath);                      // Use custom path (resolve if relative) or default
 
 // Ensure data directory exists
 const dataDir = path.dirname(dbPath);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
+  console.log(`📁 Created database directory: ${dataDir}`);
 }
+
+console.log(`💾 Database path: ${dbPath}`);
 
 // Create SQLite database instance
 const sqliteDb = new Database(dbPath);

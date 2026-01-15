@@ -70,15 +70,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Check for users (works in both browser and API mode)
       try {
+        console.log('Checking if users exist...');
         const usersExist = await hasUsers();
+        console.log('Users exist:', usersExist);
         if (!usersExist) {
+          console.log('No users found, showing setup wizard');
           setIsSetupRequired(true);
           setIsLoading(false);
           return;
         }
+        console.log('Users found, setup not required');
       } catch (error) {
         console.error('Error checking for users:', error);
         // If we can't check, assume setup is needed
+        console.log('Error checking users, showing setup wizard as fallback');
         setIsSetupRequired(true);
         setIsLoading(false);
         return;

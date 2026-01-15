@@ -12,9 +12,12 @@ import { User, UserRole, LoginCredentials, Session, SetupWizardData } from '../t
 export async function hasUsers(): Promise<boolean> {
   try {
     const response = await apiGet<{ setupRequired: boolean }>('/auth/setup-required');
+    console.log('hasUsers check result:', response);
     return !response.setupRequired;
   } catch (error) {
     console.error('Error checking for users:', error);
+    // If API call fails, we can't determine if users exist
+    // Return false to show setup wizard (safer than assuming users exist)
     return false;
   }
 }

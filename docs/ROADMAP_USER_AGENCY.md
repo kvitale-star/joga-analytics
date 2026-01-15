@@ -2,7 +2,17 @@
 
 ## Quick Reference: What Users Will Be Able To Do
 
-### Phase 1: Custom Charts (Weeks 1-4)
+### Phase 0.5: Chart Configuration (Weeks 1-2) - Quick Win
+**Users can:**
+- Toggle individual metrics on/off in existing charts
+- Add optional metrics to charts (e.g., add attempts to shots chart)
+- Toggle opponent data inclusion
+- Save their chart preferences
+
+**Example Use Case:**
+> "I want to see shots, attempts, and goals all in one chart, but hide shots against"
+
+### Phase 1: Custom Charts (Weeks 3-6)
 **Users can:**
 - Create charts by selecting any metrics
 - Choose chart types (line, bar, scatter, area, etc.)
@@ -12,7 +22,7 @@
 **Example Use Case:**
 > "I want to see how our corner kicks correlate with goals scored, as a scatter plot"
 
-### Phase 2: Calculated Metrics (Weeks 5-8)
+### Phase 2: Calculated Metrics (Weeks 7-10)
 **Users can:**
 - Create formulas like `{Goals} / {Minutes} * 90` (Goals per 90)
 - Use calculated metrics in any chart
@@ -31,7 +41,7 @@
 **Example Use Case:**
 > "I want a pre-game dashboard with just possession, shots, and xG charts"
 
-### Phase 4: Advanced Features (Weeks 13-16)
+### Phase 4: Advanced Features (Weeks 15-18)
 **Users can:**
 - Save filter combinations as bookmarks
 - Create automated reports
@@ -109,7 +119,13 @@
 
 ## Quick Wins (Can Start Immediately)
 
-1. **Metric Explorer** - Low effort, high value
+1. **Chart Configuration Panel** - Low effort, high value ⭐ **NEW**
+   - Add toggle controls to existing charts
+   - Allow users to show/hide metrics
+   - Save preferences per user
+   - Immediate personalization without full custom chart builder
+
+2. **Metric Explorer** - Low effort, high value
    - Shows all available metrics
    - Search and filter
    - Preview sample values

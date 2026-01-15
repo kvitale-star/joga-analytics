@@ -40,7 +40,125 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
 
 ## Implementation Strategy
 
-### Phase 1: Foundation (Weeks 1-4)
+### Phase 0.5: Chart Configuration (Weeks 1-2) - Quick Win
+**Goal:** Make existing charts more flexible and configurable
+
+#### 0.5.1 Chart Configuration Panel
+- **Component:** `ChartConfigPanel.tsx` (reusable component)
+- **Features:**
+  - Toggle visibility of individual metrics/series within a chart
+  - Add/remove optional metrics (e.g., attempts, goals in shots chart)
+  - Toggle opponent data inclusion
+  - Save chart preferences per user
+  - Reset to defaults
+
+- **Example Use Cases:**
+  - **Shots Chart:**
+    - Toggle "Shots For" on/off
+    - Toggle "Shots Against" on/off
+    - Optionally add "Attempts For" metric
+    - Optionally add "Attempts Against" metric
+    - Optionally add "Goals For" metric
+    - Optionally add "Goals Against" metric
+    - Toggle "Include Opponent Data" (show opponent's shots in same chart)
+  
+  - **Goals Chart:**
+    - Toggle "Goals For" on/off
+    - Toggle "Goals Against" on/off
+    - Optionally add "Expected Goals (xG)" metric
+    - Optionally add "Expected Goals Against (xGA)" metric
+    - Toggle opponent data inclusion
+  
+  - **Possession Chart:**
+    - Toggle "Possession %" on/off
+    - Toggle "Pass Share %" on/off
+    - Optionally add "Time in Possession" metric
+    - Toggle opponent data inclusion
+
+- **Implementation Approach:**
+  - Add `chartConfig` prop to existing chart components
+  - Configuration object: `{ visibleMetrics: string[], includeOpponent: boolean }`
+  - Store user preferences in `user_preferences` JSON field (or new `chart_preferences` table)
+  - Charts dynamically render only selected metrics
+  - UI: Collapsible panel with checkboxes for each available metric
+
+- **Backend:**
+  - Extend `user_preferences` JSON to include chart configurations:
+    ```json
+    {
+      "chartPreferences": {
+        "shots": {
+          "visibleMetrics": ["shotsFor", "shotsAgainst", "attemptsFor"],
+          "includeOpponent": true
+        },
+        "goals": {
+          "visibleMetrics": ["goalsFor", "goalsAgainst"],
+          "includeOpponent": false
+        }
+      }
+    }
+    ```
+  - Or create new table: `chart_preferences`
+    - `id`, `user_id`, `chart_type`, `config` (JSON), `created_at`, `updated_at`
+
+- **API Endpoints:**
+  - `GET /api/preferences/chart/:chartType` - Get user's chart preferences
+  - `PUT /api/preferences/chart/:chartType` - Update chart preferences
+  - `DELETE /api/preferences/chart/:chartType` - Reset to defaults
+
+- **Benefits:**
+  - Immediate value with minimal development
+  - Users can personalize existing charts without creating new ones
+  - Foundation for more advanced customization
+  - No new chart types needed - just configuration
+  - Backward compatible (defaults to current behavior)
+
+- **Technical Implementation Example:**
+  ```typescript
+  // Before (hardcoded):
+  <ShotsChart 
+    data={data}
+    shotsForKey="Shots For"
+    shotsAgainstKey="Shots Against"
+    opponentKey="Opponent"
+  />
+  
+  // After (configurable):
+  <ShotsChart 
+    data={data}
+    shotsForKey="Shots For"
+    shotsAgainstKey="Shots Against"
+    opponentKey="Opponent"
+    config={{
+      visibleMetrics: ['shotsFor', 'shotsAgainst', 'attemptsFor'], // User selected
+      includeOpponent: true, // User preference
+      optionalMetrics: {
+        attemptsFor: 'Attempts For',
+        attemptsAgainst: 'Attempts Against',
+        goalsFor: 'Goals For',
+        goalsAgainst: 'Goals Against'
+      }
+    }}
+    onConfigChange={(newConfig) => saveChartPreferences('shots', newConfig)}
+  />
+  ```
+
+- **UI Example:**
+  - Small gear icon in chart header
+  - Click opens collapsible panel below chart
+  - Checkboxes for each metric:
+    - ☑ Shots For (always visible)
+    - ☑ Shots Against (always visible)
+    - ☐ Attempts For (optional)
+    - ☐ Attempts Against (optional)
+    - ☐ Goals For (optional)
+    - ☐ Goals Against (optional)
+    - ☑ Include Opponent Data
+  - "Save" and "Reset to Defaults" buttons
+
+---
+
+### Phase 1: Foundation (Weeks 3-6)
 **Goal:** Enable basic custom chart creation
 
 #### 1.1 Custom Chart Builder
@@ -228,6 +346,9 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
 ```
 src/
 ├── components/
+│   ├── chart-config/
+│   │   ├── ChartConfigPanel.tsx
+│   │   └── MetricToggle.tsx
 │   ├── custom-charts/
 │   │   ├── CustomChartBuilder.tsx
 │   │   ├── DynamicChartRenderer.tsx
@@ -262,6 +383,18 @@ src/
 ### Backend Schema
 
 ```sql
+-- Chart Preferences (Phase 0.5)
+CREATE TABLE chart_preferences (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  chart_type TEXT NOT NULL, -- 'shots', 'goals', 'possession', etc.
+  config JSON NOT NULL, -- { visibleMetrics: string[], includeOpponent: boolean }
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  UNIQUE(user_id, chart_type)
+);
+
 -- Custom Charts
 CREATE TABLE custom_charts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -341,6 +474,11 @@ CREATE TABLE custom_reports (
 ### API Routes
 
 ```typescript
+// Chart Preferences (Phase 0.5)
+GET    /api/preferences/chart/:chartType
+PUT    /api/preferences/chart/:chartType
+DELETE /api/preferences/chart/:chartType
+
 // Custom Charts
 POST   /api/custom-charts
 GET    /api/custom-charts
@@ -482,6 +620,7 @@ POST   /api/reports/:id/schedule
 ## Implementation Priority
 
 ### Must Have (MVP)
+- ✅ **Chart configuration panel** - Make existing charts flexible (Phase 0.5)
 - ✅ Custom chart builder with basic chart types
 - ✅ Dynamic chart renderer
 - ✅ Save/load custom charts
