@@ -207,9 +207,10 @@ For charts, include a JSON code block with this EXACT structure:
 \`\`\`
 
 IMPORTANT - CHART COLORS:
-- For JOGA team data: Use "#6787aa" (Nike Valor Blue) or "#ceff00" (Nike Volt Yellow)
-- For opponent data: Use "#6b7280" (gray-500) or "#9ca3af" (gray-400)
-- First series should typically be JOGA team data (Valor Blue or Volt Yellow)
+- For JOGA team data: Use "#ceff00" (Nike Volt Yellow), "#6787aa" (Nike Valor Blue), or "#FFC0CB" (Pink Foam)
+- These three colors should ALWAYS be used for JOGA team information, buttons, and visual elements
+- For opponent data: Use "#6b7280" (gray-500) or "#9ca3af" (gray-400) - different shades of gray
+- First series should typically be JOGA team data (Volt Yellow, Valor Blue, or Pink Foam)
 - Second series should typically be opponent data (gray shades)
 - Default: ["#6787aa", "#6b7280"] for team vs opponent comparisons
 

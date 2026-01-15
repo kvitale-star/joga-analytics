@@ -34,8 +34,9 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // Trust proxy - required for Railway (and other reverse proxies)
+// Set to 1 to trust only the first proxy (Railway), which is more secure than 'true'
 // This allows Express to correctly identify client IPs from X-Forwarded-For header
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // Middleware
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';

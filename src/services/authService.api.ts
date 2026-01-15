@@ -135,8 +135,9 @@ export async function createInitialAdmin(data: SetupWizardData): Promise<User> {
     const response = await apiPost<{ user: User; session: Session }>('/auth/setup', data);
     
     if (response && response.user) {
-      // Session ID is now in HttpOnly cookie, not in response
-      // Convert date strings to Date objects
+      // Session ID is now in HttpOnly cookie, not in response body
+      // Convert date strings to Date objects and return just the user
+      // The session cookie is already set by the backend
       return {
         ...response.user,
         createdAt: new Date(response.user.createdAt),

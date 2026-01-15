@@ -1,14 +1,23 @@
 /**
  * JOGA Brand Colors
- * Nike Volt Yellow and Nike Valor Blue
+ * 
+ * Three primary colors for JOGA team data, buttons, and visual elements:
+ * - Volt Yellow (#ceff00) - Nike Volt Yellow
+ * - Valor Blue (#6787aa) - Nike Valor Blue
+ * - Pink Foam (#FFC0CB) - Pink Foam
+ * 
+ * These three colors should ALWAYS be used to represent JOGA team information.
+ * Different shades of gray should be used to represent opponent data.
  */
 
 // JOGA Brand Colors
 export const JOGA_COLORS = {
   voltYellow: '#ceff00',      // rgb(206, 255, 0) - Nike Volt Yellow
   valorBlue: '#6787aa',       // rgb(103, 135, 170) - Nike Valor Blue
+  pinkFoam: '#FFC0CB',        // rgb(255, 192, 203) - Pink Foam
   voltYellowRgb: 'rgb(206, 255, 0)',
   valorBlueRgb: 'rgb(103, 135, 170)',
+  pinkFoamRgb: 'rgb(255, 192, 203)',
 };
 
 // Opponent colors - shades of gray
@@ -34,9 +43,10 @@ export const VOLT_YELLOW_COMPLEMENTS = {
 
 /**
  * Get colors for JOGA team data (primary colors)
+ * Returns all three JOGA brand colors: Volt Yellow, Valor Blue, and Pink Foam
  */
 export function getJogaTeamColors(): string[] {
-  return [JOGA_COLORS.voltYellow, JOGA_COLORS.valorBlue];
+  return [JOGA_COLORS.voltYellow, JOGA_COLORS.valorBlue, JOGA_COLORS.pinkFoam];
 }
 
 /**

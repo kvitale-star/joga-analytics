@@ -184,19 +184,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const setupAdmin = useCallback(async (data: SetupWizardData) => {
+    const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
     const admin = await createInitialAdmin(data);
-    setUser(admin);
-    // Auto-login after setup - session cookie is set by backend
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-    setSession({
-      id: 'cookie-based',
-      userId: admin.id,
-      expiresAt,
-      lastActivityAt: new Date(),
-      createdAt: new Date(),
-    });
-    setIsSetupRequired(false);
+    
+    if (admin) {
+      setUser(admin);
+      // Session ID is in HttpOnly cookie (API mode) or localStorage (browser mode)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+      setSession({
+        id: 'cookie-based', // Placeholder - actual ID is in HttpOnly cookie (API) or localStorage (browser)
+        userId: admin.id,
+        expiresAt,
+        lastActivityAt: new Date(),
+        createdAt: new Date(),
+      });
+      setIsSetupRequired(false);
+      // Give cookies a moment to be set before any subsequent API calls (API mode only)
+      if (USE_BACKEND_API) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
   }, []);
 
   const refreshSession = useCallback(async () => {

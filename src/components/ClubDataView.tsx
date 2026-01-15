@@ -333,6 +333,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   shotsAgainstKey={getShotsAgainstKey()}
                   opponentKey={teamKeyForCharts}
                   showLabels={showLabels}
+                  attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                  attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                  goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                  goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
                 />
               </FadeTransition>
 

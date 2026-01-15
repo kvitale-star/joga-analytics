@@ -19,17 +19,25 @@ export async function fetchSheetData(config: SheetConfig): Promise<MatchData[]> 
   } catch (error: any) {
     console.error('Error fetching sheet data:', error);
     
-    // Provide more helpful error messages
-    if (error.message?.includes('GOOGLE_SHEETS_SPREADSHEET_ID') || error.message?.includes('GOOGLE_SHEETS_API_KEY')) {
-      throw new Error('Backend configuration error: Google Sheets credentials not set. Contact your administrator.');
-    }
-    
-    if (error.message?.includes('401') || error.message?.includes('Not authenticated')) {
+    // Check for authentication errors first (401/403 from our backend)
+    if (error.message?.includes('401') || 
+        error.message?.includes('Not authenticated') ||
+        error.message?.includes('CSRF token') ||
+        error.message?.includes('Unauthorized')) {
       throw new Error('Authentication required. Please log in to access sheet data.');
     }
     
-    if (error.message?.includes('403') || error.message?.includes('Access denied')) {
-      throw new Error('Access denied. Please check that the Google Sheets API key has proper permissions and the sheet is accessible.');
+    // Check for backend configuration errors (missing env vars)
+    if (error.message?.includes('GOOGLE_SHEETS_SPREADSHEET_ID') || 
+        error.message?.includes('GOOGLE_SHEETS_API_KEY') ||
+        error.message?.includes('Backend configuration error')) {
+      throw new Error('Backend configuration error: Google Sheets credentials not set. Contact your administrator.');
+    }
+    
+    // Check for Google Sheets API errors (403/404 from Google)
+    if (error.message?.includes('Access denied') || 
+        error.message?.includes('403') && !error.message?.includes('401')) {
+      throw new Error('Access denied by Google Sheets API. Please check that the Google Sheets API key has proper permissions and the sheet is accessible.');
     }
     
     if (error.message?.includes('404') || error.message?.includes('not found')) {

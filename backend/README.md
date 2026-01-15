@@ -45,6 +45,13 @@ SENDGRID_FROM_EMAIL=noreply@yourdomain.com
 # Set to false to disable password validation (useful for testing)
 # Default: true (enabled)
 ENABLE_PASSWORD_VALIDATION=true
+
+# Google Sheets (required for data access)
+# Spreadsheet ID: Found in the Google Sheets URL (e.g., https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit)
+GOOGLE_SHEETS_SPREADSHEET_ID=your-spreadsheet-id-here
+# API Key: Create at https://console.cloud.google.com/apis/credentials
+# Enable Google Sheets API: https://console.cloud.google.com/apis/library/sheets.googleapis.com
+GOOGLE_SHEETS_API_KEY=your-google-api-key-here
 ```
 
 ### 3. Run Migrations

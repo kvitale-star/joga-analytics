@@ -2505,6 +2505,10 @@ function App() {
                     shotsForKey={getShotsForKey()}
                     shotsAgainstKey={getShotsAgainstKey()}
                     opponentKey={opponentKey}
+                    attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                    attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
                   />
                 )
               )}

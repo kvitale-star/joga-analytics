@@ -84,6 +84,8 @@ JWT_SECRET=your-production-secret-key-here
 SENDGRID_API_KEY=SG.your_api_key_here
 SENDGRID_FROM_EMAIL=kvitale@gmail.com
 ENABLE_PASSWORD_VALIDATION=true
+GOOGLE_SHEETS_SPREADSHEET_ID=your-spreadsheet-id-here
+GOOGLE_SHEETS_API_KEY=your-google-api-key-here
 ```
 
 **Note:** Do NOT set `PORT` manually - Railway automatically sets this environment variable. Setting it manually will cause the backend to be unreachable.
@@ -92,6 +94,13 @@ ENABLE_PASSWORD_VALIDATION=true
 - Replace `your-production-secret-key-here` with a strong random string (generate one)
 - Use your actual SendGrid API key
 - `FRONTEND_URL` will be updated after frontend deploys
+- **Google Sheets Configuration (Required):**
+  - `GOOGLE_SHEETS_SPREADSHEET_ID`: The ID of your Google Spreadsheet (found in the URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`)
+  - `GOOGLE_SHEETS_API_KEY`: A Google Cloud API key with the Google Sheets API enabled
+    - Create/get API key: https://console.cloud.google.com/apis/credentials
+    - Enable Google Sheets API: https://console.cloud.google.com/apis/library/sheets.googleapis.com
+    - For public sheets: API key is sufficient
+    - For private sheets: You may need OAuth or service account (not currently implemented)
 
 ### 3.5 Get Backend URL
 

@@ -48,17 +48,28 @@ export async function fetchSheetData(range: string): Promise<MatchData[]> {
 
     if (!response.ok) {
       const errorMessage = (data as any).error?.message || response.statusText;
+      const errorDetails = (data as any).error?.details || [];
+      const fullError = errorDetails.length > 0 
+        ? `${errorMessage} (${errorDetails.map((d: any) => d.message || d).join(', ')})`
+        : errorMessage;
+
+      console.error('📊 Google Sheets API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: (data as any).error,
+        fullError,
+      });
 
       if (response.status === 403) {
-        throw new Error(`Access denied: ${errorMessage}. Please check your API key or make the sheet public.`);
+        throw new Error(`Google Sheets API access denied: ${fullError}. Please check: 1) API key has Sheets API enabled, 2) Sheet is public or API key has access, 3) API key quota not exceeded.`);
       }
       if (response.status === 404) {
-        throw new Error(`Spreadsheet not found: ${errorMessage}. Please check the spreadsheet ID and sheet name.`);
+        throw new Error(`Spreadsheet not found: ${fullError}. Please verify: 1) Spreadsheet ID is correct, 2) Sheet name in range exists (e.g., "Match Log" in "Match Log!A1:ZZ1000").`);
       }
       if (response.status === 400) {
-        throw new Error(`Invalid request: ${errorMessage}. Please check the range format (e.g., "Sheet1!A1:Z100").`);
+        throw new Error(`Invalid request: ${fullError}. Please check the range format (e.g., "Sheet1!A1:Z100").`);
       }
-      throw new Error(`Failed to fetch data (${response.status}): ${errorMessage}`);
+      throw new Error(`Google Sheets API error (${response.status}): ${fullError}`);
     }
 
     if (!data.values || data.values.length === 0) {
