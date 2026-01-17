@@ -14,7 +14,7 @@ export interface ChartPreferences {
 }
 
 export const DEFAULT_SHOTS_CONFIG: ChartConfig = {
-  visibleMetrics: ['shotsFor'],
+  visibleMetrics: ['shotsFor', 'attemptsFor'],
   includeOpponent: true,
   isExpanded: false,
 };
@@ -26,25 +26,25 @@ export const DEFAULT_POSSESSION_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_GOALS_CONFIG: ChartConfig = {
-  visibleMetrics: ['goalsFor', 'goalsAgainst'],
+  visibleMetrics: ['goalsFor', 'xG'],
   includeOpponent: true,
   isExpanded: false,
 };
 
 export const DEFAULT_XG_CONFIG: ChartConfig = {
-  visibleMetrics: ['xG'],
+  visibleMetrics: ['xG', 'goalsFor'],
   includeOpponent: true,
   isExpanded: false,
 };
 
 export const DEFAULT_CONVERSION_RATE_CONFIG: ChartConfig = {
-  visibleMetrics: ['conversionRate'],
+  visibleMetrics: ['conversionRate', 'insideBoxConvRate', 'outsideBoxConvRate'],
   includeOpponent: true,
   isExpanded: false,
 };
 
 export const DEFAULT_TSR_CONFIG: ChartConfig = {
-  visibleMetrics: ['tsr'],
+  visibleMetrics: ['tsr', 'attemptsFor'],
   includeOpponent: true,
   isExpanded: false,
 };
@@ -68,24 +68,21 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
     },
     goals: {
       goalsFor: 'Goals',
-      goalsAgainst: 'Goals',
       xG: 'xG',
-      xGA: 'xGA',
     },
     xg: {
       xG: 'xG',
       goalsFor: 'Goals',
-      goalsAgainst: 'Goals',
     },
     conversionRate: {
       conversionRate: 'Conversion Rate',
+      attemptsFor: 'Attempts',
       shotsFor: 'Shots',
       goalsFor: 'Goals',
     },
     tsr: {
       tsr: 'TSR',
       shotsFor: 'Shots',
-      shotsAgainst: 'Shots',
     },
   };
   

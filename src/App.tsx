@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { MatchData } from './types';
 import { fetchSheetData } from './services/sheetsService';
+import { invalidateAIContextCache } from './services/aiService';
 import { sheetConfig } from './config';
 import { useURLState } from './hooks/useURLState';
 import { StatsCard } from './components/StatsCard';
@@ -370,6 +371,11 @@ function App() {
     try {
       setLoading(true);
       setError(null);
+      
+      // Invalidate AI context cache when reloading data
+      // This ensures the chatbot rebuilds context with fresh data
+      invalidateAIContextCache();
+      
       const data = await fetchSheetData(sheetConfig);
       setMatchData(data);
       
@@ -1710,6 +1716,7 @@ function App() {
             getGoalsForKey={getGoalsForKey}
             getGoalsAgainstKey={getGoalsAgainstKey}
             getPossessionKey={getPossessionKey}
+            getOppPossessionKey={getOppPossessionKey}
             getPassShareKey={getPassShareKey}
             getxGKey={getxGKey}
             getxGAKey={getxGAKey}
@@ -1918,13 +1925,16 @@ function App() {
 
         {selectedTeam === null ? (
           <div 
-            className="relative min-h-[600px] w-full flex items-center justify-center rounded-lg"
+            className="relative w-full rounded-lg"
             style={{
               backgroundImage: 'url(/joga-logo-bw.png)',
-              backgroundSize: '60%',
-              backgroundPosition: 'center',
+              backgroundSize: '60% auto',
+              backgroundPosition: 'center top',
               backgroundRepeat: 'no-repeat',
               minWidth: '100%',
+              minHeight: 'calc(min(60vw, 960px) + 4rem)',
+              paddingTop: '2rem',
+              paddingBottom: '2rem',
               opacity: 0.2,
             }}
           >
@@ -2626,6 +2636,8 @@ function App() {
                       possessionKey={getPossessionKey()}
                       passShareKey={getPassShareKey()}
                       opponentKey={opponentKey}
+                      oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
+                      oppPassShareKey={columnKeys.includes(getOppPassShareKey()) ? getOppPassShareKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('possession')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />

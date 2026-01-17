@@ -851,13 +851,16 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
         <div className="w-full max-w-[1600px] mx-auto">
           {!selectedTeam ? (
             <div 
-              className="relative min-h-[600px] w-full flex items-center justify-center rounded-lg"
+              className="relative w-full rounded-lg"
               style={{
                 backgroundImage: 'url(/joga-logo-bw.png)',
-                backgroundSize: '60%',
-                backgroundPosition: 'center',
+                backgroundSize: '60% auto',
+                backgroundPosition: 'center top',
                 backgroundRepeat: 'no-repeat',
                 minWidth: '100%',
+                minHeight: 'calc(min(60vw, 960px) + 4rem)',
+                paddingTop: '2rem',
+                paddingBottom: '2rem',
                 opacity: 0.2,
               }}
             >

@@ -96,6 +96,7 @@ joga-visualizer/
 - **Authentication**: Required for most endpoints (except `/auth/login`, `/auth/setup`)
 - **Error Handling**: Consistent JSON error responses
 - **CORS**: Configured for frontend origin, credentials enabled
+- **⚠️ Cross-Origin Note**: Railway hosts frontend/backend on different domains - CORS and CSRF must be configured for cross-origin requests
 
 ### Frontend-Backend Communication
 - **API Client**: `src/services/apiClient.ts` handles all HTTP requests
@@ -133,6 +134,43 @@ joga-visualizer/
 - **Frontend**: Type-safe API client with generics
 
 ## Important Notes
+
+### ⚠️ PRE-DEPLOYMENT CHECKLIST - CRITICAL FOR RAILWAY
+
+**BEFORE PUSHING TO GITHUB, ALWAYS VERIFY:**
+
+1. **CSRF Token Configuration (Cross-Origin Critical)**
+   - ✅ CSRF token cookies must use `sameSite: 'none'` in production (Railway hosts frontend/backend on different domains)
+   - ✅ CSRF token cookies must have `secure: true` in production (required for `sameSite: 'none'`)
+   - ✅ Frontend must be able to read CSRF token (non-HttpOnly cookie) OR fetch from API response headers
+   - ✅ Check `backend/src/middleware/csrf.ts` - `setCsrfTokenCookie` function uses correct `sameSite` value
+   - ✅ Check `backend/src/routes/auth.ts` - login/setup routes set CSRF token with correct `sameSite` value
+   - ✅ Verify `X-CSRF-Token` header is being sent with state-changing requests (POST, PUT, DELETE)
+   - ⚠️ **Common Issue**: If CSRF token cookie uses `sameSite: 'strict'` in production, cookies won't be sent cross-origin → 403 errors
+
+2. **CORS Configuration**
+   - ✅ CORS must allow frontend origin with `credentials: true`
+   - ✅ Check `backend/src/server.ts` - CORS configuration includes frontend domain
+   - ✅ Verify `Access-Control-Allow-Credentials: true` header is set
+   - ✅ Verify `Access-Control-Allow-Origin` matches frontend domain (not wildcard `*` when using credentials)
+
+3. **Cross-Origin Cookie Considerations**
+   - ⚠️ **Railway hosts frontend and backend on different domains** (e.g., `joga-analytics.up.railway.app` for backend, different domain for frontend)
+   - ⚠️ JavaScript **cannot read cookies from different domains** - use API response headers (`X-CSRF-Token`) for CSRF tokens in cross-origin scenarios
+   - ✅ Session cookies (HttpOnly) are sent automatically by browser, but CSRF tokens (non-HttpOnly) may need special handling
+   - ✅ Check `src/services/apiClient.ts` - CSRF token retrieval handles cross-origin scenarios
+
+4. **Testing Checklist**
+   - ✅ Test state-changing API calls (PUT, POST, DELETE) in production environment
+   - ✅ Verify CSRF token is included in request headers
+   - ✅ Check browser console for CSRF-related errors (403 Forbidden)
+   - ✅ Verify cookies are being set and sent correctly (check Network tab → Request Headers)
+
+**If you see "CSRF token required" or 403 errors after deployment:**
+1. Check CSRF middleware cookie settings (`sameSite: 'none'` in production)
+2. Verify frontend can access CSRF token (cookie or API header)
+3. Check CORS configuration allows credentials
+4. Review `backend/src/middleware/csrf.ts` and `backend/src/routes/auth.ts` for cookie settings
 
 ### Railway Deployment
 - **Trust Proxy**: Set to `1` (trust only first proxy)
@@ -213,3 +251,4 @@ joga-visualizer/
 4. **Log appropriately** - use console logs with emoji prefixes
 5. **Test locally** - verify changes work before pushing
 6. **Update docs** - if adding features, update relevant documentation
+7. **⚠️ CHECK CSRF & CORS** - Before pushing, verify CSRF token and CORS configuration work in cross-origin scenarios (see Pre-Deployment Checklist above)

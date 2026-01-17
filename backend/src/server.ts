@@ -120,21 +120,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Configuration check endpoint (for debugging - shows if env vars are set without revealing values)
-app.get('/api/config/check', (req, res) => {
-  res.json({
-    googleSheets: {
-      spreadsheetId: !!process.env.GOOGLE_SHEETS_SPREADSHEET_ID,
-      apiKey: !!process.env.GOOGLE_SHEETS_API_KEY,
-    },
-    gemini: {
-      apiKey: !!process.env.GEMINI_API_KEY,
-    },
-    bootstrap: {
-      secret: !!process.env.BOOTSTRAP_SECRET,
-    },
-  });
-});
+// NOTE: /api/config/check endpoint removed for security reasons
+// It exposed which environment variables were configured, aiding reconnaissance
+// Use server logs or deployment dashboard to verify configuration instead
 
 // Root path - friendly message for browser access
 app.get('/', (req, res) => {

@@ -1,8 +1,14 @@
 import { MatchData, SheetConfig } from '../types';
 import { getCoachingSystemInstructions, coachingRules } from '../config/coachingRules';
-import { fetchColumnMetadata, mergeColumnMetadata, formatMetadataForAI } from './metadataService';
+import { fetchColumnMetadata, mergeColumnMetadata, formatMetadataForAI, ColumnMetadataMap } from './metadataService';
 import { findImageColumns } from '../utils/imageUtils';
 import { apiGet, apiPost } from './apiClient';
+import {
+  computeDataHash,
+  getCachedContext,
+  setCachedContext,
+  invalidateContextCache as invalidateCache,
+} from './aiContextCache';
 
 // Cache for AI configuration status
 let aiConfiguredCache: boolean | null = null;
@@ -167,7 +173,36 @@ Answer the coach's question based on this data. Include charts when visualizatio
 
 
 /**
+ * Fetches and formats metadata, with caching consideration
+ */
+async function getMetadataContext(sheetConfig?: SheetConfig): Promise<{ metadataContext: string; metadata: ColumnMetadataMap }> {
+  let metadataContext = '';
+  let metadata: ColumnMetadataMap = {};
+  
+  if (sheetConfig) {
+    try {
+      const sheetMetadata = await fetchColumnMetadata(sheetConfig);
+      const configMetadata = coachingRules.columnMetadata || {};
+      metadata = mergeColumnMetadata(configMetadata, sheetMetadata);
+      metadataContext = formatMetadataForAI(metadata);
+    } catch (err) {
+      console.warn('Could not load column metadata:', err);
+      if (coachingRules.columnMetadata && Object.keys(coachingRules.columnMetadata).length > 0) {
+        metadata = coachingRules.columnMetadata;
+        metadataContext = formatMetadataForAI(metadata);
+      }
+    }
+  } else if (coachingRules.columnMetadata && Object.keys(coachingRules.columnMetadata).length > 0) {
+    metadata = coachingRules.columnMetadata;
+    metadataContext = formatMetadataForAI(metadata);
+  }
+  
+  return { metadataContext, metadata };
+}
+
+/**
  * Main chat function using backend API
+ * Uses caching to avoid rebuilding context on every message
  */
 export async function chatWithAI(
   message: string,
@@ -176,25 +211,30 @@ export async function chatWithAI(
   sheetConfig?: SheetConfig,
   onStatusUpdate?: (status: string) => void
 ): Promise<string> {
-  // Format the match data for context
-  const dataContext = formatMatchDataForAI(matchData, columnKeys);
+  // Compute hash for cache lookup
+  const dataHash = computeDataHash(matchData, columnKeys);
   
-  // Fetch and merge column metadata
-  let metadataContext = '';
-  if (sheetConfig) {
-    try {
-      const sheetMetadata = await fetchColumnMetadata(sheetConfig);
-      const configMetadata = coachingRules.columnMetadata || {};
-      const mergedMetadata = mergeColumnMetadata(configMetadata, sheetMetadata);
-      metadataContext = formatMetadataForAI(mergedMetadata);
-    } catch (err) {
-      console.warn('Could not load column metadata:', err);
-      if (coachingRules.columnMetadata && Object.keys(coachingRules.columnMetadata).length > 0) {
-        metadataContext = formatMetadataForAI(coachingRules.columnMetadata);
-      }
+  // Check if we have valid cached context
+  let dataContext: string;
+  let metadataContext: string;
+  
+  const cached = getCachedContext(dataHash);
+  if (cached) {
+    // Use cached context - no expensive rebuilding needed
+    dataContext = cached.dataContext;
+    metadataContext = cached.metadataContext;
+  } else {
+    // Build context from scratch (first message or data changed)
+    if (onStatusUpdate) {
+      onStatusUpdate('Building context...');
     }
-  } else if (coachingRules.columnMetadata && Object.keys(coachingRules.columnMetadata).length > 0) {
-    metadataContext = formatMetadataForAI(coachingRules.columnMetadata);
+    
+    dataContext = formatMatchDataForAI(matchData, columnKeys);
+    const metadataResult = await getMetadataContext(sheetConfig);
+    metadataContext = metadataResult.metadataContext;
+    
+    // Cache for subsequent messages
+    setCachedContext(dataHash, dataContext, metadataContext, metadataResult.metadata);
   }
   
   const systemPrompt = buildSystemPrompt(dataContext, metadataContext);
@@ -220,6 +260,14 @@ export async function chatWithAI(
     }
     throw error;
   }
+}
+
+/**
+ * Invalidates the AI context cache
+ * Call this when match data or sheet config changes
+ */
+export function invalidateAIContextCache(): void {
+  invalidateCache();
 }
 
 /**

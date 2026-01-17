@@ -73,7 +73,9 @@ router.post('/login', loginRateLimiter, async (req, res) => {
       },
     });
   } catch (error: any) {
-    res.status(400).json({ error: error.message || 'Login failed' });
+    // Always return generic error to prevent user enumeration
+    console.error('🔒 Login error:', error.message);
+    res.status(401).json({ error: 'Invalid credentials' });
   }
 });
 

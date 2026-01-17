@@ -20,36 +20,37 @@ A modern web application for coaches to visualize match data from Google Sheets.
 npm install
 ```
 
-### 2. Configure Google Sheets
+### 2. Configure Backend Environment
 
-1. Open `src/config.ts`
-2. Replace `YOUR_SPREADSHEET_ID_HERE` with your Google Sheet ID
-   - The Sheet ID is in your Google Sheets URL: `https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit`
-3. Replace `YOUR_API_KEY_HERE` with your Google API Key
-   - Get one from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
-   - Enable the "Google Sheets API" for your project
+All API keys and secrets are configured in the **backend** environment only (never in the frontend).
 
-### 3. Make Your Sheet Public (Optional)
+Create a `.env` file in the `backend/` directory with:
 
-If you want to use the simple API key method:
+```bash
+# Google Sheets Configuration
+GOOGLE_SHEETS_SPREADSHEET_ID=your_spreadsheet_id_here
+GOOGLE_SHEETS_API_KEY=your_api_key_here
+
+# AI Chatbot (Optional)
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Session Security
+SESSION_SECRET=your_random_secret_here
+```
+
+**Getting the keys:**
+- **Google Sheet ID**: Found in your Google Sheets URL: `https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit`
+- **Google API Key**: Get from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (enable "Google Sheets API")
+- **Gemini API Key**: Get from [Google AI Studio](https://makersuite.google.com/app/apikey)
+
+### 3. Make Your Sheet Public
+
+For the API key method to work:
 1. Open your Google Sheet
 2. Click "Share" → "Change to anyone with the link"
 3. Set permission to "Viewer"
 
-### 4. Configure AI Chatbot (Optional)
-
-To enable the AI chatbot feature:
-
-1. Get a free Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a `.env` file in the root directory (copy from `.env.example`)
-3. Add your API key: `VITE_GEMINI_API_KEY=your_api_key_here`
-
-The chatbot allows you to ask natural language questions about your match data, such as:
-- "Show me possession stats from the last 5 games"
-- "Compare shots and SPI across all teams"
-- "What's the average xG for recent matches?"
-
-### 5. Run the Application
+### 4. Run the Application
 
 ```bash
 npm run dev

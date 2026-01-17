@@ -122,10 +122,20 @@ export function useChartConfig({ chartType, defaultConfig, globalIncludeOpponent
     if (user) {
       try {
         await resetChartConfig(user.id, chartType);
-        setConfig(defaultConfig);
+        // Apply global override if provided, otherwise use default
+        const resetConfig = globalIncludeOpponents !== undefined
+          ? { ...defaultConfig, includeOpponent: globalIncludeOpponents }
+          : defaultConfig;
+        setConfig(resetConfig);
       } catch (error) {
         console.error('Error resetting chart config:', error);
       }
+    } else {
+      // No user - just reset local state with global override if provided
+      const resetConfig = globalIncludeOpponents !== undefined
+        ? { ...defaultConfig, includeOpponent: globalIncludeOpponents }
+        : defaultConfig;
+      setConfig(resetConfig);
     }
   };
 

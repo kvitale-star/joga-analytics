@@ -147,7 +147,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
             <div className="bg-white rounded-lg p-6 border border-red-200 shadow-sm">
               <div className="text-red-600 font-semibold mb-2">⚠️ AI service is not configured</div>
               <p className="text-gray-600">
-                Please add your <code className="bg-gray-100 px-1 rounded">VITE_GEMINI_API_KEY</code> or <code className="bg-gray-100 px-1 rounded">VITE_HUGGINGFACE_API_KEY</code> to your <code className="bg-gray-100 px-1 rounded">.env</code> file to use the chatbot.
+                Please add <code className="bg-gray-100 px-1 rounded">GEMINI_API_KEY</code> to the backend <code className="bg-gray-100 px-1 rounded">.env</code> file to enable the chatbot.
               </p>
             </div>
           ) : showWelcome && messages.length === 0 ? (

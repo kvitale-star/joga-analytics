@@ -205,20 +205,26 @@ export async function hasUsers(): Promise<boolean> {
 
 /**
  * Login a user
+ * Returns null for any authentication failure to prevent user enumeration
+ * Actual failure reasons are logged server-side for debugging
  */
 export async function login(email: string, password: string) {
   const user = await getUserByEmailForAuth(email);
 
   if (!user || !user.isActive) {
+    console.log('🔒 Login failed: user not found or inactive');
     return null;
   }
 
   if (!user.emailVerified) {
-    throw new Error('Email not verified. Please check your email and verify your account.');
+    // Log the actual reason server-side, but return null to prevent user enumeration
+    console.log('🔒 Login failed: email not verified for user');
+    return null;
   }
 
   const isValidPassword = await verifyPassword(password, user.passwordHash);
   if (!isValidPassword) {
+    console.log('🔒 Login failed: invalid password');
     return null;
   }
 

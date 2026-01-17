@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChartConfig } from '../types/chartConfig';
 import { JOGA_COLORS } from '../utils/colors';
 
@@ -24,6 +24,11 @@ export const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localConfig, setLocalConfig] = useState<ChartConfig>(config);
+
+  // Sync localConfig when config prop changes (e.g., after reset)
+  useEffect(() => {
+    setLocalConfig(config);
+  }, [config]);
 
   const handleMetricToggle = (metricId: string) => {
     const isRequired = availableMetrics.find(m => m.id === metricId)?.required;

@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Team Data' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Club Data' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -131,7 +131,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Game Data' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -180,7 +180,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'JOGA AI Chat' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -214,7 +214,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Upload Game Data' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -248,7 +248,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Data at a Glance' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -293,7 +293,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Settings' : undefined}
             >
               <svg
-                className="w-5 h-5 flex-shrink-0"
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

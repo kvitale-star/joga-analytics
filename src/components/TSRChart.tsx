@@ -48,22 +48,24 @@ export const TSRChart: React.FC<TSRChartProps> = ({
     if (config.visibleMetrics.includes('tsr') && tsrKey) {
       const val = match[tsrKey];
       base['TSR'] = typeof val === 'number' ? val : null;
-    }
-    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
-      base['Shots For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
-    }
-    if (config.visibleMetrics.includes('shotsAgainst') && shotsAgainstKey) {
-      base['Shots Against'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
-    }
-
-    // Add opponent metrics when includeOpponent is true
-    if (config.includeOpponent) {
-      if (config.visibleMetrics.includes('tsr') && oppTSRKey) {
+      // Add opponent metric if includeOpponent is true
+      if (config.includeOpponent && oppTSRKey) {
         const valOpp = match[oppTSRKey];
         base['Opp TSR'] = typeof valOpp === 'number' ? valOpp : null;
       }
-      if (config.visibleMetrics.includes('shotsFor') && shotsAgainstKey) {
+    }
+    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
+      base['Shots For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
+      // Add opponent metric if includeOpponent is true
+      if (config.includeOpponent && shotsAgainstKey) {
         base['Opp Shots'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
+      }
+    }
+    if (config.visibleMetrics.includes('attemptsFor') && shotsForKey) {
+      base['Attempts For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
+      // Add opponent metric if includeOpponent is true
+      if (config.includeOpponent && shotsAgainstKey) {
+        base['Opp Attempts'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
       }
     }
 
@@ -94,30 +96,39 @@ export const TSRChart: React.FC<TSRChartProps> = ({
           {showLabels && <LabelList dataKey="Shots For" position="top" fill="#666" fontSize={12} />}
         </Bar>
       );
+      // Add opponent bar if includeOpponent is true
+      if (config.includeOpponent && shotsAgainstKey) {
+        bars.push(
+          <Bar key="Opp Shots" dataKey="Opp Shots" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opp Shots" position="top" fill="#666" fontSize={12} />}
+          </Bar>
+        );
+      }
     }
-    if (config.includeOpponent && config.visibleMetrics.includes('shotsFor') && shotsAgainstKey) {
+    if (config.visibleMetrics.includes('attemptsFor') && shotsForKey) {
       bars.push(
-        <Bar key="Opp Shots" dataKey="Opp Shots" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Opp Shots" position="top" fill="#666" fontSize={12} />}
+        <Bar key="Attempts For" dataKey="Attempts For" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Attempts For" position="top" fill="#666" fontSize={12} />}
         </Bar>
       );
-    }
-    if (config.visibleMetrics.includes('shotsAgainst') && shotsAgainstKey) {
-      bars.push(
-        <Bar key="Shots Against" dataKey="Shots Against" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Shots Against" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
+      // Add opponent bar if includeOpponent is true
+      if (config.includeOpponent && shotsAgainstKey) {
+        bars.push(
+          <Bar key="Opp Attempts" dataKey="Opp Attempts" fill={OPPONENT_COLORS.dark} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opp Attempts" position="top" fill="#666" fontSize={12} />}
+          </Bar>
+        );
+      }
     }
 
     return bars;
   };
 
-  // Available metrics
+  // Available metrics - only "For" metrics, no "Against" or "Opp"
   const availableMetrics = [
     ...(tsrKey ? [{ id: 'tsr', label: 'Total Shots Ratio %', required: false }] : []),
     ...(shotsForKey ? [{ id: 'shotsFor', label: 'Shots For', required: false }] : []),
-    ...(shotsAgainstKey ? [{ id: 'shotsAgainst', label: 'Shots Against', required: false }] : []),
+    ...(shotsForKey ? [{ id: 'attemptsFor', label: 'Attempts', required: false }] : []),
   ];
 
   // Generate dynamic title

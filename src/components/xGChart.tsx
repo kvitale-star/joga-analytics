@@ -51,24 +51,23 @@ export const XGChart: React.FC<xGChartProps> = ({
     // Add JOGA team metrics
     if (config.visibleMetrics.includes('xG')) {
       base['xG'] = typeof match[xGKey] === 'number' ? match[xGKey] : 0;
+      // Add opponent metric if includeOpponent is true
+      if (config.includeOpponent && xGAKey) {
+        base['xG (Opp)'] = typeof match[xGAKey] === 'number' ? match[xGAKey] : 0;
+      }
     }
     if (config.visibleMetrics.includes('goalsFor') && goalsForKey) {
       base['Goals For'] = typeof match[goalsForKey] === 'number' ? match[goalsForKey] : 0;
-    }
-    if (config.visibleMetrics.includes('goalsAgainst') && goalsAgainstKey) {
-      base['Goals Against'] = typeof match[goalsAgainstKey] === 'number' ? match[goalsAgainstKey] : 0;
+      // Add opponent metric if includeOpponent is true
+      if (config.includeOpponent && goalsAgainstKey) {
+        base['Goals Against'] = typeof match[goalsAgainstKey] === 'number' ? match[goalsAgainstKey] : 0;
+      }
     }
     if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
       base['Shots For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
-    }
-    if (config.visibleMetrics.includes('shotsAgainst') && shotsAgainstKey) {
-      base['Shots Against'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
-    }
-
-    // Add opponent metrics when includeOpponent is true
-    if (config.includeOpponent) {
-      if (config.visibleMetrics.includes('xG')) {
-        base['xG (Opp)'] = typeof match[xGAKey] === 'number' ? match[xGAKey] : 0;
+      // Add opponent metric if includeOpponent is true
+      if (config.includeOpponent && shotsAgainstKey) {
+        base['Shots Against'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
       }
     }
 
@@ -99,13 +98,14 @@ export const XGChart: React.FC<xGChartProps> = ({
           {showLabels && <LabelList dataKey="Goals For" position="top" fill="#666" fontSize={12} />}
         </Bar>
       );
-    }
-    if (config.visibleMetrics.includes('goalsAgainst') && goalsAgainstKey) {
-      bars.push(
-        <Bar key="Goals Against" dataKey="Goals Against" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Goals Against" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
+      // Add opponent bar if includeOpponent is true
+      if (config.includeOpponent && goalsAgainstKey) {
+        bars.push(
+          <Bar key="Goals Against" dataKey="Goals Against" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Goals Against" position="top" fill="#666" fontSize={12} />}
+          </Bar>
+        );
+      }
     }
     if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
       bars.push(
@@ -113,25 +113,24 @@ export const XGChart: React.FC<xGChartProps> = ({
           {showLabels && <LabelList dataKey="Shots For" position="top" fill="#666" fontSize={12} />}
         </Bar>
       );
-    }
-    if (config.visibleMetrics.includes('shotsAgainst') && shotsAgainstKey) {
-      bars.push(
-        <Bar key="Shots Against" dataKey="Shots Against" fill={OPPONENT_COLORS.dark} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Shots Against" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
+      // Add opponent bar if includeOpponent is true
+      if (config.includeOpponent && shotsAgainstKey) {
+        bars.push(
+          <Bar key="Shots Against" dataKey="Shots Against" fill={OPPONENT_COLORS.dark} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Shots Against" position="top" fill="#666" fontSize={12} />}
+          </Bar>
+        );
+      }
     }
 
     return bars;
   };
 
-  // Available metrics
+  // Available metrics - only "For" metrics, no "Against" or "Opp"
   const availableMetrics = [
     { id: 'xG', label: 'Expected Goals (xG)', required: false },
     ...(goalsForKey ? [{ id: 'goalsFor', label: 'Goals For', required: false }] : []),
-    ...(goalsAgainstKey ? [{ id: 'goalsAgainst', label: 'Goals Against', required: false }] : []),
     ...(shotsForKey ? [{ id: 'shotsFor', label: 'Shots For', required: false }] : []),
-    ...(shotsAgainstKey ? [{ id: 'shotsAgainst', label: 'Shots Against', required: false }] : []),
   ];
 
   // Generate dynamic title

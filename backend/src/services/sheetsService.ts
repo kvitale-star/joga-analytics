@@ -11,34 +11,44 @@ interface MatchData {
   [key: string]: string | number;
 }
 
+// Flag to ensure we only log config status once
+let hasLoggedConfig = false;
+
+/**
+ * Gets config values lazily (after dotenv has loaded) and logs once
+ */
+function getConfig(): { spreadsheetId: string | undefined; apiKey: string | undefined } {
+  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+  const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
+  
+  // Log config status once on first access
+  if (!hasLoggedConfig) {
+    hasLoggedConfig = true;
+    console.log('📊 Sheets Service config:');
+    console.log('  GOOGLE_SHEETS_SPREADSHEET_ID:', spreadsheetId ? 'configured' : 'NOT SET');
+    console.log('  GOOGLE_SHEETS_API_KEY:', apiKey ? 'configured' : 'NOT SET');
+  }
+  
+  return { spreadsheetId, apiKey };
+}
+
 /**
  * Fetches data from Google Sheets using the Sheets API
  */
 export async function fetchSheetData(range: string): Promise<MatchData[]> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
-
-  console.log('📊 Sheets Service - Checking environment variables...');
-  console.log('  GOOGLE_SHEETS_SPREADSHEET_ID:', spreadsheetId ? `${spreadsheetId.substring(0, 10)}...` : 'NOT SET');
-  console.log('  GOOGLE_SHEETS_API_KEY:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NOT SET');
-
+  const { spreadsheetId, apiKey } = getConfig();
+  
   if (!spreadsheetId) {
-    console.error('❌ GOOGLE_SHEETS_SPREADSHEET_ID is not set');
     throw new Error('Backend configuration error: GOOGLE_SHEETS_SPREADSHEET_ID environment variable is not set. Please configure this in your backend .env file or deployment environment variables.');
   }
 
   if (!apiKey) {
-    console.error('❌ GOOGLE_SHEETS_API_KEY is not set');
     throw new Error('Backend configuration error: GOOGLE_SHEETS_API_KEY environment variable is not set. Please configure this in your backend .env file or deployment environment variables.');
   }
 
   // URL encode the range to handle special characters like spaces in sheet names
   const encodedRange = encodeURIComponent(range);
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodedRange}?key=${apiKey}`;
-
-  console.log('📊 Fetching from Google Sheets API...');
-  console.log('  Range:', range);
-  console.log('  URL:', url.replace(apiKey, 'API_KEY_HIDDEN'));
 
   try {
     const response = await fetch(url);
@@ -117,9 +127,8 @@ export async function fetchSheetData(range: string): Promise<MatchData[]> {
  * Fetches column metadata from a "Metadata" tab in Google Sheets
  */
 export async function fetchColumnMetadata(range: string): Promise<Record<string, any>> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
-
+  const { spreadsheetId, apiKey } = getConfig();
+  
   if (!spreadsheetId || !apiKey) {
     return {};
   }
@@ -169,9 +178,8 @@ export async function appendRowToSheet(
   columnKeys: string[],
   rowData: Record<string, string | number>
 ): Promise<void> {
-  const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-  const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
-
+  const { spreadsheetId, apiKey } = getConfig();
+  
   if (!spreadsheetId) {
     throw new Error('Backend configuration error: GOOGLE_SHEETS_SPREADSHEET_ID environment variable is not set. Please configure this in your backend .env file or deployment environment variables.');
   }

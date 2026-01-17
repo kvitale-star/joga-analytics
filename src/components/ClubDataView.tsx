@@ -49,6 +49,7 @@ interface ClubDataViewProps {
   getGoalsForKey: () => string;
   getGoalsAgainstKey: () => string;
   getPossessionKey: () => string;
+  getOppPossessionKey: () => string;
   getPassShareKey: () => string;
   getxGKey: () => string;
   getxGAKey: () => string;
@@ -108,6 +109,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
   getGoalsForKey,
   getGoalsAgainstKey,
   getPossessionKey,
+  getOppPossessionKey,
   getPassShareKey,
   getxGKey,
   getxGAKey,
@@ -311,38 +313,48 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
       <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
         <div className="max-w-[1600px] mx-auto w-full">
           {!clubDataByTeam || clubDataByTeam.length === 0 ? (
-            selectedClubTeams.length === 0 ? (
-              availableClubTeams && availableClubTeams.length >= 2 ? (
-                <div className="max-w-4xl mx-auto">
-                  <TeamComparisonRadialChart
-                    data={matchData || []}
-                    teamKey={teamKeyForCharts}
-                    availableTeams={availableClubTeams || []}
-                    getTSRKey={getTSRKey}
-                    getPossessionKey={getPossessionKey}
-                    getSPIKey={getSPIKey}
-                    getPassesKey={getPassesForKey}
-                    getLPCAvgKey={getLPCAvgKey}
-                    getConversionRateKey={getConversionRateKey}
-                    columnKeys={columnKeys || []}
-                  />
-                </div>
+            (() => {
+              // Show radial chart when no teams selected OR when all teams are selected (default state)
+              const noTeamsSelected = selectedClubTeams.length === 0;
+              const allTeamsSelected = selectedClubTeams.length > 0 && 
+                                       availableClubTeams.length > 0 &&
+                                       selectedClubTeams.length === availableClubTeams.length &&
+                                       selectedClubTeams.every(team => availableClubTeams.includes(team));
+              const shouldShowRadial = noTeamsSelected || allTeamsSelected;
+              
+              return shouldShowRadial ? (
+                availableClubTeams && availableClubTeams.length >= 2 ? (
+                  <div className="max-w-4xl mx-auto">
+                    <TeamComparisonRadialChart
+                      data={matchData || []}
+                      teamKey={teamKeyForCharts}
+                      availableTeams={availableClubTeams || []}
+                      getTSRKey={getTSRKey}
+                      getPossessionKey={getPossessionKey}
+                      getSPIKey={getSPIKey}
+                      getPassesKey={getPassesForKey}
+                      getLPCAvgKey={getLPCAvgKey}
+                      getConversionRateKey={getConversionRateKey}
+                      columnKeys={columnKeys || []}
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                    <p className="text-gray-600 text-lg">
+                      {availableClubTeams && availableClubTeams.length === 1 
+                        ? 'At least 2 teams are required to display the team comparison chart.'
+                        : 'No teams available. Please ensure your data contains team information.'}
+                    </p>
+                  </div>
+                )
               ) : (
                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                   <p className="text-gray-600 text-lg">
-                    {availableClubTeams && availableClubTeams.length === 1 
-                      ? 'At least 2 teams are required to display the team comparison chart.'
-                      : 'No teams available. Please ensure your data contains team information.'}
+                    No team data available. Try adjusting filters.
                   </p>
                 </div>
-              )
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <p className="text-gray-600 text-lg">
-                  No team data available. Try adjusting filters.
-                </p>
-              </div>
-            )
+              );
+            })()
           ) : (
             <>
               {/* Charts Grid */}
@@ -393,6 +405,8 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     possessionKey={getPossessionKey()}
                     passShareKey={getPassShareKey()}
                     opponentKey={teamKeyForCharts}
+                    oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
+                    oppPassShareKey={columnKeys.includes(getOppPassShareKey()) ? getOppPassShareKey() : undefined}
                     onExpansionChange={handleChartExpansionChange('possession')}
                     globalIncludeOpponents={globalIncludeOpponents}
                   />
