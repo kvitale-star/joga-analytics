@@ -198,10 +198,33 @@ const teams = await db
   .execute();
 ```
 
+## Testing
+
+The backend includes a comprehensive test suite for the authentication system. Tests work with both local and Railway deployments.
+
+**Quick Start:**
+```bash
+# Terminal 1: Start server in test mode (disables rate limiting)
+NODE_ENV=test npm run dev
+
+# Terminal 2: Run tests
+npm test
+```
+
+**For detailed testing documentation, see [TEST_README.md](./TEST_README.md)**
+
+**Test Coverage:**
+- Authentication endpoints (login, logout, password change)
+- User enumeration prevention
+- Session management
+- Error handling and validation
+
+**Note:** Tests use test data only (no real credentials) and automatically clean up after themselves.
+
 ## Next Steps
 
 1. **Frontend Integration:** Create API client in frontend to call these endpoints
-2. **Testing:** Test all endpoints
+2. **Testing:** Run the test suite to verify all endpoints work correctly
 3. **Deployment:** Deploy backend to your hosting provider
 4. **Production:** Update environment variables for production
 

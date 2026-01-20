@@ -64,9 +64,10 @@ export function requireCsrfToken(
     return next();
   }
   
-  // Skip CSRF for certain endpoints (like login, setup, email verification, password reset)
-  // These endpoints don't require authentication, so CSRF is less critical
-  const skipCsrfPaths = ['/auth/login', '/auth/setup', '/auth/verify-email', '/auth/reset-password', '/auth/request-password-reset'];
+  // Skip CSRF for certain endpoints (like login, setup, email verification, password reset, logout)
+  // These endpoints don't require authentication, or need to work even when session is invalid
+  // Logout is included so clients can always clear cookies even after session expires
+  const skipCsrfPaths = ['/auth/login', '/auth/setup', '/auth/verify-email', '/auth/reset-password', '/auth/request-password-reset', '/auth/logout'];
   if (skipCsrfPaths.some(path => req.path.includes(path))) {
     return next();
   }

@@ -11,6 +11,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleMouseEnter = () => {
+    // Don't expand if walkthrough is active
+    if (document.body.classList.contains('walkthrough-active') || document.querySelector('.react-joyride__overlay')) {
+      return;
+    }
     setIsExpanded(true);
   };
 
@@ -20,6 +24,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
 
   return (
     <div
+      data-tour="sidebar"
       className={`fixed left-0 top-0 h-full bg-gray-800 text-white transition-all duration-300 z-50 ${
         isExpanded ? 'w-64' : 'w-16'
       }`}
@@ -31,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         <img
           src="/joga-logo.png"
           alt="JOGA"
+          data-tour="sidebar-logo"
           className="h-10 w-10 flex-shrink-0 object-contain"
           style={{ 
             filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
@@ -46,7 +52,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
       {/* Navigation Sections */}
       <nav className="mt-4">
         {/* Reporting Section */}
-        <div className="mb-6">
+        <div className="mb-6" data-tour="reporting-section">
           <div 
             className={`px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap transition-all duration-300 ease-in-out ${
               isExpanded 
@@ -58,6 +64,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           </div>
           <div className="space-y-1">
             <button
+              data-tour="team-data-nav"
               onClick={() => onNavigate('team-data')}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
@@ -71,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Team Data' : undefined}
             >
               <svg
+                data-tour="team-data-nav-icon"
                 className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
@@ -94,6 +102,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               </span>
             </button>
             <button
+              data-tour="club-data-nav"
               onClick={() => onNavigate('club-data')}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
@@ -101,6 +110,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Club Data' : undefined}
             >
               <svg
+                data-tour="club-data-nav-icon"
                 className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
@@ -124,6 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               </span>
             </button>
             <button
+              data-tour="game-data-nav"
               onClick={() => onNavigate('game-data')}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
@@ -131,6 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'Game Data' : undefined}
             >
               <svg
+                data-tour="game-data-nav-icon"
                 className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"
@@ -159,6 +171,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
         {/* Tools Section */}
         <div className="mb-6">
           <div 
+            data-tour="sidebar-tools-section"
             className={`px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap transition-all duration-300 ease-in-out ${
               isExpanded 
                 ? 'opacity-100 max-h-8' 
@@ -169,6 +182,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           </div>
           <div className="space-y-1">
             <button
+              data-tour="chat-nav"
               onClick={() => onNavigate('chat')}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
@@ -180,6 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               title={!isExpanded ? 'JOGA AI Chat' : undefined}
             >
               <svg
+                data-tour="chat-nav-icon"
                 className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
                 fill="none"
                 stroke="currentColor"

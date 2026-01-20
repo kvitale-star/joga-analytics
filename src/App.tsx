@@ -41,6 +41,7 @@ import { UserMenu } from './components/UserMenu';
 import { PasswordResetForm } from './components/PasswordResetForm';
 import { EmailVerification } from './components/EmailVerification';
 import { SettingsView } from './components/SettingsView';
+import { Walkthrough } from './components/Walkthrough';
 
 type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings';
 
@@ -1604,9 +1605,10 @@ function App() {
     return (
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="chat" onNavigate={handleNavigation} />
-        <div className="flex-1 ml-16">
+        <div className="flex-1 ml-16" data-tour="chat-content">
           <ChatFirstView matchData={matchData} columnKeys={columnKeys} sheetConfig={sheetConfig} />
         </div>
+        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1616,7 +1618,7 @@ function App() {
     return (
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="game-data" onNavigate={handleNavigation} />
-        <div className="flex-1 ml-16">
+        <div className="flex-1 ml-16" data-tour="game-data-content">
           <GameDataView
             matchData={matchData}
             columnKeys={columnKeys}
@@ -1646,6 +1648,7 @@ function App() {
             setSelectedTeam={setSelectedTeam}
           />
         </div>
+        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1682,6 +1685,7 @@ function App() {
         <div className="flex-1 ml-16">
           <SettingsView />
         </div>
+        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1691,7 +1695,7 @@ function App() {
     return (
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="club-data" onNavigate={handleNavigation} />
-        <div className="flex-1 ml-16 flex flex-col overflow-auto">
+        <div className="flex-1 ml-16 flex flex-col overflow-auto" data-tour="club-data-content">
           <ClubDataView
             matchData={matchData}
             columnKeys={columnKeys}
@@ -1752,6 +1756,7 @@ function App() {
             getOppPassShareKey={getOppPassShareKey}
           />
         </div>
+        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1759,13 +1764,13 @@ function App() {
   return (
     <div className="flex h-screen bg-gray-50 relative">
       <Sidebar currentView="dashboard" onNavigate={handleNavigation} />
-      <div className="flex-1 ml-16 flex flex-col overflow-auto">
+      <div className="flex-1 ml-16 flex flex-col overflow-auto" data-tour="team-data-content">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 relative">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Team Data Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900" data-tour="team-data-header">Team Data Dashboard</h1>
               <p className="text-sm text-gray-600 mt-1">Charts and Visualizations of Team Match Data</p>
             </div>
             <div className="relative">
@@ -1783,6 +1788,7 @@ function App() {
             <div className="flex-shrink-0">
               <label className="block text-xs font-medium text-gray-600 mb-1">Team</label>
               <select
+                data-tour="team-selector"
                 value={selectedTeam || ''}
                 onChange={(e) => {
                   setSelectedTeam(e.target.value || null);
@@ -1829,6 +1835,7 @@ function App() {
             <div className="flex-shrink-0">
               <label className="block text-xs font-medium text-gray-600 mb-1">Chart Group</label>
               <select
+                data-tour="chart-group-selector"
                 value={selectedChartGroup || ''}
                 onChange={(e) => {
                   const groupId = e.target.value || null;
@@ -1920,7 +1927,7 @@ function App() {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
+      <main className="flex-1 overflow-y-auto p-6 bg-gray-50" data-tour="charts-area">
         <div className="max-w-[1600px] mx-auto w-full">
 
         {selectedTeam === null ? (
@@ -2589,18 +2596,20 @@ function App() {
                   {selectedTeam === null ? (
                     <EmptyChart showTitle={false} />
                   ) : (
-                    <ShotsChart
-                      data={dataToDisplay}
-                      shotsForKey={getShotsForKey()}
-                      shotsAgainstKey={getShotsAgainstKey()}
-                      opponentKey={opponentKey}
-                      showLabels={showLabels}
-                      attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
-                      attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
-                      goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                      goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                      onExpansionChange={handleChartExpansionChange('shots')}
-                    />
+                    <div data-tour="first-chart">
+                      <ShotsChart
+                        data={dataToDisplay}
+                        shotsForKey={getShotsForKey()}
+                        shotsAgainstKey={getShotsAgainstKey()}
+                        opponentKey={opponentKey}
+                        showLabels={showLabels}
+                        attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                        attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                        goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                        goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                        onExpansionChange={handleChartExpansionChange('shots')}
+                      />
+                    </div>
                   )}
                 </div>
               )}
@@ -2975,6 +2984,7 @@ function App() {
         </div>
       </main>
       </div>
+      <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
     </div>
   );
 }

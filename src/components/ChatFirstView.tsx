@@ -130,7 +130,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">JOGA Analytics AI</h1>
+              <h1 className="text-2xl font-bold text-gray-900" data-tour="chat-header">JOGA Analytics AI</h1>
               <p className="text-sm text-gray-600 mt-1">AI-Powered Match Data Analysis</p>
             </div>
             <div className="relative">

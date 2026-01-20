@@ -82,15 +82,23 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 /**
  * POST /api/auth/logout
  * Logout (delete session)
+ * Note: Not protected by authenticateSession - allows logout even when session is invalid
+ * This ensures clients can always clear their cookies
  */
-router.post('/logout', authenticateSession, async (req, res) => {
+router.post('/logout', async (req, res) => {
   try {
     const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] as string;
     if (sessionId) {
-      await deleteSession(sessionId);
+      // Try to delete session, but don't fail if it doesn't exist
+      try {
+        await deleteSession(sessionId);
+      } catch (err) {
+        // Session may already be invalid/expired - that's okay, just clear cookies
+        console.log('🔒 Session already invalid during logout (this is normal)');
+      }
     }
     
-    // Clear cookies
+    // Always clear cookies, even if session was invalid
     const isProduction = process.env.NODE_ENV === 'production';
     const sameSite = isProduction ? 'none' : 'lax';
     res.clearCookie('sessionId', {
@@ -108,6 +116,21 @@ router.post('/logout', authenticateSession, async (req, res) => {
     
     res.json({ success: true });
   } catch (error: any) {
+    // Even if there's an error, try to clear cookies
+    const isProduction = process.env.NODE_ENV === 'production';
+    const sameSite = isProduction ? 'none' : 'lax';
+    res.clearCookie('sessionId', {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: sameSite as 'none' | 'lax',
+      path: '/',
+    });
+    res.clearCookie('csrfToken', {
+      httpOnly: false,
+      secure: isProduction,
+      sameSite: sameSite as 'none' | 'strict',
+      path: '/',
+    });
     res.status(500).json({ error: error.message || 'Logout failed' });
   }
 });

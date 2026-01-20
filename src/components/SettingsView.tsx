@@ -5,6 +5,8 @@ import { UserPreferences } from './UserPreferences';
 import { UserManagement } from './UserManagement';
 import { TeamAssignment } from './TeamAssignment';
 import { UserMenu } from './UserMenu';
+import { triggerWalkthrough } from './Walkthrough';
+import { JOGA_COLORS } from '../utils/colors';
 
 export const SettingsView: React.FC = () => {
   const { user } = useAuth();
@@ -92,6 +94,30 @@ export const SettingsView: React.FC = () => {
           {activeTab === 'account' && (
             <div className="space-y-6">
               <ChangePassword />
+              
+              {/* Tutorial Section */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Tutorial</h2>
+                <p className="text-gray-600 mb-4">
+                  Take a guided tour of JOGA Analytics to learn about all the features and views.
+                </p>
+                <button
+                  onClick={() => triggerWalkthrough()}
+                  className="font-medium py-2 px-6 rounded-lg transition-colors text-black"
+                  style={{
+                    backgroundColor: JOGA_COLORS.voltYellow,
+                    border: `2px solid ${JOGA_COLORS.voltYellow}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#b8e600';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+                  }}
+                >
+                  Start Tutorial
+                </button>
+              </div>
               
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>

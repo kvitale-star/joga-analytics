@@ -23,18 +23,65 @@ export async function getAllUsers() {
     .orderBy('created_at', 'desc')
     .execute();
 
-  return users.map(user => ({
+  return users.map(user => {
+    // Defensive JSON parsing - fall back to {} if malformed
+    let preferences = {};
+    try {
+      preferences = JSON.parse(user.preferences || '{}');
+    } catch (err) {
+      console.error(`⚠️ Failed to parse preferences for user ${user.id}:`, err);
+      preferences = {};
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      emailVerified: Boolean(user.email_verified),
+      preferences,
+      isActive: Boolean(user.is_active),
+      createdAt: new Date(user.created_at),
+      updatedAt: new Date(user.updated_at),
+      lastLoginAt: user.last_login_at ? new Date(user.last_login_at) : null,
+    };
+  });
+}
+
+/**
+ * Get count of active admin users
+ */
+export async function getActiveAdminCount(excludeUserId?: number): Promise<number> {
+  let query = db
+    .selectFrom('users')
+    .select(db.fn.count('id').as('count'))
+    .where('role', '=', 'admin')
+    .where('is_active', '=', 1);
+
+  if (excludeUserId !== undefined) {
+    query = query.where('id', '!=', excludeUserId);
+  }
+
+  const result = await query.executeTakeFirst();
+  return Number(result?.count || 0);
+}
+
+/**
+ * Get user basic info by ID (for validation checks)
+ * Returns minimal fields needed for authorization checks
+ */
+export async function getUserBasicInfo(userId: number) {
+  const user = await db
+    .selectFrom('users')
+    .select(['id', 'role', 'is_active'])
+    .where('id', '=', userId)
+    .executeTakeFirst();
+  
+  return user ? {
     id: user.id,
-    email: user.email,
-    name: user.name,
     role: user.role,
-    emailVerified: Boolean(user.email_verified),
-    preferences: JSON.parse(user.preferences || '{}'),
     isActive: Boolean(user.is_active),
-    createdAt: new Date(user.created_at),
-    updatedAt: new Date(user.updated_at),
-    lastLoginAt: user.last_login_at ? new Date(user.last_login_at) : null,
-  }));
+  } : null;
 }
 
 /**

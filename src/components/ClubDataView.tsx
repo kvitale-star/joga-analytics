@@ -176,7 +176,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Club Data Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900" data-tour="club-data-header">Club Data Dashboard</h1>
               <p className="text-sm text-gray-600 mt-1">Team performance metrics across all JOGA teams</p>
             </div>
             <div className="relative">
