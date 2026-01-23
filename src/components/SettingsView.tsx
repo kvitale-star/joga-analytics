@@ -82,42 +82,8 @@ export const SettingsView: React.FC = () => {
         <div>
           {activeTab === 'account' && (
             <div className="space-y-6">
-              {/* Account Information - First */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
-                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Name</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{user.name}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Email</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Role</dt>
-                    <dd className="mt-1 text-sm text-gray-900 capitalize">{user.role}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Email Verified</dt>
-                    <dd className="mt-1 text-sm text-gray-900">
-                      {user.emailVerified ? (
-                        <span className="text-green-600">✓ Verified</span>
-                      ) : (
-                        <span className="text-yellow-600">⚠ Not Verified</span>
-                      )}
-                    </dd>
-                  </div>
-                  {user.lastLoginAt && (
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Last Login</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {new Date(user.lastLoginAt).toLocaleString()}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
+              {/* Change Password - First */}
+              <ChangePassword />
 
               {/* Preferences - Second */}
               <UserPreferences />
@@ -154,8 +120,42 @@ export const SettingsView: React.FC = () => {
                 </button>
               </div>
 
-              {/* Change Password - Fourth */}
-              <ChangePassword />
+              {/* Account Information - Fourth (Bottom) */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
+                <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Name</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{user.name}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Role</dt>
+                    <dd className="mt-1 text-sm text-gray-900 capitalize">{user.role}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email Verified</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {user.emailVerified ? (
+                        <span className="text-green-600">✓ Verified</span>
+                      ) : (
+                        <span className="text-yellow-600">⚠ Not Verified</span>
+                      )}
+                    </dd>
+                  </div>
+                  {user.lastLoginAt && (
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Last Login</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        {new Date(user.lastLoginAt).toLocaleString()}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
             </div>
           )}
 
