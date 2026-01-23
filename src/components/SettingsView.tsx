@@ -82,13 +82,10 @@ export const SettingsView: React.FC = () => {
         <div>
           {activeTab === 'account' && (
             <div className="space-y-6">
-              {/* Change Password - First */}
-              <ChangePassword />
-
-              {/* Preferences - Second */}
+              {/* Preferences - First */}
               <UserPreferences />
               
-              {/* Tutorial Section - Third */}
+              {/* Tutorial Section - Second */}
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Tutorial</h2>
                 <p className="text-gray-600 mb-4">
@@ -119,6 +116,9 @@ export const SettingsView: React.FC = () => {
                   Start Tutorial
                 </button>
               </div>
+
+              {/* Change Password - Third */}
+              <ChangePassword />
 
               {/* Account Information - Fourth (Bottom) */}
               <div className="bg-white rounded-lg shadow p-6">
