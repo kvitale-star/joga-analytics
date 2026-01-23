@@ -39,7 +39,7 @@ JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 
 # SendGrid (optional - for email functionality)
 SENDGRID_API_KEY=SG.your_api_key_here
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
+SENDGRID_FROM_EMAIL=jogafc.analytics@gmail.com
 
 # Password Validation
 # Set to false to disable password validation (useful for testing)
