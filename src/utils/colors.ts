@@ -4,7 +4,7 @@
  * Three primary colors for JOGA team data, buttons, and visual elements:
  * - Volt Yellow (#ceff00) - Nike Volt Yellow
  * - Valor Blue (#6787aa) - Nike Valor Blue
- * - Pink Foam (#FFC0CB) - Pink Foam
+ * - Pink Foam (#EBAAB7) - Pink Foam (darker shade)
  * 
  * These three colors should ALWAYS be used to represent JOGA team information.
  * Different shades of gray should be used to represent opponent data.
@@ -14,10 +14,10 @@
 export const JOGA_COLORS = {
   voltYellow: '#ceff00',      // rgb(206, 255, 0) - Nike Volt Yellow
   valorBlue: '#6787aa',       // rgb(103, 135, 170) - Nike Valor Blue
-  pinkFoam: '#FFC0CB',        // rgb(255, 192, 203) - Pink Foam
+  pinkFoam: '#EBAAB7',        // rgb(235, 170, 183) - Pink Foam (darker shade)
   voltYellowRgb: 'rgb(206, 255, 0)',
   valorBlueRgb: 'rgb(103, 135, 170)',
-  pinkFoamRgb: 'rgb(255, 192, 203)',
+  pinkFoamRgb: 'rgb(235, 170, 183)',
 };
 
 // Opponent colors - shades of gray

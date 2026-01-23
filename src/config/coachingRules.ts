@@ -91,16 +91,16 @@ export const coachingRules: CoachingRules = {
   
   examplePrompts: [
     {
-        question: "Summarize the season for the B2014 team.",
+        question: "Summarize the season for the Boys U12 team for 2025 Season.",
         description: "I'll create a summary report.",
     },
     {
-      question: "Show me possession stats for the G2011 team from the last 5 games",
+      question: "Show me possession stats for the GU11 Volt team from the last 5 games",
       description: "I'll create a chart and summary",
     },
 
     {
-      question: "Which games had the highest conversion rate for the  B2015 team?",
+      question: "Which games had the highest conversion rate for the BU11 team?",
       description: "I'll identify and visualize the top performers",
     },
     {
