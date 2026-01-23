@@ -98,19 +98,23 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
   
   /**
-   * NOTE: Sender Avatar Configuration
+   * NOTE: Sender Avatar in Email Clients
    * The avatar/profile picture that appears next to the sender name in email clients
-   * is controlled by SendGrid's Sender Profile settings, not by code.
+   * (Gmail, Outlook, etc.) is NOT controlled by SendGrid or this code.
    * 
-   * To set the JOGA logo as the sender avatar:
-   * 1. Log in to SendGrid dashboard
-   * 2. Go to Settings → Sender Authentication → Sender Profiles
-   * 3. Create or edit a sender profile for your FROM_EMAIL address
-   * 4. Upload the JOGA logo (joga-logo-bw.png) as the profile picture
-   * 5. Save the sender profile
+   * Email client avatars are determined by:
+   * 1. The sender email account's profile picture (Gmail, Outlook, etc.)
+   * 2. Gravatar (if the email is linked to a Gravatar account)
+   * 3. The recipient's contact database
    * 
-   * The avatar will then appear in email clients (Gmail, Outlook, etc.) when
-   * emails are sent from this address.
+   * To use the JOGA logo as the sender avatar:
+   * - Set up a Gravatar account for your SENDGRID_FROM_EMAIL address
+   * - Upload joga-logo-bw.png as the Gravatar image
+   * - Email clients that support Gravatar will display it
+   * 
+   * Alternatively, if using a Gmail/Google Workspace account:
+   * - Set the profile picture in the Google account settings
+   * - This will appear in Gmail and some other email clients
    */
   const msg = {
     to: email,
@@ -187,8 +191,8 @@ export async function sendPasswordSetupEmail(email: string, token: string, name:
   
   /**
    * NOTE: Sender Avatar Configuration
-   * See comment in sendPasswordResetEmail() for instructions on setting
-   * the sender avatar/profile picture in SendGrid dashboard.
+   * See comment in sendPasswordResetEmail() for information about
+   * how sender avatars work in email clients.
    */
   const msg = {
     to: email,
