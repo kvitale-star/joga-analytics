@@ -82,40 +82,7 @@ export const SettingsView: React.FC = () => {
         <div>
           {activeTab === 'account' && (
             <div className="space-y-6">
-              <ChangePassword />
-              
-              {/* Tutorial Section */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Tutorial</h2>
-                <p className="text-gray-600 mb-4">
-                  Take a guided tour of JOGA Analytics to learn about all the features and views.
-                </p>
-                <button
-                  onClick={() => {
-                    // Try to call the window function, or dispatch a custom event
-                    if ((window as any).startWalkthrough) {
-                      (window as any).startWalkthrough();
-                    } else {
-                      // Fallback: dispatch custom event
-                      window.dispatchEvent(new CustomEvent('startWalkthrough'));
-                    }
-                  }}
-                  className="font-medium py-2 px-6 rounded-lg transition-colors text-black"
-                  style={{
-                    backgroundColor: JOGA_COLORS.voltYellow,
-                    border: `2px solid ${JOGA_COLORS.voltYellow}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#b8e600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
-                  }}
-                >
-                  Start Tutorial
-                </button>
-              </div>
-              
+              {/* Account Information - First */}
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -152,8 +119,43 @@ export const SettingsView: React.FC = () => {
                 </dl>
               </div>
 
-              {/* Preferences merged into Account tab */}
+              {/* Preferences - Second */}
               <UserPreferences />
+              
+              {/* Tutorial Section - Third */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Tutorial</h2>
+                <p className="text-gray-600 mb-4">
+                  Take a guided tour of JOGA Analytics to learn about all the features and views.
+                </p>
+                <button
+                  onClick={() => {
+                    // Try to call the window function, or dispatch a custom event
+                    if ((window as any).startWalkthrough) {
+                      (window as any).startWalkthrough();
+                    } else {
+                      // Fallback: dispatch custom event
+                      window.dispatchEvent(new CustomEvent('startWalkthrough'));
+                    }
+                  }}
+                  className="font-medium py-2 px-6 rounded-lg transition-colors text-black"
+                  style={{
+                    backgroundColor: JOGA_COLORS.voltYellow,
+                    border: `2px solid ${JOGA_COLORS.voltYellow}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#b8e600';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+                  }}
+                >
+                  Start Tutorial
+                </button>
+              </div>
+
+              {/* Change Password - Fourth */}
+              <ChangePassword />
             </div>
           )}
 
