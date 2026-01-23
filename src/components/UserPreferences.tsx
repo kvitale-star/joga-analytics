@@ -137,41 +137,6 @@ export const UserPreferences: React.FC = () => {
           </p>
         </div>
 
-        {/* Theme Preference */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Theme
-          </label>
-          <select
-            value={preferences.theme || 'light'}
-            onChange={(e) => handleChange('theme', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          >
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-            <option value="auto">Auto (System)</option>
-          </select>
-        </div>
-
-        {/* Chart Defaults */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Default Chart Type
-          </label>
-          <select
-            value={preferences.defaultChartType || 'bar'}
-            onChange={(e) => handleChange('defaultChartType', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isLoading}
-          >
-            <option value="bar">Bar Chart</option>
-            <option value="line">Line Chart</option>
-            <option value="area">Area Chart</option>
-            <option value="combo">Combo Chart</option>
-          </select>
-        </div>
-
         {/* Date Format */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -187,59 +152,6 @@ export const UserPreferences: React.FC = () => {
             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
             <option value="YYYY-MM-DD">YYYY-MM-DD</option>
           </select>
-        </div>
-
-        {/* Notifications */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email Notifications
-          </label>
-          <div className="space-y-2">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={preferences.emailNotifications !== false}
-                onChange={(e) => handleChange('emailNotifications', e.target.checked)}
-                className="rounded border-gray-300 text-[#6787aa] focus:ring-[#6787aa]"
-                disabled={isLoading}
-              />
-              <span className="ml-2 text-sm text-gray-700">Receive email notifications</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={preferences.weeklyReports === true}
-                onChange={(e) => handleChange('weeklyReports', e.target.checked)}
-                className="rounded border-gray-300 text-[#6787aa] focus:ring-[#6787aa]"
-                disabled={isLoading}
-              />
-              <span className="ml-2 text-sm text-gray-700">Weekly summary reports</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Custom JSON Editor for Advanced Users */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Advanced: Custom Preferences (JSON)
-          </label>
-          <textarea
-            value={JSON.stringify(preferences, null, 2)}
-            onChange={(e) => {
-              try {
-                const parsed = JSON.parse(e.target.value);
-                setPreferences(parsed);
-              } catch {
-                // Invalid JSON, ignore
-              }
-            }}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-            rows={8}
-            disabled={isLoading}
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Edit JSON directly for advanced customization
-          </p>
         </div>
 
         <button

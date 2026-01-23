@@ -274,6 +274,7 @@
 - [ ] Investigate and fix services.test.ts failures
 - [ ] Investigate and fix sheets.test.ts failures
 - [ ] Investigate and fix preferences.test.ts failures
+- [x] Simplify Settings UI - Removed unused preference sections (theme, email notifications, default chart type, advanced customizations) and merged preferences into Account tab
 - [ ] Investigate and fix ai.test.ts failures
 
 **Target:** 95%+ test coverage

@@ -9,7 +9,7 @@ import { JOGA_COLORS } from '../utils/colors';
 
 export const SettingsView: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'users' | 'teams'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'users' | 'teams'>('account');
 
   if (!user) {
     return null;
@@ -50,16 +50,6 @@ export const SettingsView: React.FC = () => {
               }`}
             >
               Account
-            </button>
-            <button
-              onClick={() => setActiveTab('preferences')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'preferences'
-                  ? 'border-[#6787aa] text-[#6787aa]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Preferences
             </button>
             {isAdmin && (
               <>
@@ -161,10 +151,11 @@ export const SettingsView: React.FC = () => {
                   )}
                 </dl>
               </div>
+
+              {/* Preferences merged into Account tab */}
+              <UserPreferences />
             </div>
           )}
-
-          {activeTab === 'preferences' && <UserPreferences />}
 
           {activeTab === 'users' && isAdmin && <UserManagement />}
 
