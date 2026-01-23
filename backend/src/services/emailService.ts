@@ -96,6 +96,22 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
   const logoDataUri = getLogoDataUri();
   const footer = getEmailFooter();
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
+  
+  /**
+   * NOTE: Sender Avatar Configuration
+   * The avatar/profile picture that appears next to the sender name in email clients
+   * is controlled by SendGrid's Sender Profile settings, not by code.
+   * 
+   * To set the JOGA logo as the sender avatar:
+   * 1. Log in to SendGrid dashboard
+   * 2. Go to Settings → Sender Authentication → Sender Profiles
+   * 3. Create or edit a sender profile for your FROM_EMAIL address
+   * 4. Upload the JOGA logo (joga-logo-bw.png) as the profile picture
+   * 5. Save the sender profile
+   * 
+   * The avatar will then appear in email clients (Gmail, Outlook, etc.) when
+   * emails are sent from this address.
+   */
   const msg = {
     to: email,
     from: {
@@ -168,6 +184,12 @@ export async function sendPasswordSetupEmail(email: string, token: string, name:
   const logoDataUri = getLogoDataUri();
   const footer = getEmailFooter();
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
+  
+  /**
+   * NOTE: Sender Avatar Configuration
+   * See comment in sendPasswordResetEmail() for instructions on setting
+   * the sender avatar/profile picture in SendGrid dashboard.
+   */
   const msg = {
     to: email,
     from: {
@@ -238,6 +260,12 @@ export async function sendVerificationEmail(email: string, token: string): Promi
   const logoDataUri = getLogoDataUri();
   const footer = getEmailFooter();
   const fromEmail = process.env.SENDGRID_FROM_EMAIL!;
+  
+  /**
+   * NOTE: Sender Avatar Configuration
+   * See comment in sendPasswordResetEmail() for instructions on setting
+   * the sender avatar/profile picture in SendGrid dashboard.
+   */
   const msg = {
     to: email,
     from: {
