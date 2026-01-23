@@ -1,5 +1,4 @@
 import express from 'express';
-import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import { runMigrations } from './db/migrations.js';
@@ -44,24 +43,26 @@ app.set('trust proxy', 1);
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 console.log('🔒 CORS configured for origin:', frontendUrl);
 
-// CORS configuration
-const corsOptions = {
-  origin: frontendUrl,
-  credentials: true, // Required for cookies
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-ID', 'X-CSRF-Token'], // Keep X-Session-ID for backward compatibility, add X-CSRF-Token for CSRF protection
-  exposedHeaders: [],
-  preflightContinue: false,
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
-
-// Explicitly handle OPTIONS requests (preflight)
-app.options('*', cors(corsOptions));
-
-// Cookie parser (must be before routes)
+// Cookie parser (must be before routes and CORS)
 app.use(cookieParser());
+
+// Manual CORS handling to ensure Access-Control-Allow-Credentials is always set
+// This is more reliable than the cors middleware for cross-origin scenarios (Railway)
+app.use((req, res, next) => {
+  // Handle preflight OPTIONS requests
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Session-ID, X-CSRF-Token');
+    return res.status(204).end();
+  }
+  
+  // Set CORS headers for all other requests
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+  next();
+});
 
 app.use(express.json());
 

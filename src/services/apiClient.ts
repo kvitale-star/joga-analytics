@@ -53,13 +53,16 @@ export async function apiRequest<T = any>(
       credentials: 'include', // Required to send/receive cookies
     });
 
-    // Handle non-JSON responses
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
+    // Handle non-JSON responses (this should not happen for our API).
+    // Previously we returned `{}` which caused subtle runtime failures (e.g., `matchData.forEach is not a function`).
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const bodyText = await response.text().catch(() => '');
+      const snippet = bodyText.slice(0, 200);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status} (${snippet})`);
       }
-      return {} as T;
+      throw new Error(`Unexpected non-JSON response from API (${snippet})`);
     }
 
     const data = await response.json();

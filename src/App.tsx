@@ -415,7 +415,11 @@ function App() {
       // This ensures the chatbot rebuilds context with fresh data
       invalidateAIContextCache();
       
-      const data = await fetchSheetData(sheetConfig);
+      const raw = await fetchSheetData(sheetConfig);
+      const data = Array.isArray(raw) ? raw : [];
+      if (!Array.isArray(raw)) {
+        console.error('❌ fetchSheetData returned non-array; defaulting matchData to []', raw);
+      }
 
       // Extract column keys from first match
       const keys = data.length > 0 ? Object.keys(data[0]) : [];
@@ -441,7 +445,7 @@ function App() {
         })
         : data;
 
-      setMatchData(filtered);
+      setMatchData(Array.isArray(filtered) ? filtered : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);

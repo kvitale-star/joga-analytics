@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserPreferences } from '../services/authService';
@@ -9,6 +9,11 @@ interface WalkthroughOverlayProps {
   onClose: () => void;
 }
 
+// Preload the logo image once when module loads to ensure browser caching
+const LOGO_PATH = '/joga-logo-bw.png';
+const preloadedLogo = new Image();
+preloadedLogo.src = LOGO_PATH;
+
 /**
  * Component that loads GIF with PNG fallback
  * Tries to load the GIF first, then falls back to PNG if GIF fails
@@ -16,6 +21,7 @@ interface WalkthroughOverlayProps {
 const WalkthroughImage: React.FC<{ gifPath: string; alt: string }> = ({ gifPath, alt }) => {
   const [imageSrc, setImageSrc] = useState<string>(gifPath);
   const [hasError, setHasError] = useState(false);
+  const logoLoadedRef = useRef(false);
 
   // Convert GIF path to PNG path (e.g., /walkthrough/welcome.gif -> /walkthrough/welcome.png)
   const pngPath = gifPath.replace(/\.gif$/i, '.png');
@@ -33,6 +39,8 @@ const WalkthroughImage: React.FC<{ gifPath: string; alt: string }> = ({ gifPath,
     } else {
       // Both GIF and PNG failed, show placeholder
       setHasError(true);
+      // Mark logo as loaded to prevent re-downloading
+      logoLoadedRef.current = true;
     }
   };
 
@@ -40,9 +48,11 @@ const WalkthroughImage: React.FC<{ gifPath: string; alt: string }> = ({ gifPath,
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <img
-          src="/joga-logo-bw.png"
+          src={LOGO_PATH}
           alt="JOGA Logo"
           className="max-w-[200px] max-h-[200px] object-contain opacity-50"
+          // Add key to prevent React from recreating the img element unnecessarily
+          key="logo-placeholder"
         />
       </div>
     );
@@ -54,6 +64,8 @@ const WalkthroughImage: React.FC<{ gifPath: string; alt: string }> = ({ gifPath,
       alt={alt}
       className="w-full h-full object-contain"
       onError={handleError}
+      // Use key based on imageSrc to help browser cache properly
+      key={imageSrc}
     />
   );
 };
