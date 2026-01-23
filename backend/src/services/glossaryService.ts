@@ -1,8 +1,8 @@
 import { db } from '../db/database.js';
 import { fetchColumnMetadata } from './sheetsService.js';
 
-// Re-export the metadata type for consistency
-export type { ColumnMetadata } from './sheetsService.js';
+// Type for column metadata (matches what fetchColumnMetadata returns)
+export type ColumnMetadata = Record<string, any>;
 
 export interface MetricDefinition {
   id?: number;

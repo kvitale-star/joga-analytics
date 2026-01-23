@@ -299,6 +299,18 @@ describe('Teams Management API', () => {
           .execute();
       }
       
+      // Clean up any existing team with the target slug first
+      await db.deleteFrom('user_teams')
+        .where('team_id', 'in',
+          db.selectFrom('teams')
+            .select('id')
+            .where('slug', '=', 'GU14-VR-2026')
+        )
+        .execute();
+      await db.deleteFrom('teams')
+        .where('slug', '=', 'GU14-VR-2026')
+        .execute();
+
       // Update to different values to trigger slug recomputation
       const response = await makeRequest()
         .put(`/api/teams/${testTeam.id}`)
@@ -314,6 +326,9 @@ describe('Teams Management API', () => {
       if (response.status === 200) {
         expect(response.body).toHaveProperty('id');
         expect(response.body.slug).toBe('GU14-VR-2026');
+        // Cleanup the updated team
+        await db.deleteFrom('user_teams').where('team_id', '=', response.body.id).execute();
+        await db.deleteFrom('teams').where('id', '=', response.body.id).execute();
       } else {
         // If update fails, it might be because the team doesn't have required fields
         // This can happen if the team was created before the schema update
@@ -573,6 +588,26 @@ describe('Teams Management API', () => {
   });
 
   describe('Team Slug Generation', () => {
+    beforeEach(async () => {
+      // Clean up any existing teams with test slugs before each test
+      const testSlugs = ['BU12-VT-2026', 'GU14-VR-2026', 'BU13-BL-2026'];
+      const existingTeams = await db
+        .selectFrom('teams')
+        .select('id')
+        .where('slug', 'in', testSlugs)
+        .execute();
+      
+      if (existingTeams.length > 0) {
+        const teamIds = existingTeams.map(t => t.id);
+        await db.deleteFrom('user_teams')
+          .where('team_id', 'in', teamIds)
+          .execute();
+        await db.deleteFrom('teams')
+          .where('id', 'in', teamIds)
+          .execute();
+      }
+    });
+
     it('should generate slug with VT suffix for Volt teams', async () => {
       const response = await makeRequest()
         .post('/api/teams')
@@ -605,9 +640,12 @@ describe('Teams Management API', () => {
           variant: 'valor',
           birthYearStart: 2012,
           birthYearEnd: 2013,
-        })
-        .expect(201);
+        });
       
+      if (response.status !== 201) {
+        console.log('VR suffix test error:', response.body);
+      }
+      expect(response.status).toBe(201);
       expect(response.body.slug).toBe('GU14-VR-2026');
       
       // Cleanup
@@ -804,6 +842,22 @@ describe('Teams Management API', () => {
     });
 
     it('should create team with parent team relationship', async () => {
+      // Clean up any existing team with the slug that will be generated (BU13-VT-2025)
+      const existingTeam = await db
+        .selectFrom('teams')
+        .select('id')
+        .where('slug', '=', 'BU13-VT-2025')
+        .executeTakeFirst();
+      
+      if (existingTeam) {
+        await db.deleteFrom('user_teams')
+          .where('team_id', '=', existingTeam.id)
+          .execute();
+        await db.deleteFrom('teams')
+          .where('id', '=', existingTeam.id)
+          .execute();
+      }
+
       const response = await makeRequest()
         .post('/api/teams')
         .set(getAuthHeaders(admin.cookies, admin.csrfToken))
@@ -813,9 +867,12 @@ describe('Teams Management API', () => {
           level: 'U13',
           variant: 'volt',
           parentTeamId: parentTeam.id,
-        })
-        .expect(201);
+        });
       
+      if (response.status !== 201) {
+        console.log('Parent team relationship test error:', response.body);
+      }
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('parentTeamId');
       expect(response.body.parentTeamId).toBe(parentTeam.id);
       
@@ -845,6 +902,18 @@ describe('Teams Management API', () => {
     });
 
     it('should reject parent team from same season', async () => {
+      // Clean up any existing team with this slug first
+      await db.deleteFrom('user_teams')
+        .where('team_id', 'in',
+          db.selectFrom('teams')
+            .select('id')
+            .where('slug', '=', 'BU14-VT-2025')
+        )
+        .execute();
+      await db.deleteFrom('teams')
+        .where('slug', '=', 'BU14-VT-2025')
+        .execute();
+
       const sameSeasonTeam = await createTestTeam(
         'Same Season Team',
         'BU14-VT-2025',

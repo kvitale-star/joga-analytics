@@ -9,7 +9,7 @@ if (!process.env.ENABLE_PASSWORD_VALIDATION) {
   process.env.ENABLE_PASSWORD_VALIDATION = 'true';
 }
 
-// Ensure DB connections don’t keep Jest alive
+// Ensure DB connections don't keep Jest alive
 import { db, getSqliteDb } from '../db/database.js';
 
 afterAll(async () => {
@@ -19,7 +19,10 @@ afterAll(async () => {
     // ignore
   }
   try {
-    getSqliteDb().close();
+    const sqliteDb = getSqliteDb();
+    if (sqliteDb) {
+      sqliteDb.close();
+    }
   } catch {
     // ignore
   }
