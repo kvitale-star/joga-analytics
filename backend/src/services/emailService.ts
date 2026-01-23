@@ -267,8 +267,8 @@ export async function sendVerificationEmail(email: string, token: string): Promi
   
   /**
    * NOTE: Sender Avatar Configuration
-   * See comment in sendPasswordResetEmail() for instructions on setting
-   * the sender avatar/profile picture in SendGrid dashboard.
+   * See comment in sendPasswordResetEmail() for information about
+   * how sender avatars work in email clients.
    */
   const msg = {
     to: email,
