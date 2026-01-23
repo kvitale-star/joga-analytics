@@ -3,9 +3,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { ChangePassword } from './ChangePassword';
 import { UserPreferences } from './UserPreferences';
 import { UserManagement } from './UserManagement';
-import { TeamAssignment } from './TeamAssignment';
+import { TeamManagement } from './TeamManagement';
 import { UserMenu } from './UserMenu';
-import { triggerWalkthrough } from './Walkthrough';
 import { JOGA_COLORS } from '../utils/colors';
 
 export const SettingsView: React.FC = () => {
@@ -82,7 +81,7 @@ export const SettingsView: React.FC = () => {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  Team Assignments
+                  Teams
                 </button>
               </>
             )}
@@ -102,7 +101,15 @@ export const SettingsView: React.FC = () => {
                   Take a guided tour of JOGA Analytics to learn about all the features and views.
                 </p>
                 <button
-                  onClick={() => triggerWalkthrough()}
+                  onClick={() => {
+                    // Try to call the window function, or dispatch a custom event
+                    if ((window as any).startWalkthrough) {
+                      (window as any).startWalkthrough();
+                    } else {
+                      // Fallback: dispatch custom event
+                      window.dispatchEvent(new CustomEvent('startWalkthrough'));
+                    }
+                  }}
                   className="font-medium py-2 px-6 rounded-lg transition-colors text-black"
                   style={{
                     backgroundColor: JOGA_COLORS.voltYellow,
@@ -161,7 +168,7 @@ export const SettingsView: React.FC = () => {
 
           {activeTab === 'users' && isAdmin && <UserManagement />}
 
-          {activeTab === 'teams' && isAdmin && <TeamAssignment />}
+          {activeTab === 'teams' && isAdmin && <TeamManagement />}
         </div>
         </div>
       </div>

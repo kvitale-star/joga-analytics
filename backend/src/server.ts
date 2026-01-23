@@ -7,10 +7,12 @@ import { requireCsrfToken, setCsrfTokenCookie } from './middleware/csrf.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import teamRoutes from './routes/teams.js';
+import seasonRoutes from './routes/seasons.js';
 import preferenceRoutes from './routes/preferences.js';
 import matchRoutes from './routes/matches.js';
 import sheetsRoutes from './routes/sheets.js';
 import aiRoutes from './routes/ai.js';
+import glossaryRoutes from './routes/glossary.js';
 
 // Load environment variables
 // Try to load from backend/.env explicitly
@@ -29,7 +31,7 @@ console.log('  GOOGLE_SHEETS_API_KEY:', process.env.GOOGLE_SHEETS_API_KEY ? '✓
 console.log('  GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? '✓ Set' : '✗ Not set');
 console.log('  BOOTSTRAP_SECRET:', process.env.BOOTSTRAP_SECRET ? '✓ Set' : '✗ Not set');
 
-const app = express();
+export const app = express();
 // Railway automatically sets PORT - use it or default to 3001 for local dev
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
@@ -93,7 +95,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Initialize database and run migrations
-async function initializeDatabase() {
+export async function initializeDatabase() {
   try {
     await runMigrations();
     console.log('✓ Database initialized and migrations completed');
@@ -107,9 +109,11 @@ async function initializeDatabase() {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/seasons', seasonRoutes);
 app.use('/api/preferences', preferenceRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/sheets', sheetsRoutes);
+app.use('/api/glossary', glossaryRoutes);
 app.use('/api/ai', aiRoutes);
 
 // Health check
@@ -283,13 +287,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Start server
-async function startServer() {
+// Start server (when running normally)
+export async function startServer() {
   await initializeDatabase();
-  
+
   // Railway requires binding to 0.0.0.0, not just localhost
   const HOST = process.env.HOST || '0.0.0.0';
-  
+
   app.listen(PORT, HOST, () => {
     console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
     console.log(`📊 API available at http://${HOST}:${PORT}/api`);
@@ -299,7 +303,10 @@ async function startServer() {
   });
 }
 
-startServer().catch((error) => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
+// In test runs we import the app into supertest without listening.
+if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
+  startServer().catch((error) => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  });
+}

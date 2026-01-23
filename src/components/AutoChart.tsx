@@ -3,6 +3,9 @@ import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, Cartesia
 import { MatchData } from '../types';
 import { ChartConfig, getPairTitle } from '../utils/chartUtils';
 import { JOGA_COLORS, OPPONENT_COLORS, isJogaTeamData } from '../utils/colors';
+import { ChartExpandButton } from './ChartExpandButton';
+import { useChartConfig } from '../hooks/useChartConfig';
+import { DEFAULT_AUTO_CONFIG } from '../types/chartConfig';
 
 interface AutoChartProps {
   data: MatchData[];
@@ -11,6 +14,7 @@ interface AutoChartProps {
   config: ChartConfig;
   pairColumnKey?: string; // For combo charts (e.g., "Shots For" and "Shots Against")
   showLabels?: boolean;
+  onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
 
 export const AutoChart: React.FC<AutoChartProps> = ({
@@ -20,7 +24,15 @@ export const AutoChart: React.FC<AutoChartProps> = ({
   config,
   pairColumnKey,
   showLabels = false,
+  onExpansionChange,
 }) => {
+  // Use chart config hook for expansion state only (AutoChart uses its own config system)
+  const { isExpanded, handleExpandToggle } = useChartConfig({
+    chartType: 'auto',
+    defaultConfig: DEFAULT_AUTO_CONFIG,
+    globalIncludeOpponents: false,
+    onExpansionChange,
+  });
   const chartData = data.map((match) => {
     const base: any = {
       name: match[opponentKey] || 'Opponent',
@@ -222,8 +234,13 @@ export const AutoChart: React.FC<AutoChartProps> = ({
   const displayTitle = pairColumnKey ? getPairTitle(columnKey, pairColumnKey) : config.title;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-bold mb-4 text-gray-800">{displayTitle}</h3>
+    <div className="bg-white rounded-lg shadow-md p-6 relative group">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xl font-bold text-gray-800">{displayTitle}</h3>
+        <div className="flex items-center gap-2">
+          <ChartExpandButton isExpanded={isExpanded} onToggle={handleExpandToggle} />
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={400}>
         {renderChart()}
       </ResponsiveContainer>

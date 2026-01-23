@@ -24,7 +24,6 @@
     "jsonwebtoken": "^9.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-joyride": "^2.9.3",
     "react-markdown": "^10.1.0",
     "recharts": "^2.10.3",
     "rehype-raw": "^7.0.0",

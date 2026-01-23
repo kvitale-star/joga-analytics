@@ -17,6 +17,13 @@ export interface User {
   lastLoginAt: Date | null;
 }
 
+export interface Season {
+  id: number;
+  name: string; // Year label, e.g. "2026"
+  isActive: boolean;
+  createdAt: Date;
+}
+
 export interface UserWithPassword extends User {
   passwordHash: string;
   emailVerificationToken: string | null;
@@ -51,6 +58,12 @@ export interface Team {
   slug: string;
   metadata: TeamMetadata;
   seasonId: number | null;
+  gender?: 'boys' | 'girls' | null;
+  level?: string | null; // "U13"
+  variant?: 'volt' | 'valor' | 'black' | null;
+  birthYearStart?: number | null;
+  birthYearEnd?: number | null;
+  ageGroup?: string | null; // "Aug 2014 - July 2015" or "2014"
   parentTeamId: number | null;
   isActive: boolean;
   createdAt: Date;

@@ -9,6 +9,7 @@ import {
   createGameEvent,
 } from '../services/matchService.js';
 import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
+import { getUserTeamAssignments } from '../services/teamService.js';
 
 const router = express.Router();
 
@@ -40,6 +41,24 @@ router.get('/', async (req, res) => {
       filters.competitionType = req.query.competitionType as string;
     }
 
+    // Role-based visibility:
+    // - Admin: can view all matches
+    // - Coach: can view only matches for assigned teams
+    // - Viewer: (not used in UI yet) keep same as coach for safety (no access to other teams)
+    if (req.userId && req.userRole && req.userRole !== 'admin') {
+      const assignedTeamIds = await getUserTeamAssignments(req.userId);
+
+      // If an explicit teamId is requested, enforce it is assigned
+      if (filters.teamId && !assignedTeamIds.includes(filters.teamId)) {
+        return res.status(403).json({ error: 'You can only view matches for your assigned teams' });
+      }
+
+      // Otherwise, scope to assigned teams
+      if (!filters.teamId) {
+        filters.teamIds = assignedTeamIds;
+      }
+    }
+
     const matches = await getMatches(Object.keys(filters).length > 0 ? filters : undefined);
     res.json(matches);
   } catch (error: any) {
@@ -58,6 +77,14 @@ router.get('/:id', async (req, res) => {
 
     if (!match) {
       return res.status(404).json({ error: 'Match not found' });
+    }
+
+    // Coaches/viewers can only view their assigned teams' matches
+    if (req.userId && req.userRole && req.userRole !== 'admin') {
+      const assignedTeamIds = await getUserTeamAssignments(req.userId);
+      if (match.teamId && !assignedTeamIds.includes(match.teamId)) {
+        return res.status(403).json({ error: 'You can only view matches for your assigned teams' });
+      }
     }
 
     res.json(match);
@@ -189,6 +216,19 @@ router.delete('/:id', canModifyMatch, async (req, res) => {
 router.get('/:id/events', async (req, res) => {
   try {
     const matchId = parseInt(req.params.id);
+
+    // Enforce visibility via match access
+    const match = await getMatchById(matchId);
+    if (!match) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+    if (req.userId && req.userRole && req.userRole !== 'admin') {
+      const assignedTeamIds = await getUserTeamAssignments(req.userId);
+      if (match.teamId && !assignedTeamIds.includes(match.teamId)) {
+        return res.status(403).json({ error: 'You can only view matches for your assigned teams' });
+      }
+    }
+
     const events = await getMatchEvents(matchId);
     res.json(events);
   } catch (error: any) {

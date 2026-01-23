@@ -8,3 +8,19 @@ if (!process.env.NODE_ENV) {
 if (!process.env.ENABLE_PASSWORD_VALIDATION) {
   process.env.ENABLE_PASSWORD_VALIDATION = 'true';
 }
+
+// Ensure DB connections don’t keep Jest alive
+import { db, getSqliteDb } from '../db/database.js';
+
+afterAll(async () => {
+  try {
+    await db.destroy();
+  } catch {
+    // ignore
+  }
+  try {
+    getSqliteDb().close();
+  } catch {
+    // ignore
+  }
+});

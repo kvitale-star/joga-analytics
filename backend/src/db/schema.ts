@@ -16,6 +16,7 @@ export interface Database {
   matches: MatchesTable;
   game_events: GameEventsTable;
   images: ImagesTable;
+  metric_definitions: MetricDefinitionsTable;
 }
 
 // Schema Migrations
@@ -42,6 +43,12 @@ export interface TeamsTable {
   slug: string;
   metadata: string; // JSON stored as string
   season_id: number | null;
+  gender: string | null;
+  level: string | null;
+  variant: string | null;
+  birth_year_start: number | null;
+  birth_year_end: number | null;
+  age_group: string | null;
   parent_team_id: number | null;
   is_active: Generated<number>;
   created_at: Generated<string>;
@@ -151,6 +158,24 @@ export interface ImagesTable {
   description: string | null;
   uploaded_by: number | null;
   created_at: Generated<string>;
+}
+
+// Metric Definitions (for Glossary)
+export interface MetricDefinitionsTable {
+  id: Generated<number>;
+  metric_name: string;
+  category: string | null;
+  description: string | null;
+  units: string | null;
+  calculation: string | null;
+  notes: string | null;
+  example: string | null;
+  data_type: string | null;
+  availability: string | null;
+  source: string;
+  last_synced_at: string | null;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
 }
 
 // Helper types for common operations

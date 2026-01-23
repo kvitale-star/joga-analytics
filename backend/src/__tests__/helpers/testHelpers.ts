@@ -1,4 +1,9 @@
 import { db } from '../../db/database.js';
+import { cleanupTestData as cleanupExtended } from './dataHelpers.js';
+import request from 'supertest';
+import { app, initializeDatabase } from '../../server.js';
+
+let isDbInitialized = false;
 
 /**
  * Test helper to get the API base URL
@@ -20,28 +25,29 @@ export function getApiBaseUrl(): string {
 }
 
 /**
+ * Get a Supertest client.
+ * - If API_URL is set, uses that remote base URL (Railway).
+ * - Otherwise, uses the local Express app instance (no server required).
+ */
+export async function getTestClient() {
+  if (process.env.API_URL) {
+    return request(getApiBaseUrl());
+  }
+
+  if (!isDbInitialized) {
+    await initializeDatabase();
+    isDbInitialized = true;
+  }
+
+  return request(app);
+}
+
+/**
  * Clean up test data from database
+ * Now uses extended cleanup from dataHelpers
  */
 export async function cleanupTestData() {
-  try {
-    // Delete test users (emails starting with 'test-')
-    await db
-      .deleteFrom('users')
-      .where('email', 'like', 'test-%')
-      .execute();
-    
-    // Delete test sessions
-    await db
-      .deleteFrom('sessions')
-      .where('user_id', 'in', 
-        db.selectFrom('users')
-          .select('id')
-          .where('email', 'like', 'test-%')
-      )
-      .execute();
-  } catch (error) {
-    console.error('Error cleaning up test data:', error);
-  }
+  await cleanupExtended();
 }
 
 /**
@@ -82,6 +88,7 @@ export async function createTestUser(
  * Delete a test user by email
  */
 export async function deleteTestUser(email: string) {
+  if (!email) return;
   await db
     .deleteFrom('users')
     .where('email', '=', email.toLowerCase().trim())

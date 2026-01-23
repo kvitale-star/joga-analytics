@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserPreferences, getUserById } from '../services/authService';
+import { getAllSeasons } from '../services/seasonService';
 import { JOGA_COLORS } from '../utils/colors';
+import type { Season } from '../types/auth';
 
 export const UserPreferences: React.FC = () => {
   const { user } = useAuth();
@@ -9,12 +11,26 @@ export const UserPreferences: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [seasons, setSeasons] = useState<Season[]>([]);
 
   useEffect(() => {
     if (user) {
       setPreferences(user.preferences || {});
     }
   }, [user]);
+
+  useEffect(() => {
+    const loadSeasons = async () => {
+      try {
+        const all = await getAllSeasons();
+        setSeasons(all);
+      } catch {
+        // Preferences UI should still function without seasons
+        setSeasons([]);
+      }
+    };
+    void loadSeasons();
+  }, []);
 
   const handleChange = (key: string, value: any) => {
     setPreferences((prev) => ({
@@ -76,6 +92,51 @@ export const UserPreferences: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Preferred Seasons */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Preferred Seasons (multi-select)
+          </label>
+          {seasons.length === 0 ? (
+            <p className="text-sm text-gray-500">No seasons available.</p>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {seasons
+                .slice()
+                .sort((a, b) => Number(b.name) - Number(a.name))
+                .map((season) => {
+                  const year = Number(season.name);
+                  const preferred: number[] = Array.isArray(preferences.preferredSeasons)
+                    ? preferences.preferredSeasons
+                    : [];
+                  const checked = preferred.includes(year);
+                  return (
+                    <label key={season.id} className="flex items-center gap-2 p-2 border border-gray-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? Array.from(new Set([...preferred, year]))
+                            : preferred.filter((y) => y !== year);
+                          handleChange('preferredSeasons', next);
+                        }}
+                        className="rounded border-gray-300 text-[#6787aa] focus:ring-[#6787aa]"
+                        disabled={isLoading}
+                      />
+                      <span className="text-sm text-gray-700">
+                        {season.name}{season.isActive ? ' (Active)' : ''}
+                      </span>
+                    </label>
+                  );
+                })}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            If selected, reporting views will prefer showing data from these season year(s).
+          </p>
+        </div>
+
         {/* Theme Preference */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">

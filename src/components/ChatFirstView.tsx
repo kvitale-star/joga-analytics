@@ -4,7 +4,8 @@ import { chatWithAI, refreshAIConfigured } from '../services/aiService';
 import { ChatMessage } from './ChatMessage';
 import { ChartData } from './ChartRenderer';
 import { WelcomeMessage } from './WelcomeMessage';
-import { UserMenu } from './UserMenu';
+import { PageLayout } from './PageLayout';
+import { JOGA_COLORS } from '../utils/colors';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -123,26 +124,62 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
     }
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50 relative">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 relative">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900" data-tour="chat-header">JOGA Analytics AI</h1>
-              <p className="text-sm text-gray-600 mt-1">AI-Powered Match Data Analysis</p>
-            </div>
-            <div className="relative">
-              <UserMenu />
-            </div>
-          </div>
+  const inputFooter = (
+    <div className="px-6 py-4">
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="flex space-x-3">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={aiConfigured ? "Ask about your match data..." : "AI service not configured"}
+            disabled={isLoading || !aiConfigured}
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading || !aiConfigured}
+            className="px-6 py-3 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+            style={{
+              backgroundColor: isLoading || !input.trim() || !aiConfigured 
+                ? '#d1d5db' 
+                : JOGA_COLORS.voltYellow,
+              color: isLoading || !input.trim() || !aiConfigured
+                ? '#6b7280'
+                : '#000000',
+            }}
+            onMouseEnter={(e) => {
+              if (!isLoading && input.trim() && aiConfigured) {
+                e.currentTarget.style.backgroundColor = '#b8e600';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isLoading && input.trim() && aiConfigured) {
+                e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+              }
+            }}
+          >
+            Send
+          </button>
         </div>
-      </header>
+        {!aiConfigured && (
+          <p className="text-xs text-gray-500 mt-2">
+            AI service requires GEMINI_API_KEY in backend .env file. Contact your administrator.
+          </p>
+        )}
+      </div>
+    </div>
+  );
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-        <div className="max-w-6xl mx-auto w-full">
+  return (
+    <PageLayout
+      title="JOGA Analytics AI"
+      subtitle="AI-Powered Match Data Analysis"
+      maxWidth="6xl"
+      footer={inputFooter}
+    >
           {!aiConfigured ? (
             <div className="bg-white rounded-lg p-6 border border-red-200 shadow-sm">
               <div className="text-red-600 font-semibold mb-2">⚠️ AI service is not configured</div>
@@ -188,57 +225,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
             </>
           )}
           <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="flex space-x-3">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={aiConfigured ? "Ask about your match data..." : "AI service not configured"}
-              disabled={isLoading || !aiConfigured}
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading || !aiConfigured}
-              className="px-6 py-3 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
-              style={{
-                backgroundColor: isLoading || !input.trim() || !aiConfigured 
-                  ? '#d1d5db' 
-                  : '#ceff00', // Nike Volt Yellow
-                color: isLoading || !input.trim() || !aiConfigured
-                  ? '#6b7280'
-                  : '#000000', // Black text on Volt Yellow
-              }}
-              onMouseEnter={(e) => {
-                if (!isLoading && input.trim() && aiConfigured) {
-                  e.currentTarget.style.backgroundColor = '#b8e600'; // Darker Volt Yellow
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isLoading && input.trim() && aiConfigured) {
-                  e.currentTarget.style.backgroundColor = '#ceff00'; // Volt Yellow
-                }
-              }}
-            >
-              Send
-            </button>
-          </div>
-          {!aiConfigured && (
-            <p className="text-xs text-gray-500 mt-2">
-              AI service requires GEMINI_API_KEY in backend .env file. Contact your administrator.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

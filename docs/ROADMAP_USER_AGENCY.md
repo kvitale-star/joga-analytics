@@ -2,12 +2,14 @@
 
 ## Quick Reference: What Users Will Be Able To Do
 
-### Phase 0.5: Chart Configuration (Weeks 1-2) - Quick Win
+### Phase 0.5: Chart Configuration (Weeks 1-2) - Quick Win ✅ COMPLETE
 **Users can:**
-- Toggle individual metrics on/off in existing charts
-- Add optional metrics to charts (e.g., add attempts to shots chart)
-- Toggle opponent data inclusion
-- Save their chart preferences
+- ✅ Toggle individual metrics on/off in existing charts
+- ✅ Add optional metrics to charts (e.g., add attempts to shots chart)
+- ✅ Toggle opponent data inclusion
+- ✅ Save their chart preferences
+- ✅ Expand charts to full width
+- ✅ All 18 charts now support full customization
 
 **Example Use Case:**
 > "I want to see shots, attempts, and goals all in one chart, but hide shots against"
@@ -42,8 +44,10 @@
 > "I want a pre-game dashboard with just possession, shots, and xG charts"
 
 ### Phase 4: Advanced Features (Weeks 15-18)
+**Prerequisites:** ✅ View-scoped URL state implemented (enables bookmarking)
+
 **Users can:**
-- Save filter combinations as bookmarks
+- Save filter combinations as bookmarks (leverages view-scoped URL state)
 - Create automated reports
 - Compare different views side-by-side
 - Share insights with comments
@@ -137,7 +141,7 @@
    - Quick way to give more agency without full custom builder
 
 3. **Saved Filter Combinations** - Low effort, high value
-   - Save current filter state (team + date range + opponent)
+   - Save current filter state (team + date range + opponent) - Uses view-scoped URL state
    - Quick access menu
    - Foundation for saved views
 

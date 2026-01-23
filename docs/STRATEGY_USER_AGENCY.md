@@ -14,6 +14,8 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
 - ✅ Toggle chart visibility via dropdowns
 - ✅ View metrics in Game Data view with category filtering
 - ✅ Use AI chat for data questions
+- ✅ Bookmark/share view configurations (view-scoped URL state)
+- ✅ Switch between views without losing filter state (each view has independent state)
 
 ### What Users Cannot Do
 - ❌ Create custom charts with their own metric combinations
@@ -40,8 +42,9 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
 
 ## Implementation Strategy
 
-### Phase 0.5: Chart Configuration (Weeks 1-2) - Quick Win
-**Goal:** Make existing charts more flexible and configurable
+### Phase 0.5: Chart Configuration (Weeks 1-2) - Quick Win ✅ COMPLETE
+**Goal:** Make existing charts more flexible and configurable  
+**Status:** All 18 charts now support metric toggling, opponent data inclusion, and preference saving
 
 #### 0.5.1 Chart Configuration Panel
 - **Component:** `ChartConfigPanel.tsx` (reusable component)
@@ -75,36 +78,32 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
     - Optionally add "Time in Possession" metric
     - Toggle opponent data inclusion
 
-- **Implementation Approach:**
-  - Add `chartConfig` prop to existing chart components
-  - Configuration object: `{ visibleMetrics: string[], includeOpponent: boolean }`
-  - Store user preferences in `user_preferences` JSON field (or new `chart_preferences` table)
-  - Charts dynamically render only selected metrics
-  - UI: Collapsible panel with checkboxes for each available metric
+- **Implementation Approach:** ✅ COMPLETE
+  - ✅ Added `chartConfig` prop to all chart components
+  - ✅ Configuration object: `{ visibleMetrics: string[], includeOpponent: boolean, isExpanded?: boolean }`
+  - ✅ Store user preferences in `chart_preferences` table (via `chartPreferencesService`)
+  - ✅ Charts dynamically render only selected metrics
+  - ✅ UI: Collapsible panel with checkboxes for each available metric (gear icon on hover)
+  - ✅ All 18 charts fully implemented
 
-- **Backend:**
-  - Extend `user_preferences` JSON to include chart configurations:
+- **Backend:** ✅ COMPLETE
+  - ✅ Created `chart_preferences` table with user_id, chart_type, and config JSON
+  - ✅ Implemented API routes: `GET/PUT /api/preferences/chart/:chartType`
+  - ✅ Preferences stored per user per chart type:
     ```json
     {
-      "chartPreferences": {
-        "shots": {
-          "visibleMetrics": ["shotsFor", "shotsAgainst", "attemptsFor"],
-          "includeOpponent": true
-        },
-        "goals": {
-          "visibleMetrics": ["goalsFor", "goalsAgainst"],
-          "includeOpponent": false
-        }
-      }
+      "visibleMetrics": ["shotsFor", "shotsAgainst", "attemptsFor"],
+      "includeOpponent": true,
+      "isExpanded": false
     }
     ```
   - Or create new table: `chart_preferences`
     - `id`, `user_id`, `chart_type`, `config` (JSON), `created_at`, `updated_at`
 
-- **API Endpoints:**
-  - `GET /api/preferences/chart/:chartType` - Get user's chart preferences
-  - `PUT /api/preferences/chart/:chartType` - Update chart preferences
-  - `DELETE /api/preferences/chart/:chartType` - Reset to defaults
+- **API Endpoints:** ✅ COMPLETE
+  - ✅ `GET /api/preferences/chart/:chartType` - Get user's chart preferences
+  - ✅ `PUT /api/preferences/chart/:chartType` - Update chart preferences
+  - ✅ `DELETE /api/preferences/chart/:chartType` - Reset to defaults
 
 - **Benefits:**
   - Immediate value with minimal development
@@ -248,6 +247,8 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
 ### Phase 3: Custom Dashboards (Weeks 9-12)
 **Goal:** Let users create and save custom dashboard layouts
 
+**Prerequisites:** ✅ View-scoped URL state implemented (enables dashboard state persistence)
+
 #### 3.1 Dashboard Builder
 - **Component:** `DashboardBuilder.tsx`
 - **Features:**
@@ -256,6 +257,7 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
   - Resize and reposition widgets
   - Multiple dashboard views per user
   - Set default dashboard
+  - Dashboard state persisted in view-scoped URL (e.g., `dashboard.customLayout=...`)
 
 - **Backend:**
   - New table: `custom_dashboards`
@@ -264,6 +266,11 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
     - `widgets` (JSON array of chart/widget configs)
     - `is_default`, `is_public`
     - `created_at`, `updated_at`
+  
+- **Implementation Note:**
+  - Dashboard state uses view-scoped URL parameters
+  - Each dashboard can have its own URL state namespace
+  - Enables bookmarking and sharing of dashboard configurations
 
 - **API Endpoints:**
   - `POST /api/dashboards` - Create dashboard
@@ -288,9 +295,11 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
 **Goal:** Enable collaboration and automation
 
 #### 4.1 Saved Views & Bookmarks
+**Prerequisites:** ✅ View-scoped URL state implemented (saved views = URL snapshots)
+
 - **Component:** `SavedViewsManager.tsx`
 - **Features:**
-  - Save current filter/selection state
+  - Save current filter/selection state (captures view-scoped URL state)
   - Quick access menu
   - Share with other users
   - Organize into folders
@@ -299,8 +308,13 @@ Currently, the app follows a **top-down, prescriptive model** where the programm
   - New table: `saved_views`
     - `id`, `user_id`, `name`, `description`
     - `view_type` (dashboard, game-data, club-data, etc.)
-    - `state` (JSON - filters, selections, etc.)
+    - `state` (JSON - view-scoped URL parameters, e.g., `{ "dashboard.team": "BU13-VT-2026", "dashboard.chartGroup": "shooting" }`)
     - `is_public`, `shared_with` (JSON array of user IDs)
+  
+- **Implementation Note:**
+  - Saved views store the current URL state (view-scoped parameters)
+  - Loading a saved view = navigating to the saved URL
+  - Leverages existing view-scoped URL state infrastructure
 
 #### 4.2 Custom Reports
 - **Component:** `ReportBuilder.tsx`
@@ -620,7 +634,7 @@ POST   /api/reports/:id/schedule
 ## Implementation Priority
 
 ### Must Have (MVP)
-- ✅ **Chart configuration panel** - Make existing charts flexible (Phase 0.5)
+- ✅ **Chart configuration panel** - Make existing charts flexible (Phase 0.5) - **COMPLETE**: All 18 charts support metric toggling and opponent data inclusion
 - ✅ Custom chart builder with basic chart types
 - ✅ Dynamic chart renderer
 - ✅ Save/load custom charts

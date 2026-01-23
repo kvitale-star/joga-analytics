@@ -5,6 +5,10 @@ import { MultiSelectDropdown } from './MultiSelectDropdown';
 import { DateFilter } from './DateFilter';
 import { JOGA_COLORS } from '../utils/colors';
 import { UserMenu } from './UserMenu';
+import { Team } from '../types/auth';
+import { getTeamsForDropdown } from '../utils/teamMapping';
+import { useAuth } from '../contexts/AuthContext';
+import { formatDateWithUserPreference } from '../utils/dateFormatting';
 
 interface GameDataViewProps {
   matchData: MatchData[];
@@ -13,6 +17,7 @@ interface GameDataViewProps {
   getOpponentKey: () => string;
   getLabelKey: () => string;
   parseDateHelper: (value: string | number | undefined | null) => Date | null;
+  teamSlugMap: Map<string, Team>;
   selectedOpponents: string[];
   setSelectedOpponents: (value: string[] | ((prev: string[]) => string[])) => void;
   selectedShootingMetrics: string[];
@@ -209,6 +214,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
   getOpponentKey,
   getLabelKey,
   parseDateHelper,
+  teamSlugMap,
   selectedOpponents,
   setSelectedOpponents,
   selectedShootingMetrics,
@@ -230,6 +236,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
   selectedTeam,
   setSelectedTeam
 }) => {
+  const { user } = useAuth();
   const [columnOrder, setColumnOrder] = useState<number[]>([]);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [openConfigCategory, setOpenConfigCategory] = useState<string | null>(null);
@@ -259,7 +266,11 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     let filteredMatches = matchData;
     
     if (selectedTeam) {
-      filteredMatches = filteredMatches.filter(match => match[teamKey] === selectedTeam);
+      // selectedTeam is now a slug, match against team column (which should also be slugs)
+      filteredMatches = filteredMatches.filter(match => {
+        const matchTeamSlug = (match[teamKey] as string)?.trim();
+        return matchTeamSlug === selectedTeam;
+      });
     }
     
     if (selectedOpponents.length > 0) {
@@ -286,7 +297,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     const dates = Array.from(dateMap.entries())
       .map(([dateStr, date]) => ({
         value: dateStr,
-        label: date.toLocaleDateString(),
+        label: formatDateWithUserPreference(date, user?.preferences),
         date: date
       }))
       .sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -294,17 +305,22 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     return dates.map(({ value, label }) => ({ value, label }));
   }, [matchData, selectedTeam, selectedOpponents, dateKey, teamKey, opponentKey, parseDateHelper]);
 
-  // Get unique teams
-  const teams = useMemo(() => {
+  // Extract team slugs from match data and map to Display Names
+  const teamSlugs = useMemo(() => {
     const teamSet = new Set<string>();
     matchData.forEach(match => {
       const team = match[teamKey];
-      if (team && typeof team === 'string') {
-        teamSet.add(team);
+      if (team && typeof team === 'string' && team.trim()) {
+        teamSet.add(team.trim());
       }
     });
-    return Array.from(teamSet).sort();
+    return Array.from(teamSet);
   }, [matchData, teamKey]);
+
+  // Map slugs to Display Names for dropdown
+  const teams = useMemo(() => {
+    return getTeamsForDropdown(teamSlugs, teamSlugMap);
+  }, [teamSlugs, teamSlugMap]);
 
   // Get available opponents for selected team (or all opponents if no team selected)
   const availableOpponents = useMemo(() => {
@@ -314,8 +330,10 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
       const opponent = match[opponentKey];
       if (opponent && typeof opponent === 'string') {
         // If team is selected, only show opponents for that team
+        // selectedTeam is now a slug
         if (selectedTeam) {
-          if (team === selectedTeam) {
+          const matchTeamSlug = (team as string)?.trim();
+          if (matchTeamSlug === selectedTeam) {
             opponents.add(opponent);
           }
         } else {
@@ -331,9 +349,12 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
   const filteredData = useMemo(() => {
     let filtered = matchData;
     
-    // Filter by team if selected
+    // Filter by team if selected (selectedTeam is now a slug)
     if (selectedTeam) {
-      filtered = filtered.filter(match => match[teamKey] === selectedTeam);
+      filtered = filtered.filter(match => {
+        const matchTeamSlug = (match[teamKey] as string)?.trim();
+        return matchTeamSlug === selectedTeam;
+      });
     }
     
     // Filter by selected opponents if any are selected
@@ -728,13 +749,13 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                   setSelectedTeam(e.target.value || null);
                   setSelectedOpponents([]); // Reset opponents when team changes
                 }}
-                className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] min-w-[140px]"
-                style={{ borderColor: '#ceff00' }}
+                className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
+                style={{ borderColor: '#ceff00', width: 'auto', minWidth: '140px' }}
               >
                 <option value="">Choose a team...</option>
                 {teams.map((team) => (
-                  <option key={team} value={team}>
-                    {team}
+                  <option key={team.slug} value={team.slug}>
+                    {team.displayName}
                   </option>
                 ))}
               </select>
@@ -1044,7 +1065,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                       // Use the date key from useMemo
                       const date = dateKey ? parseDateHelper(match[dateKey] as string | number | undefined | null) : null;
                       // Never show match ID - always show date or game number
-                      const dateStr = date ? date.toLocaleDateString() : `Game ${displayIndex + 1}`;
+                      const dateStr = date ? formatDateWithUserPreference(date, user?.preferences) : `Game ${displayIndex + 1}`;
                       return (
                         <th
                           key={`col-${displayIndex}-${opponent}`}

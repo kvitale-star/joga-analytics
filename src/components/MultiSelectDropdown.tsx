@@ -50,16 +50,16 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     : placeholder;
 
   return (
-    <div className={`relative z-[200] ${className}`} ref={dropdownRef}>
+    <div className={`relative z-[200] ${className}`} ref={dropdownRef} style={{ width: 'auto', minWidth: 'fit-content' }}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between ${className} ${
+        className={`pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between whitespace-nowrap ${className} ${
           isTeamDropdown ? 'border-2 border-[#ceff00]' : 'border border-gray-300'
         }`}
-        style={isTeamDropdown ? { borderColor: '#ceff00' } : undefined}
+        style={isTeamDropdown ? { borderColor: '#ceff00', width: 'auto', minWidth: 'fit-content' } : { width: 'auto', minWidth: 'fit-content' }}
       >
-        <span className={selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
+        <span className={`${selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-900'} whitespace-nowrap`}>
           {displayText}
         </span>
         <svg
@@ -73,21 +73,21 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute z-[200] w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-[200] mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto" style={{ minWidth: '100%', width: 'max-content' }}>
           {options.map((option) => {
             const isSelected = selectedValues.includes(option.value);
             return (
               <label
                 key={option.value}
-                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer whitespace-nowrap"
               >
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggleOption(option.value)}
-                  className="mr-2 h-4 w-4 text-[#6787aa] focus:ring-[#6787aa] border-gray-300 rounded"
+                  className="mr-2 h-4 w-4 text-[#6787aa] focus:ring-[#6787aa] border-gray-300 rounded flex-shrink-0"
                 />
-                <span className="text-sm text-gray-700">{option.label}</span>
+                <span className="text-sm text-gray-700 whitespace-nowrap">{option.label}</span>
               </label>
             );
           })}

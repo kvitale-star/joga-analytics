@@ -14,6 +14,7 @@ const __dirname = path.dirname(__filename);
 const railwayVolumePath = process.env.RAILWAY_VOLUME_MOUNT_PATH;
 const customDbPath = process.env.DATABASE_PATH;
 const defaultDbPath = path.join(__dirname, '../../data/joga.db');
+const defaultTestDbPath = path.join(__dirname, '../../data/joga.test.db');
 
 // Priority: Railway volume > Custom DATABASE_PATH > Default
 // If Railway volume is mounted, it sets RAILWAY_VOLUME_MOUNT_PATH automatically
@@ -23,7 +24,7 @@ const dbPath = railwayVolumePath
   ? path.join(railwayVolumePath, 'joga.db')  // Use Railway persistent volume (absolute path)
   : (customDbPath 
       ? (path.isAbsolute(customDbPath) ? customDbPath : path.resolve(process.cwd(), customDbPath))
-      : defaultDbPath);                      // Use custom path (resolve if relative) or default
+      : (process.env.NODE_ENV === 'test' ? defaultTestDbPath : defaultDbPath)); // Separate DB for tests
 
 // Ensure data directory exists
 const dataDir = path.dirname(dbPath);

@@ -1,10 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { MatchData } from '../types';
-import { UserMenu } from './UserMenu';
+import { Team } from '../types/auth';
+import { getAllSeasons } from '../services/seasonService.api';
+import { PageLayout } from './PageLayout';
+import { JOGA_COLORS } from '../utils/colors';
+import { formatDateWithMonthName } from '../utils/dateFormatting';
+// import { getDisplayNameForSlug } from '../utils/teamMapping'; // Reserved for future use
 
 interface DataAtAGlanceViewProps {
   matchData: MatchData[];
   columnKeys: string[];
+  teamSlugMap: Map<string, Team>;
 }
 
 // Helper function to categorize columns
@@ -142,8 +148,10 @@ const categorizeColumns = (columnKeys: string[]): Record<string, string[]> => {
   return categories;
 };
 
-export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData, columnKeys }) => {
+export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData, columnKeys, teamSlugMap: _teamSlugMap }) => {
   const [showColumns, setShowColumns] = useState(false);
+  const [activeSeason, setActiveSeason] = useState<string | null>(null);
+  const [loadingSeason, setLoadingSeason] = useState(true);
 
   // Calculate stats - same logic as in ChatFirstView
   const stats = useMemo(() => {
@@ -153,8 +161,14 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
     const teamKey = columnKeys.find(key => 
       key.toLowerCase().includes('team') && !key.toLowerCase().includes('opponent')
     ) || 'Team';
-    const teams = [...new Set(matchData.map(m => m[teamKey]).filter(Boolean))];
-    const teamCount = teams.length;
+    // Extract team slugs and map to Display Names for display
+    const teamSlugs = [...new Set(matchData.map(m => {
+      const team = m[teamKey];
+      return team && typeof team === 'string' ? team.trim() : null;
+    }).filter(Boolean) as string[])];
+    const teamCount = teamSlugs.length;
+    // For display, use Display Names (but count is based on slugs)
+    // Note: teamCount uses slugs directly, Display Names are available via getDisplayNameForSlug if needed
     
     // Extract unique opponents
     const opponentKey = columnKeys.find(key => 
@@ -259,8 +273,8 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
         const latest = dates[dates.length - 1];
         
         if (earliest.getFullYear() >= 2000 && latest.getFullYear() >= 2000) {
-          earliestDate = earliest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-          latestDate = latest.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          earliestDate = formatDateWithMonthName(earliest);
+          latestDate = formatDateWithMonthName(latest);
         }
       }
     }
@@ -268,10 +282,35 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
     return { matchCount, teamCount, opponentCount, earliestDate, latestDate };
   }, [matchData, columnKeys]);
 
+  // Fetch active season
+  useEffect(() => {
+    const fetchActiveSeason = async () => {
+      try {
+        setLoadingSeason(true);
+        const seasons = await getAllSeasons();
+        const active = seasons.find(s => s.isActive);
+        setActiveSeason(active?.name || null);
+      } catch (error) {
+        console.error('Error fetching active season:', error);
+        setActiveSeason(null);
+      } finally {
+        setLoadingSeason(false);
+      }
+    };
+    fetchActiveSeason();
+  }, []);
+
   // Categorize columns for display
   const categorizedColumns = useMemo(() => {
     return categorizeColumns(columnKeys);
   }, [columnKeys]);
+
+  // JOGA colors for card headers (rotating pattern - matches Glossary)
+  const cardHeaderColors = [JOGA_COLORS.voltYellow, JOGA_COLORS.valorBlue];
+  
+  const getCardHeaderColor = (index: number): string => {
+    return cardHeaderColors[index % cardHeaderColors.length];
+  };
 
   const categoryColors: Record<string, string> = {
     'Game Info': 'bg-blue-50 border-blue-200 text-blue-800',
@@ -285,35 +324,31 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 relative">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Data at a Glance</h1>
-              <p className="text-sm text-gray-600 mt-1">Overview of your match data</p>
+    <PageLayout
+      title="Data at a Glance"
+      subtitle="Overview of your match data"
+      maxWidth="6xl"
+    >
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+            <div 
+              className="px-6 py-4 border-b border-gray-200"
+              style={{ backgroundColor: getCardHeaderColor(0) }}
+            >
+              <h2 className={`text-xl font-semibold ${getCardHeaderColor(0) === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white'}`}>
+                Data Overview
+              </h2>
             </div>
-            <div className="relative">
-              <UserMenu />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Data Overview</h2>
+            <div className="p-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <div className="text-sm text-gray-600 font-medium mb-2">Recorded Matches</div>
                 <div className="text-3xl font-bold text-gray-900">{stats.matchCount}</div>
               </div>
               <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600 font-medium mb-2">Current Season</div>
-                <div className="text-3xl font-bold text-gray-900">2024</div>
+                <div className="text-sm text-gray-600 font-medium mb-2">Active Season</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {loadingSeason ? '...' : (activeSeason || 'N/A')}
+                </div>
               </div>
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <div className="text-sm text-gray-600 font-medium mb-2">Teams</div>
@@ -336,25 +371,37 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
                 </div>
               )}
             </div>
+            </div>
           </div>
 
           {/* Detected Columns Section */}
-          <div className="mt-8 bg-white rounded-lg shadow-md border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Detected Data Columns</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  {columnKeys.length} column{columnKeys.length !== 1 ? 's' : ''} detected in your data
-                </p>
+          <div className="mt-8 bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+            <div 
+              className="px-6 py-4 border-b border-gray-200"
+              style={{ backgroundColor: getCardHeaderColor(1) }}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className={`text-xl font-semibold ${getCardHeaderColor(1) === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white'}`}>
+                    Detected Data Columns
+                  </h2>
+                  <p className={`text-sm mt-1 ${getCardHeaderColor(1) === JOGA_COLORS.voltYellow ? 'text-gray-700' : 'text-white/90'}`}>
+                    {columnKeys.length} column{columnKeys.length !== 1 ? 's' : ''} detected in your data
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowColumns(!showColumns)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    getCardHeaderColor(1) === JOGA_COLORS.voltYellow
+                      ? 'text-gray-900 bg-white/90 hover:bg-white'
+                      : 'text-white bg-white/20 hover:bg-white/30'
+                  }`}
+                >
+                  {showColumns ? 'Hide' : 'Show'} Columns
+                </button>
               </div>
-              <button
-                onClick={() => setShowColumns(!showColumns)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                {showColumns ? 'Hide' : 'Show'} Columns
-              </button>
             </div>
-
+            <div className="p-6">
             {showColumns && (
               <div className="space-y-4">
                 {Object.entries(categorizedColumns).map(([category, columns]) => (
@@ -387,10 +434,9 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
                 Click "Show Columns" to see all {columnKeys.length} detected data columns organized by category.
               </div>
             )}
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

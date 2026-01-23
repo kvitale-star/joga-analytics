@@ -305,5 +305,202 @@ export async function runMigrations(): Promise<void> {
     }
   }
 
+  // Run migration 003 if needed - Add structured team fields for season/year-based teams
+  if (version < 3) {
+    console.log('Running migration 003: Add structured team fields...');
+
+    try {
+      // Teams: add required structured fields (nullable initially for backfill)
+      // Note: SQLite supports adding columns but not altering constraints easily.
+      // We'll add columns as nullable, then enforce in app-level validation.
+      getSqliteDb().prepare(`
+        ALTER TABLE teams ADD COLUMN gender TEXT
+      `).run();
+      getSqliteDb().prepare(`
+        ALTER TABLE teams ADD COLUMN level TEXT
+      `).run();
+      getSqliteDb().prepare(`
+        ALTER TABLE teams ADD COLUMN variant TEXT DEFAULT 'volt'
+      `).run();
+      getSqliteDb().prepare(`
+        ALTER TABLE teams ADD COLUMN birth_year_start INTEGER
+      `).run();
+      getSqliteDb().prepare(`
+        ALTER TABLE teams ADD COLUMN birth_year_end INTEGER
+      `).run();
+
+      // Seasons: ensure name is treated as year label (no schema change, but index helps lookup)
+      // Add index on seasons.name for fast year lookup
+      try {
+        getSqliteDb().prepare(`
+          CREATE INDEX IF NOT EXISTS idx_seasons_name ON seasons(name)
+        `).run();
+      } catch {
+        // ignore if unsupported
+      }
+
+      // Optional: backfill variant for existing rows that may have NULL
+      getSqliteDb().prepare(`
+        UPDATE teams SET variant = 'volt' WHERE variant IS NULL OR variant = ''
+      `).run();
+
+      // Record migration
+      await db
+        .insertInto('schema_migrations')
+        .values({
+          version: 3,
+          description: 'Add structured team fields (gender, level, variant, birth year range) and season name index',
+          applied_at: new Date().toISOString(),
+        })
+        .execute();
+
+      console.log('✓ Migration 003 completed successfully');
+    } catch (error: any) {
+      const errorMsg = error?.message || '';
+      if (
+        errorMsg.includes('duplicate column name') ||
+        errorMsg.includes('already exists')
+      ) {
+        console.log('One or more columns already exist, skipping...');
+        // Record migration anyway to mark it as applied
+        try {
+          await db
+            .insertInto('schema_migrations')
+            .values({
+              version: 3,
+              description:
+                'Add structured team fields (gender, level, variant, birth year range) and season name index',
+              applied_at: new Date().toISOString(),
+            })
+            .execute();
+        } catch {
+          // Migration already recorded, ignore
+        }
+      } else {
+        console.error('Migration 003 failed:', errorMsg);
+        throw error;
+      }
+    }
+  }
+
+  // Run migration 004 if needed - Add age_group field to teams
+  if (version < 4) {
+    console.log('Running migration 004: Add age_group field to teams...');
+
+    try {
+      // Add age_group column to teams table (nullable, informational only)
+      getSqliteDb().prepare(`
+        ALTER TABLE teams ADD COLUMN age_group TEXT
+      `).run();
+
+      // Record migration
+      await db
+        .insertInto('schema_migrations')
+        .values({
+          version: 4,
+          description: 'Add age_group field for flexible age group display (month range or single year)',
+          applied_at: new Date().toISOString(),
+        })
+        .execute();
+
+      console.log('✓ Migration 004 completed successfully');
+    } catch (error: any) {
+      const errorMsg = error?.message || '';
+      if (
+        errorMsg.includes('duplicate column name') ||
+        errorMsg.includes('already exists')
+      ) {
+        console.log('Column already exists, skipping...');
+        // Record migration anyway to mark it as applied
+        try {
+          await db
+            .insertInto('schema_migrations')
+            .values({
+              version: 4,
+              description: 'Add age_group field for flexible age group display (month range or single year)',
+              applied_at: new Date().toISOString(),
+            })
+            .execute();
+        } catch {
+          // Migration already recorded, ignore
+        }
+      } else {
+        console.error('Migration 004 failed:', errorMsg);
+        throw error;
+      }
+    }
+  }
+
+  // Run migration 005 if needed - Add metric_definitions table for glossary
+  if (version < 5) {
+    console.log('Running migration 005: Add metric_definitions table...');
+
+    try {
+      // Create metric_definitions table
+      getSqliteDb().prepare(`
+        CREATE TABLE IF NOT EXISTS metric_definitions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          metric_name TEXT NOT NULL UNIQUE,
+          category TEXT,
+          description TEXT,
+          units TEXT,
+          calculation TEXT,
+          notes TEXT,
+          example TEXT,
+          data_type TEXT,
+          availability TEXT,
+          source TEXT DEFAULT 'google_sheets',
+          last_synced_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `).run();
+
+      // Create indexes
+      getSqliteDb().prepare(`
+        CREATE INDEX IF NOT EXISTS idx_metric_definitions_category ON metric_definitions(category)
+      `).run();
+      getSqliteDb().prepare(`
+        CREATE INDEX IF NOT EXISTS idx_metric_definitions_name ON metric_definitions(metric_name)
+      `).run();
+
+      // Record migration
+      await db
+        .insertInto('schema_migrations')
+        .values({
+          version: 5,
+          description: 'Add metric_definitions table for glossary feature',
+          applied_at: new Date().toISOString(),
+        })
+        .execute();
+
+      console.log('✓ Migration 005 completed successfully');
+    } catch (error: any) {
+      const errorMsg = error?.message || '';
+      if (
+        errorMsg.includes('duplicate column name') ||
+        errorMsg.includes('already exists')
+      ) {
+        console.log('Table already exists, skipping...');
+        // Record migration anyway to mark it as applied
+        try {
+          await db
+            .insertInto('schema_migrations')
+            .values({
+              version: 5,
+              description: 'Add metric_definitions table for glossary feature',
+              applied_at: new Date().toISOString(),
+            })
+            .execute();
+        } catch {
+          // Migration already recorded, ignore
+        }
+      } else {
+        console.error('Migration 005 failed:', errorMsg);
+        throw error;
+      }
+    }
+  }
+
   console.log('All migrations completed!');
 }

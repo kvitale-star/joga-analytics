@@ -11,6 +11,9 @@ A modern web application for coaches to visualize match data from Google Sheets.
 - 🤖 AI-powered chatbot for natural language data queries (powered by Google Gemini)
 - 🎨 Modern, responsive UI built with React and Tailwind CSS
 - 📱 Mobile-friendly design
+- 👥 User management with role-based access (admin, coach, viewer)
+- 🏆 Team management across multiple seasons
+- ⚙️ Chart customization (Phase 0.5 - ✅ Complete) - Toggle metrics, opponent data, and save preferences
 
 ## Setup
 
@@ -93,21 +96,57 @@ npm run build
 
 The built files will be in the `dist` directory.
 
+## Project Structure
+
+```
+joga-visualizer/
+├── backend/          # Express API server (TypeScript, SQLite, Kysely)
+│   ├── src/
+│   │   ├── db/      # Database schema, migrations
+│   │   ├── routes/  # API endpoints
+│   │   ├── services/# Business logic
+│   │   └── scripts/ # Utility scripts
+│   └── README.md    # Backend documentation
+├── src/             # React frontend (TypeScript, Vite, Tailwind)
+│   ├── components/  # React components
+│   ├── services/    # API clients
+│   └── utils/       # Utility functions
+├── docs/            # Project documentation
+└── scripts/         # Development scripts
+```
+
+## Documentation
+
+- **[Backend README](./backend/README.md)** - Backend API documentation
+- **[Outstanding Items](./docs/OUTSTANDING_ITEMS.md)** - Planned features and phases
+- **[Chart Customization Plan](./docs/PHASE_0.5_CHART_CUSTOMIZATION_PLAN.md)** - Chart customization implementation (✅ Complete - All 18 charts)
+- **[View State Implementation](./docs/VIEW_STATE_IMPLEMENTATION.md)** - View-scoped URL state (✅ Implemented)
+- **[View State Recommendations](./docs/VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md)** - Original analysis and recommendations
+- **[Deployment Guide](./docs/RAILWAY_DEPLOYMENT_QUICKSTART.md)** - Railway deployment
+- **[Team Management](./docs/TEAM_MANAGEMENT.md)** - Team management features
+- **[Security Plan](./docs/SECURITY_REMEDIATION_PLAN.md)** - Security improvements
+
 ## Troubleshooting
 
 ### "Access denied" Error
-- Make sure your API key is correct
+- Make sure your API key is correct in `backend/.env`
 - Ensure the Google Sheets API is enabled in your Google Cloud project
-- If using a private sheet, consider making it public or implementing OAuth
+- Verify `GOOGLE_SHEETS_SPREADSHEET_ID` and `GOOGLE_SHEETS_API_KEY` are set
 
 ### "Spreadsheet not found" Error
-- Verify the spreadsheet ID in `src/config.ts`
+- Verify the spreadsheet ID in `backend/.env` (`GOOGLE_SHEETS_SPREADSHEET_ID`)
 - Make sure the sheet exists and you have access to it
+- Ensure the sheet is public (for API key authentication)
 
 ### Charts Not Showing
 - Check that your column names match the expected format
 - Look at the "Detected Columns" section in development mode
 - Ensure your data contains numeric values for the statistics you want to visualize
+
+### Backend Connection Issues
+- Verify backend is running on `http://localhost:3001`
+- Check `FRONTEND_URL` in `backend/.env` matches your frontend URL
+- Ensure CORS is configured correctly
 
 ## License
 

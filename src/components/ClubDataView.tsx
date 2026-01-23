@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MatchData } from '../types';
 import { ChartType, CHART_GROUPS, CHART_LABELS } from '../utils/chartGroups';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
@@ -28,9 +28,10 @@ interface ClubDataViewProps {
   matchData: MatchData[];
   columnKeys: string[];
   clubDataByTeam: MatchData[];
-  availableClubTeams: string[];
-  selectedClubTeams: string[];
+  availableClubTeams: Array<{ slug: string; displayName: string }>;
+  selectedClubTeams: string[]; // Array of slugs
   setSelectedClubTeams: (value: string[] | ((prev: string[]) => string[])) => void;
+  teamSlugMap: Map<string, any>;
   lastNGames: number | null;
   setLastNGames: (value: number | null | ((prev: number | null) => number | null)) => void;
   selectedChartGroup: string | null;
@@ -92,6 +93,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
   availableClubTeams,
   selectedClubTeams,
   setSelectedClubTeams,
+  teamSlugMap: _teamSlugMap, // Reserved for future use
   lastNGames,
   setLastNGames,
   selectedChartGroup,
@@ -145,6 +147,14 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
   getOppPassShareKey,
 }) => {
   const teamKeyForCharts = getTeamKey();
+  // For club data, we want to use opponentKey (which contains displayName) for chart x-axis labels
+  // But we need to get the opponentKey column name from the data
+  const opponentKeyForCharts = useMemo(() => {
+    // Find the opponent key column name from columnKeys
+    return columnKeys.find(key => 
+      key.toLowerCase().includes('opponent') && !key.toLowerCase().includes('team')
+    ) || 'Opponent';
+  }, [columnKeys]);
   const showLabels = additionalOptions.includes('showChartLabels');
   const globalIncludeOpponents = additionalOptions.includes('includeOpponents');
   
@@ -195,8 +205,8 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
               <label className="block text-xs font-medium text-gray-600 mb-1">Team</label>
               <MultiSelectDropdown
                 options={availableClubTeams.map(team => ({
-                  value: team,
-                  label: team
+                  value: team.slug,
+                  label: team.displayName
                 }))}
                 selectedValues={selectedClubTeams}
                 onSelectionChange={setSelectedClubTeams}
@@ -229,7 +239,8 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     setSelectedCharts([]);
                   }
                 }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] min-w-[160px]"
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
+                style={{ width: 'auto', minWidth: '160px' }}
               >
                 <option value="">Select Group...</option>
                 {[...CHART_GROUPS].sort((a, b) => {
@@ -316,19 +327,20 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
             (() => {
               // Show radial chart when no teams selected OR when all teams are selected (default state)
               const noTeamsSelected = selectedClubTeams.length === 0;
+              const availableSlugs = new Set(availableClubTeams.map(t => t.slug));
               const allTeamsSelected = selectedClubTeams.length > 0 && 
                                        availableClubTeams.length > 0 &&
                                        selectedClubTeams.length === availableClubTeams.length &&
-                                       selectedClubTeams.every(team => availableClubTeams.includes(team));
+                                       selectedClubTeams.every(slug => availableSlugs.has(slug));
               const shouldShowRadial = noTeamsSelected || allTeamsSelected;
               
               return shouldShowRadial ? (
                 availableClubTeams && availableClubTeams.length >= 2 ? (
                   <div className="max-w-4xl mx-auto">
                     <TeamComparisonRadialChart
-                      data={matchData || []}
-                      teamKey={teamKeyForCharts}
-                      availableTeams={availableClubTeams || []}
+                      data={clubDataByTeam || []}
+                      teamKey={opponentKeyForCharts}
+                      availableTeams={availableClubTeams.map(t => t.displayName) || []}
                       getTSRKey={getTSRKey}
                       getPossessionKey={getPossessionKey}
                       getSPIKey={getSPIKey}
@@ -341,7 +353,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                 ) : (
                   <div className="bg-white rounded-lg shadow-md p-8 text-center">
                     <p className="text-gray-600 text-lg">
-                      {availableClubTeams && availableClubTeams.length === 1 
+                      {availableClubTeams && availableClubTeams.length === 1
                         ? 'At least 2 teams are required to display the team comparison chart.'
                         : 'No teams available. Please ensure your data contains team information.'}
                     </p>
@@ -366,7 +378,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     shotsForKey={getShotsForKey()}
                     shotsAgainstKey={getShotsAgainstKey()}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
                     showLabels={showLabels}
                     attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
                     attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
@@ -385,7 +397,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     goalsForKey={getGoalsForKey()}
                     goalsAgainstKey={getGoalsAgainstKey()}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
                     showLabels={showLabels}
                     xGKey={columnKeys.includes(getxGKey()) ? getxGKey() : undefined}
                     xGAKey={columnKeys.includes(getxGAKey()) ? getxGAKey() : undefined}
@@ -404,7 +416,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     possessionKey={getPossessionKey()}
                     passShareKey={getPassShareKey()}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
                     oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
                     oppPassShareKey={columnKeys.includes(getOppPassShareKey()) ? getOppPassShareKey() : undefined}
                     onExpansionChange={handleChartExpansionChange('possession')}
@@ -420,7 +432,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     xGKey={getxGKey()}
                     xGAKey={getxGAKey()}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
                     showLabels={showLabels}
                     goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
                     goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
@@ -439,7 +451,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     tsrKey={columnKeys.includes(getTSRKey()) ? getTSRKey() : undefined}
                     oppTSRKey={columnKeys.includes(getOppTSRKey()) ? getOppTSRKey() : undefined}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
                     showLabels={showLabels}
                     shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
                     shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
@@ -475,7 +487,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     conversionRateKey={getConversionRateKey()}
                     oppConversionRateKey={getOppConversionRateKey()}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
                     showLabels={showLabels}
                     shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
                     shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
@@ -496,8 +508,14 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   data={clubDataByTeam}
                   attemptsKey={getAttemptsKey()}
                   oppAttemptsKey={getOppAttemptsKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                  shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                  goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                  goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('attempts')}
                 />
               </FadeTransition>
 
@@ -514,8 +532,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   outsideBoxAttemptsPctKey={getOutsideBoxAttemptsPctKey()}
                   oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
                   oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('positionalAttempts')}
                 />
               </FadeTransition>
 
@@ -532,8 +552,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   cornersAgainstKey={getCornersAgainstKey()}
                   freeKickForKey={getFreeKickForKey()}
                   freeKickAgainstKey={getFreeKickAgainstKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('miscStats')}
                 />
               </FadeTransition>
 
@@ -546,8 +568,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   data={clubDataByTeam}
                   passesForKey={getPassesForKey()}
                   oppPassesKey={getOppPassesKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('passes')}
                 />
               </FadeTransition>
 
@@ -560,8 +584,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   data={clubDataByTeam}
                   avgPassLengthKey={getAvgPassLengthKey()}
                   oppAvgPassLengthKey={getOppAvgPassLengthKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('avgPassLength')}
                 />
               </FadeTransition>
 
@@ -578,8 +604,9 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   passStrings35Key={getTeamPassStrings35Key()}
                   passStrings6PlusKey={getTeamPassStrings6PlusKey()}
                   lpcKey={getLPCAvgKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  onExpansionChange={handleChartExpansionChange('passStrLength')}
                 />
               </FadeTransition>
 
@@ -611,8 +638,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   data={clubDataByTeam}
                   passByZoneKeys={getPassByZoneKeys()}
                   oppPassByZoneKeys={getOppPassByZoneKeys()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('passByZone')}
                 />
               </FadeTransition>
 
@@ -625,8 +654,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   data={clubDataByTeam}
                   ppmKey={getPPMKey()}
                   oppPPMKey={getOppPPMKey()}
-                  opponentKey={teamKeyForCharts}
+                  opponentKey={opponentKeyForCharts}
                   showLabels={showLabels}
+                  globalIncludeOpponents={globalIncludeOpponents}
+                  onExpansionChange={handleChartExpansionChange('ppm')}
                 />
               </FadeTransition>
 
@@ -637,7 +668,12 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     data={clubDataByTeam}
                     passShareKey={getPassShareKey()}
                     oppPassShareKey={getOppPassShareKey()}
-                    opponentKey={teamKeyForCharts}
+                    opponentKey={opponentKeyForCharts}
+                    possessionKey={columnKeys.includes(getPossessionKey()) ? getPossessionKey() : undefined}
+                    oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
+                    showLabels={showLabels}
+                    globalIncludeOpponents={globalIncludeOpponents}
+                    onExpansionChange={handleChartExpansionChange('passShare')}
                   />
                 </div>
               )}
@@ -698,7 +734,7 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                             key={columnKey}
                             data={clubDataByTeam}
                             columnKey={columnKey}
-                            opponentKey={teamKeyForCharts}
+                            opponentKey={opponentKeyForCharts}
                             config={config}
                             pairColumnKey={pairColumn || undefined}
                             showLabels={showLabels}

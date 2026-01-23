@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getAllUsers, createUserByAdmin, updateUser, deleteUser, resetUserPassword } from '../services/userService';
 import { User, UserRole } from '../types/auth';
 import { JOGA_COLORS } from '../utils/colors';
+import { formatDateWithUserPreference } from '../utils/dateFormatting';
 
 export const UserManagement: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -153,7 +154,7 @@ export const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {user.lastLoginAt
-                      ? new Date(user.lastLoginAt).toLocaleDateString()
+                      ? formatDateWithUserPreference(new Date(user.lastLoginAt), currentUser?.preferences)
                       : 'Never'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -292,7 +293,6 @@ const CreateUserModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             >
               <option value="coach">Coach</option>
-              <option value="viewer">Viewer</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -384,7 +384,6 @@ const EditUserModal: React.FC<{ user: User; onClose: () => void }> = ({ user, on
               className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             >
               <option value="coach">Coach</option>
-              <option value="viewer">Viewer</option>
               <option value="admin">Admin</option>
             </select>
           </div>

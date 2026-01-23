@@ -13,8 +13,15 @@ import { authenticateSession, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// All team management routes require admin
+// Auth required for all routes
 router.use(authenticateSession);
+
+/**
+ * NOTE ON PERMISSIONS
+ * - Admins: full CRUD + assignments
+ * - Coaches: will get separate read endpoints in a future route (e.g. /api/coach/*)
+ *   For now, the existing /api/teams routes remain admin-only.
+ */
 router.use(requireAdmin);
 
 /**
@@ -55,18 +62,47 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { displayName, slug, metadata, seasonId, parentTeamId } = req.body;
+    const {
+      displayName,
+      metadata,
+      seasonId,
+      parentTeamId,
+      gender,
+      level,
+      variant,
+      birthYearStart,
+      birthYearEnd,
+      ageGroup,
+    } = req.body;
 
-    if (!displayName || !slug) {
-      return res.status(400).json({ error: 'Display name and slug are required' });
+    if (!seasonId || typeof seasonId !== 'number') {
+      return res.status(400).json({ error: 'seasonId is required' });
+    }
+    if (!gender || (gender !== 'boys' && gender !== 'girls')) {
+      return res.status(400).json({ error: 'gender must be "boys" or "girls"' });
+    }
+    if (!level || typeof level !== 'string') {
+      return res.status(400).json({ error: 'level is required' });
+    }
+    // Birth years are optional - validate only if provided
+    if (birthYearStart !== undefined && birthYearStart !== null && typeof birthYearStart !== 'number') {
+      return res.status(400).json({ error: 'birthYearStart must be a number if provided' });
+    }
+    if (birthYearEnd !== undefined && birthYearEnd !== null && typeof birthYearEnd !== 'number') {
+      return res.status(400).json({ error: 'birthYearEnd must be a number if provided' });
     }
 
     const team = await createTeam({
       displayName,
-      slug,
       metadata,
       seasonId,
       parentTeamId,
+      gender,
+      level,
+      variant,
+      birthYearStart: birthYearStart ?? null,
+      birthYearEnd: birthYearEnd ?? null,
+      ageGroup: ageGroup || null,
     });
 
     res.status(201).json(team);
@@ -82,15 +118,32 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const teamId = parseInt(req.params.id);
-    const { displayName, slug, metadata, seasonId, parentTeamId, isActive } = req.body;
-
-    const team = await updateTeam(teamId, {
+    const {
       displayName,
-      slug,
       metadata,
       seasonId,
       parentTeamId,
       isActive,
+      gender,
+      level,
+      variant,
+      birthYearStart,
+      birthYearEnd,
+      ageGroup,
+    } = req.body;
+
+    const team = await updateTeam(teamId, {
+      displayName,
+      metadata,
+      seasonId,
+      parentTeamId,
+      isActive,
+      gender,
+      level,
+      variant,
+      birthYearStart,
+      birthYearEnd,
+      ageGroup: ageGroup !== undefined ? ageGroup : undefined,
     });
 
     res.json(team);

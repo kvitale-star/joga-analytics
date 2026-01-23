@@ -2,12 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { MatchData, SheetConfig } from '../types';
 import { appendRowToSheet } from '../services/sheetsService';
 import { JOGA_COLORS } from '../utils/colors';
-import { UserMenu } from './UserMenu';
+import { Team } from '../types/auth';
+import { PageLayout } from './PageLayout';
 
 interface UploadGameDataViewProps {
   columnKeys: string[];
   matchData: MatchData[];
   sheetConfig: SheetConfig;
+  teamSlugMap: Map<string, Team>;
 }
 
 // Fields that are computed/calculated - should not be in the form
@@ -107,14 +109,37 @@ const categorizeField = (fieldName: string): string => {
   return 'Other';
 };
 
-export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKeys, matchData, sheetConfig }) => {
+export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKeys, matchData, sheetConfig, teamSlugMap }) => {
   const [formData, setFormData] = useState<Record<string, string | number>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Get available teams from existing data
+  // JOGA colors for category headers (rotating pattern - matches Glossary)
+  const categoryHeaderColors = [JOGA_COLORS.voltYellow, JOGA_COLORS.pinkFoam, JOGA_COLORS.valorBlue];
+  
+  const getCategoryHeaderColor = (index: number): string => {
+    return categoryHeaderColors[index % categoryHeaderColors.length];
+  };
+
+  // Get available teams from database (for dropdown)
+  // Also get teams from match data as fallback
   const availableTeams = useMemo(() => {
+    // Get all active database teams
+    const dbTeams = Array.from(teamSlugMap.values())
+      .filter(team => team.isActive)
+      .map(team => ({
+        slug: team.slug,
+        displayName: team.displayName || team.slug,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    
+    // If we have database teams, use them
+    if (dbTeams.length > 0) {
+      return dbTeams;
+    }
+    
+    // Fallback: extract from match data
     const teamKey = columnKeys.find(key => 
       key.toLowerCase().includes('team') && !key.toLowerCase().includes('opponent')
     ) || 'Team';
@@ -125,8 +150,8 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
         teams.add(team);
       }
     });
-    return Array.from(teams).sort();
-  }, [matchData, columnKeys]);
+    return Array.from(teams).map(slug => ({ slug, displayName: slug })).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [matchData, columnKeys, teamSlugMap]);
 
   // Filter and categorize fields for the form
   const formFields = useMemo(() => {
@@ -277,25 +302,11 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 relative">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Upload Game Data</h1>
-              <p className="text-sm text-gray-600 mt-1">Enter data for a single game</p>
-            </div>
-            <div className="relative">
-              <UserMenu />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Form Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-4xl mx-auto">
+    <PageLayout
+      title="Upload Game Data"
+      subtitle="Enter data for a single game"
+      maxWidth="4xl"
+    >
           {submitSuccess && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
               Game data submitted successfully!
@@ -309,12 +320,22 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
           )}
 
           <form onSubmit={handleSubmit}>
-            {Object.entries(formFields).map(([category, fields]) => (
+            {Object.entries(formFields).map(([category, fields], categoryIndex) => {
+              const categoryColor = getCategoryHeaderColor(categoryIndex);
+              const textColor = categoryColor === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white';
+              
+              return (
               <div key={category} className="mb-6">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4 pb-2 border-b border-gray-200">
-                    {category}
-                  </h2>
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                  <div 
+                    className="px-6 py-4 border-b border-gray-200"
+                    style={{ backgroundColor: categoryColor }}
+                  >
+                    <h2 className={`text-lg font-semibold ${textColor}`}>
+                      {category}
+                    </h2>
+                  </div>
+                  <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {fields.map(field => {
                       const fieldName = field.name;
@@ -342,7 +363,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
                             >
                               <option value="">Select a team...</option>
                               {availableTeams.map(team => (
-                                <option key={team} value={team}>{team}</option>
+                                <option key={team.slug} value={team.slug}>{team.displayName}</option>
                               ))}
                             </select>
                           ) : inputType === 'date' ? (
@@ -388,30 +409,18 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
                       );
                     })}
                   </div>
+                  </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             {/* Form Actions */}
             <div className="flex justify-end gap-4 mt-6">
               <button
                 type="button"
                 onClick={handleReset}
-                className="px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white"
-                style={{
-                  backgroundColor: isSubmitting ? '#9ca3af' : JOGA_COLORS.valorBlue,
-                  border: `2px solid ${JOGA_COLORS.valorBlue}`,
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.backgroundColor = '#557799'; // Darker valor blue
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSubmitting) {
-                    e.currentTarget.style.backgroundColor = JOGA_COLORS.valorBlue;
-                  }
-                }}
+                className="px-6 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 Reset
@@ -439,9 +448,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
               </button>
             </div>
           </form>
-        </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

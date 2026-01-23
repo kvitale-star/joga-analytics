@@ -3,7 +3,7 @@ import { ChartConfig } from '../types/chartConfig';
 import { JOGA_COLORS } from '../utils/colors';
 
 interface ChartConfigPanelProps {
-  chartType: 'shots' | 'possession' | 'goals' | 'xg' | 'conversionRate' | 'tsr';
+  chartType: 'shots' | 'possession' | 'goals' | 'xg' | 'conversionRate' | 'tsr' | 'passes' | 'passShare' | 'avgPassLength' | 'ppm' | 'passStrLength' | 'spi' | 'attempts' | 'miscStats' | 'positionalAttempts' | 'passByZone' | 'auto';
   config: ChartConfig;
   availableMetrics: {
     id: string;
@@ -13,6 +13,7 @@ interface ChartConfigPanelProps {
   onConfigChange: (config: ChartConfig) => void;
   onSave: () => void;
   onReset: () => void;
+  hideOpponentToggle?: boolean; // Optional prop to hide opponent toggle for charts that don't support it
 }
 
 export const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({
@@ -21,6 +22,7 @@ export const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({
   onConfigChange,
   onSave,
   onReset,
+  hideOpponentToggle = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localConfig, setLocalConfig] = useState<ChartConfig>(config);
@@ -134,17 +136,19 @@ export const ChartConfigPanel: React.FC<ChartConfigPanelProps> = ({
           </div>
 
           {/* Opponent Data Toggle */}
-          <div className="mb-4">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={localConfig.includeOpponent}
-                onChange={handleOpponentToggle}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm text-gray-700">Include Opponents</span>
-            </label>
-          </div>
+          {!hideOpponentToggle && (
+            <div className="mb-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={localConfig.includeOpponent}
+                  onChange={handleOpponentToggle}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Include Opponents</span>
+              </label>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-2">

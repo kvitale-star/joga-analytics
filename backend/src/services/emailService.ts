@@ -74,6 +74,10 @@ function getEmailFooter(): string {
  * Send password reset email
  */
 export async function sendPasswordResetEmail(email: string, token: string): Promise<void> {
+  // Never send real emails during automated tests
+  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+    return;
+  }
   // Use path-based token to avoid email clients stripping query params
   const resetUrl = `${getBaseUrl()}/reset-password/${token}`;
 
@@ -142,6 +146,10 @@ export async function sendPasswordResetEmail(email: string, token: string): Prom
  * This email allows the user to set their initial password and verifies their email
  */
 export async function sendPasswordSetupEmail(email: string, token: string, name: string): Promise<void> {
+  // Never send real emails during automated tests
+  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+    return;
+  }
   // Use path-based token to avoid email clients stripping query params
   const setupUrl = `${getBaseUrl()}/reset-password/${token}`;
 
@@ -208,6 +216,10 @@ export async function sendPasswordSetupEmail(email: string, token: string, name:
  * Send email verification email
  */
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
+  // Never send real emails during automated tests
+  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
+    return;
+  }
   // Use path-based token to avoid email clients stripping query params
   const verificationUrl = `${getBaseUrl()}/verify-email/${token}`;
 

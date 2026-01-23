@@ -4,6 +4,8 @@ import { fetchSheetData } from './services/sheetsService';
 import { invalidateAIContextCache } from './services/aiService';
 import { sheetConfig } from './config';
 import { useURLState } from './hooks/useURLState';
+import { useViewScopedState } from './hooks/useViewScopedState';
+import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { StatsCard } from './components/StatsCard';
 import { getMissingDataInfo } from './utils/missingDataUtils';
 import { ShotsChart } from './components/ShotsChart';
@@ -41,9 +43,14 @@ import { UserMenu } from './components/UserMenu';
 import { PasswordResetForm } from './components/PasswordResetForm';
 import { EmailVerification } from './components/EmailVerification';
 import { SettingsView } from './components/SettingsView';
-import { Walkthrough } from './components/Walkthrough';
+import { Glossary } from './components/Glossary';
+import { WalkthroughOverlay } from './components/WalkthroughOverlay';
+import { getAllTeams } from './services/teamService';
+import { Team } from './types/auth';
+import { createTeamSlugMap, getTeamsForDropdown } from './utils/teamMapping';
+import { formatDateWithUserPreference } from './utils/dateFormatting';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings';
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
 
 function App() {
   const { user, isLoading, isSetupRequired } = useAuth();
@@ -51,45 +58,112 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [columnKeys, setColumnKeys] = useState<string[]>([]);
+  const [databaseTeams, setDatabaseTeams] = useState<Team[]>([]);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
   
   const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
+  
+  // Create team slug map for quick lookups
+  const teamSlugMap = useMemo(() => createTeamSlugMap(databaseTeams), [databaseTeams]);
+  
+  // Load database teams
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const teams = await getAllTeams();
+        setDatabaseTeams(teams);
+      } catch (error) {
+        console.error('Failed to load teams:', error);
+        // Continue without database teams - will fallback to showing slugs
+      }
+    };
+    
+    if (user && !isLoading) {
+      loadTeams();
+    }
+  }, [user, isLoading]);
 
-  // URL-persisted state
+  // Check if user needs onboarding
+  useEffect(() => {
+    if (user && !user.preferences?.onboardingCompleted) {
+      // Small delay to let the page render first
+      const timer = setTimeout(() => {
+        setShowWalkthrough(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  // Expose function to start walkthrough from Settings
+  useEffect(() => {
+    const startWalkthrough = () => {
+      setShowWalkthrough(true);
+    };
+    
+    (window as any).startWalkthrough = startWalkthrough;
+    
+    // Also listen for custom event as fallback
+    const handleStartWalkthrough = () => {
+      setShowWalkthrough(true);
+    };
+    window.addEventListener('startWalkthrough', handleStartWalkthrough);
+    
+    return () => {
+      delete (window as any).startWalkthrough;
+      window.removeEventListener('startWalkthrough', handleStartWalkthrough);
+    };
+  }, []);
+
+  // URL-persisted state - view mode is global (not scoped)
   const [viewMode, setViewMode] = useURLState<ViewMode>('view', 'dashboard');
-  const [selectedTeam, setSelectedTeam] = useURLState<string | null>('team', null, {
+  
+  // Dashboard view-scoped state
+  const [selectedTeam, setSelectedTeam] = useViewScopedState<string | null>(viewMode, 'team', null, {
     serialize: (v) => v || '',
     deserialize: (v) => v || null,
   });
-  const [selectedOpponent, setSelectedOpponent] = useURLState<string | null>('opponent', null, {
+  const [selectedOpponent, setSelectedOpponent] = useViewScopedState<string | null>(viewMode, 'opponent', null, {
     serialize: (v) => v || '',
     deserialize: (v) => v || null,
   });
-  const [lastNGames, setLastNGames] = useURLState<number | null>('lastNGames', 10, {
-    serialize: (v) => v?.toString() || '',
-    deserialize: (v) => {
-      if (!v) return null;
-      const num = parseInt(v, 10);
-      return isNaN(num) ? null : num;
-    },
-  });
-  const [selectedDate, setSelectedDate] = useURLState<string>('date', '');
-  const [selectedChartGroup, setSelectedChartGroup] = useURLState<string | null>('chartGroup', null, {
+  const [selectedDate, setSelectedDate] = useViewScopedState<string>(viewMode, 'date', '');
+  const [selectedChartGroup, setSelectedChartGroup] = useViewScopedState<string | null>(viewMode, 'chartGroup', null, {
     serialize: (v) => v || '',
     deserialize: (v) => v || null,
   });
-  const [selectedCharts, setSelectedCharts] = useURLState<ChartType[]>('charts', [], {
+  // Chart selections - stored in localStorage (not URL) to keep URLs short
+  // Chart preferences (which metrics are visible, etc.) are stored in database
+  const [selectedCharts, setSelectedCharts] = useLocalStorageState<ChartType[]>(
+    viewMode === 'dashboard' ? 'joga.dashboard.charts' : 'joga.clubData.charts',
+    [],
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (v) => {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      },
+    }
+  );
+  
+  // Dashboard options for Team Data: 'showChartLabels', 'includeOpponents'
+  const [dashboardOptions, setDashboardOptions] = useViewScopedState<string[]>(viewMode, 'dashboardOptions', ['showChartLabels'], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
         const parsed = JSON.parse(v);
-        return Array.isArray(parsed) ? parsed : [];
+        return Array.isArray(parsed) ? parsed : ['showChartLabels'];
       } catch {
-        return [];
+        return ['showChartLabels'];
       }
     },
   });
-  // Additional options for Club Data: 'boys', 'girls', 'blackTeams', 'showChartLabels'
-  const [additionalOptions, setAdditionalOptions] = useURLState<string[]>('additionalOptions', ['boys', 'girls', 'showChartLabels'], {
+  
+  // Club Data view-scoped state
+  const [additionalOptions, setAdditionalOptions] = useViewScopedState<string[]>('club-data', 'additionalOptions', ['boys', 'girls', 'showChartLabels'], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -100,17 +174,12 @@ function App() {
       }
     },
   });
-  
-  // Dashboard options for Team Data: 'showChartLabels', 'includeOpponents'
-  const [dashboardOptions, setDashboardOptions] = useURLState<string[]>('dashboardOptions', ['showChartLabels'], {
-    serialize: (v) => JSON.stringify(v),
+  const [lastNGames, setLastNGames] = useViewScopedState<number | null>('club-data', 'lastNGames', 10, {
+    serialize: (v) => v?.toString() || '',
     deserialize: (v) => {
-      try {
-        const parsed = JSON.parse(v);
-        return Array.isArray(parsed) ? parsed : ['showChartLabels'];
-      } catch {
-        return ['showChartLabels'];
-      }
+      if (!v) return null;
+      const num = parseInt(v, 10);
+      return isNaN(num) ? null : num;
     },
   });
   
@@ -151,7 +220,7 @@ function App() {
   };
   
   // Selected teams for Club Data (multiselect)
-  const [selectedClubTeams, setSelectedClubTeams] = useURLState<string[]>('selectedClubTeams', [], {
+  const [selectedClubTeams, setSelectedClubTeams] = useViewScopedState<string[]>('club-data', 'teams', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -170,8 +239,8 @@ function App() {
   // Helper to check if black teams are included
   const includeBlackTeams = additionalOptions.includes('blackTeams');
   
-  // Game Data View specific URL state (only relevant when viewMode === 'game-data')
-  const [selectedOpponents, setSelectedOpponents] = useURLState<string[]>('gameOpponents', [], {
+  // Game Data View specific URL state (view-scoped)
+  const [selectedOpponents, setSelectedOpponents] = useViewScopedState<string[]>('game-data', 'opponents', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -182,9 +251,10 @@ function App() {
       }
     },
   });
-  // Metric selections for Game Data view (replaces showAdditionalMetrics)
-  // Store selected metrics per category as URL state
-  const [selectedShootingMetrics, setSelectedShootingMetrics] = useURLState<string[]>('shootingMetrics', [], {
+  // Metric selections for Game Data view
+  // Store in localStorage (not URL) to keep URLs short - these are UI preferences, not bookmarkable filters
+  // Only critical filters (team, opponent, date) are in URL for bookmarking
+  const [selectedShootingMetrics, setSelectedShootingMetrics] = useLocalStorageState<string[]>('joga.gameData.shootingMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -195,7 +265,7 @@ function App() {
       }
     },
   });
-  const [selectedPassingMetrics, setSelectedPassingMetrics] = useURLState<string[]>('passingMetrics', [], {
+  const [selectedPassingMetrics, setSelectedPassingMetrics] = useLocalStorageState<string[]>('joga.gameData.passingMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -206,7 +276,7 @@ function App() {
       }
     },
   });
-  const [selectedPossessionMetrics, setSelectedPossessionMetrics] = useURLState<string[]>('possessionMetrics', [], {
+  const [selectedPossessionMetrics, setSelectedPossessionMetrics] = useLocalStorageState<string[]>('joga.gameData.possessionMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -217,7 +287,7 @@ function App() {
       }
     },
   });
-  const [selectedJOGAMetrics, setSelectedJOGAMetrics] = useURLState<string[]>('jogaMetrics', [], {
+  const [selectedJOGAMetrics, setSelectedJOGAMetrics] = useLocalStorageState<string[]>('joga.gameData.jogaMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -228,7 +298,7 @@ function App() {
       }
     },
   });
-  const [selectedDefenseMetrics, setSelectedDefenseMetrics] = useURLState<string[]>('defenseMetrics', [], {
+  const [selectedDefenseMetrics, setSelectedDefenseMetrics] = useLocalStorageState<string[]>('joga.gameData.defenseMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -239,7 +309,7 @@ function App() {
       }
     },
   });
-  const [selectedSetPiecesMetrics, setSelectedSetPiecesMetrics] = useURLState<string[]>('setPiecesMetrics', [], {
+  const [selectedSetPiecesMetrics, setSelectedSetPiecesMetrics] = useLocalStorageState<string[]>('joga.gameData.setPiecesMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -250,7 +320,7 @@ function App() {
       }
     },
   });
-  const [selectedOtherMetrics, setSelectedOtherMetrics] = useURLState<string[]>('otherMetrics', [], {
+  const [selectedOtherMetrics, setSelectedOtherMetrics] = useLocalStorageState<string[]>('joga.gameData.otherMetrics', [], {
     serialize: (v) => JSON.stringify(v),
     deserialize: (v) => {
       try {
@@ -262,15 +332,9 @@ function App() {
     },
   });
 
-  // Track previous viewMode to only clear state when actually switching views
-  const prevViewModeRef = useRef<ViewMode | undefined>(undefined);
-  
-  // Clean up URL parameters from other views when switching views
-  // Note: Default values are automatically excluded from URL by useURLState,
-  // but we still need to remove params from other views when switching
+  // Clean up old non-scoped URL parameters and metric selections (now in localStorage) when switching views
+  // This provides backward compatibility and cleans up legacy URLs
   useEffect(() => {
-    const prevView = prevViewModeRef.current;
-    
     // Don't clean up URL params if we're on password reset or email verification pages
     // These pages need to preserve the token parameter
     const path = window.location.pathname.toLowerCase();
@@ -278,68 +342,42 @@ function App() {
       return; // Don't modify URL on these pages
     }
     
-    // Define which params belong to which views
-    const viewParams: Record<ViewMode, string[]> = {
-      'dashboard': ['team', 'opponent', 'date', 'chartGroup', 'charts', 'lastNGames'],
-      'game-data': ['team', 'gameOpponents', 'date', 'shootingMetrics', 'passingMetrics', 'possessionMetrics', 'jogaMetrics', 'defenseMetrics', 'setPiecesMetrics', 'otherMetrics'],
-      'club-data': ['selectedClubTeams', 'additionalOptions', 'chartGroup', 'charts', 'lastNGames'],
-      'upload-game-data': [],
-      'data-at-a-glance': [],
-      'chat': [],
-      'settings': [],
-    };
-
-    // Remove URL params that don't belong to current view
-    // This handles cross-view navigation (e.g., Club Data params when on Upload page)
     const params = new URLSearchParams(window.location.search);
     let changed = false;
 
-    // Get all params that should be kept for current view
-    // Always preserve 'token' parameter (for password reset/email verification)
-    const keepParams = new Set(['view', 'token', ...viewParams[viewMode]]);
+    // Define old non-scoped param names that should be removed
+    // These are legacy params from before view-scoping
+    const legacyParams = [
+      'team', 'opponent', 'date', 'chartGroup', 'charts', 'lastNGames',
+      'gameOpponents', 'selectedClubTeams', 'additionalOptions', 'dashboardOptions',
+      'shootingMetrics', 'passingMetrics', 'possessionMetrics', 'jogaMetrics',
+      'defenseMetrics', 'setPiecesMetrics', 'otherMetrics'
+    ];
+    
+    // Also remove view-scoped parameters that are now stored in localStorage
+    const localStorageParams = [
+      // Metric selections (Game Data view)
+      'gameData.shootingMetrics', 'gameData.passingMetrics', 'gameData.possessionMetrics',
+      'gameData.jogaMetrics', 'gameData.defenseMetrics', 'gameData.setPiecesMetrics', 'gameData.otherMetrics',
+      // Chart selections (Dashboard and Club Data views)
+      'dashboard.charts', 'clubData.charts'
+    ];
 
-    // Remove all params that don't belong to current view
-    const allParams = Array.from(params.keys());
-    for (const key of allParams) {
-      if (!keepParams.has(key)) {
+    // Remove legacy params (view-scoped params are handled automatically by useViewScopedState)
+    // Always preserve 'view' and 'token' parameters
+    for (const key of [...legacyParams, ...localStorageParams]) {
+      if (params.has(key) && key !== 'view' && key !== 'token') {
         params.delete(key);
         changed = true;
       }
     }
 
-    // Update URL if we removed any params
+    // Update URL if we removed any legacy params
     if (changed) {
       const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`;
       window.history.replaceState({}, '', newUrl);
     }
-
-    // Clear state for views we're leaving (only if we actually switched views)
-    // This helps prevent stale state in memory
-    if (prevView !== undefined && prevView !== viewMode) {
-      if (prevView === 'game-data' && viewMode !== 'game-data') {
-        setSelectedOpponents([]);
-      }
-      if (prevView === 'club-data' && viewMode !== 'club-data') {
-        setAdditionalOptions(['boys', 'girls', 'showChartLabels']);
-        setSelectedClubTeams([]);
-      }
-      if ((prevView === 'dashboard' || prevView === 'game-data') && 
-          viewMode !== 'dashboard' && viewMode !== 'game-data') {
-        setSelectedDate('');
-      }
-      if (prevView === 'dashboard' && viewMode !== 'dashboard' && viewMode !== 'club-data') {
-        // Clear dashboard-specific params when leaving for non-club-data views
-        setSelectedTeam(null);
-        setSelectedOpponent(null);
-        setSelectedChartGroup(null);
-        setSelectedCharts([]);
-      }
-    }
-    
-    // Update previous view mode
-    prevViewModeRef.current = viewMode;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [viewMode]); // Only depend on viewMode - setters are stable from useCallback
+  }, [viewMode]);
 
   useEffect(() => {
     // Don't try to load data while auth is still checking
@@ -378,12 +416,32 @@ function App() {
       invalidateAIContextCache();
       
       const data = await fetchSheetData(sheetConfig);
-      setMatchData(data);
-      
+
       // Extract column keys from first match
-      if (data.length > 0) {
-        setColumnKeys(Object.keys(data[0]));
+      const keys = data.length > 0 ? Object.keys(data[0]) : [];
+      if (keys.length > 0) {
+        setColumnKeys(keys);
       }
+
+      // Apply preferred season filter (multi-year) when available.
+      // We filter here (before setMatchData) to keep derived UI lists consistent.
+      const preferredSeasons: number[] = Array.isArray(user?.preferences?.preferredSeasons)
+        ? user?.preferences?.preferredSeasons
+        : [];
+
+      const seasonKey = keys.find(k => k.toLowerCase() === 'season' || k.toLowerCase().includes('season'));
+      const filtered = (preferredSeasons.length > 0 && seasonKey)
+        ? data.filter((row) => {
+          const raw = row[seasonKey];
+          const year =
+            typeof raw === 'number' ? raw :
+            typeof raw === 'string' ? Number(raw.trim()) :
+            NaN;
+          return preferredSeasons.includes(year);
+        })
+        : data;
+
+      setMatchData(filtered);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
       console.error('Error loading data:', err);
@@ -705,8 +763,8 @@ function App() {
     return findColumnKey(['xG (Opp)', 'xG (Opp)', 'xG(Opp)', 'xG_Opp', 'xGA', 'xga', 'xG Against', 'xGAgainst', 'xG_Against', 'xG Against', 'Expected Goals Against', 'ExpectedGoalsAgainst', 'xGA_Against', 'expected goals against']) || 'xG (Opp)';
   };
 
-  // Extract unique teams and opponents
-  const teams = useMemo(() => {
+  // Extract unique team slugs from match data
+  const teamSlugs = useMemo(() => {
     const teamKey = getTeamKey();
     const uniqueTeams = new Set<string>();
     matchData.forEach((match) => {
@@ -715,8 +773,13 @@ function App() {
         uniqueTeams.add(team.trim());
       }
     });
-    return Array.from(uniqueTeams).sort();
+    return Array.from(uniqueTeams);
   }, [matchData, columnKeys]);
+
+  // Map slugs to Display Names for dropdown
+  const teams = useMemo(() => {
+    return getTeamsForDropdown(teamSlugs, teamSlugMap);
+  }, [teamSlugs, teamSlugMap]);
 
   // Get available opponents for selected team (or all opponents if "All Teams" is selected)
   const availableOpponents = useMemo(() => {
@@ -817,10 +880,11 @@ function App() {
     let filtered = matchData;
     
     // Filter by team if a specific team is selected (null means "All Teams")
+    // selectedTeam is now a slug from the dropdown
     if (selectedTeam) {
       filtered = filtered.filter((match) => {
-        const team = match[teamKey];
-        return team === selectedTeam;
+        const matchTeamSlug = (match[teamKey] as string)?.trim();
+        return matchTeamSlug === selectedTeam; // selectedTeam is the slug
       });
     }
 
@@ -882,7 +946,11 @@ function App() {
     let filteredMatches = matchData;
     
     if (selectedTeam) {
-      filteredMatches = filteredMatches.filter(match => match[teamKey] === selectedTeam);
+      // selectedTeam is now a slug, match against team column (which should also be slugs)
+      filteredMatches = filteredMatches.filter(match => {
+        const matchTeamSlug = (match[teamKey] as string)?.trim();
+        return matchTeamSlug === selectedTeam;
+      });
     }
     
     if (selectedOpponent && selectedTeam !== null) {
@@ -906,7 +974,7 @@ function App() {
     const dates = Array.from(dateMap.entries())
       .map(([dateStr, date]) => ({
         value: dateStr,
-        label: date.toLocaleDateString(),
+        label: formatDateWithUserPreference(date, user?.preferences),
         date: date
       }))
       .sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -989,9 +1057,14 @@ function App() {
       if (teamMatches.length === 0) return;
 
       // Calculate averages for all numeric columns
+      // teamName is the slug from match data
+      const teamSlug = teamName; // teamName from forEach is the slug
+      const dbTeam = teamSlugMap.get(teamSlug.toLowerCase().trim());
+      const displayName = dbTeam?.displayName || teamSlug;
+      
       const aggregatedMatch: MatchData = {
-        [teamKey]: teamName,
-        [opponentKey]: teamName, // Use team name for x-axis display
+        [teamKey]: teamSlug, // Store slug in match data
+        [opponentKey]: displayName, // Use Display Name for x-axis display
       } as MatchData;
 
       // Get all numeric columns from the first match
@@ -1030,37 +1103,50 @@ function App() {
     
     const teamKeyForClub = getTeamKey();
     
-    // Get unique teams
-    const allTeams = new Set<string>();
+    // Extract team slugs from match data
+    const allTeamSlugs = new Set<string>();
     matchData.forEach(match => {
       const team = match[teamKeyForClub];
-      if (team && typeof team === 'string') {
-        allTeams.add(team.trim());
+      if (team && typeof team === 'string' && team.trim()) {
+        allTeamSlugs.add(team.trim());
       }
     });
 
-    // Filter by gender (boys/girls) and black teams based on additional options
-    let teams = Array.from(allTeams).sort();
-    
-    // Filter by gender based on selected options
-    teams = teams.filter(team => {
-      const teamUpper = team.trim().toUpperCase();
-      const isBoysTeam = teamUpper.startsWith('B');
-      const isGirlsTeam = teamUpper.startsWith('G');
+    // Filter slugs by database team properties (gender/variant)
+    const filteredSlugs = Array.from(allTeamSlugs).filter(slug => {
+      const team = teamSlugMap.get(slug.toLowerCase().trim());
+      if (!team) {
+        // If team not found in database, use fallback logic (check slug prefix)
+        const slugUpper = slug.trim().toUpperCase();
+        const isBoysTeam = slugUpper.startsWith('B');
+        const isGirlsTeam = slugUpper.startsWith('G');
+        const isBlackTeam = slugUpper.includes('BLACK') || slugUpper.includes('-BL-');
+        
+        // Filter by gender
+        if (isBoysTeam && !includeBoysTeams) return false;
+        if (isGirlsTeam && !includeGirlsTeams) return false;
+        if (!isBoysTeam && !isGirlsTeam) return false; // Exclude if can't determine gender
+        
+        // Filter by variant
+        if (isBlackTeam && !includeBlackTeams) return false;
+        
+        return true;
+      }
       
-      // Include team if it matches selected gender options
-      if (isBoysTeam && includeBoysTeams) return true;
-      if (isGirlsTeam && includeGirlsTeams) return true;
-      return false;
+      // Filter by gender using database team property
+      if (team.gender === 'boys' && !includeBoysTeams) return false;
+      if (team.gender === 'girls' && !includeGirlsTeams) return false;
+      if (!team.gender) return false; // Exclude if no gender set
+      
+      // Filter by variant using database team property
+      if (team.variant === 'black' && !includeBlackTeams) return false;
+      
+      return true;
     });
 
-    // Filter out Black teams if not included
-    if (!includeBlackTeams) {
-      teams = teams.filter(team => !team.trim().toUpperCase().includes('BLACK'));
-    }
-    
-    return teams;
-  }, [viewMode, matchData, includeBoysTeams, includeGirlsTeams, includeBlackTeams, columnKeys]);
+    // Map slugs to Display Names for dropdown
+    return getTeamsForDropdown(filteredSlugs, teamSlugMap);
+  }, [viewMode, matchData, includeBoysTeams, includeGirlsTeams, includeBlackTeams, columnKeys, teamSlugMap]);
 
   // Track previous additional options to detect changes
   const prevAdditionalOptionsRef = useRef<string[]>(additionalOptions);
@@ -1076,9 +1162,9 @@ function App() {
     const prevIncludeGirls = prevOptions.includes('girls');
     const prevIncludeBlack = prevOptions.includes('blackTeams');
     
-    // Check if selectedClubTeams param exists in URL
+    // Check if selectedClubTeams param exists in URL (view-scoped: clubData.teams)
     const params = new URLSearchParams(window.location.search);
-    const hasURLParam = params.has('selectedClubTeams');
+    const hasURLParam = params.has('clubData.teams');
     
     // On initial mount, only auto-select all teams if there's no URL param
     // (meaning user is visiting fresh, not from a URL with explicit selection)
@@ -1088,12 +1174,12 @@ function App() {
         // No URL param and no selection = fresh visit, auto-select all
         // Mark this as initial auto-select so we can clean it from URL
         isInitialAutoSelectRef.current = true;
-        setSelectedClubTeams([...availableClubTeams]);
+        setSelectedClubTeams(availableClubTeams.map(t => t.slug));
         // Remove from URL immediately since this is the "default" behavior
         setTimeout(() => {
           const newParams = new URLSearchParams(window.location.search);
-          if (newParams.has('selectedClubTeams')) {
-            newParams.delete('selectedClubTeams');
+          if (newParams.has('clubData.teams')) {
+            newParams.delete('clubData.teams');
             const newUrl = `${window.location.pathname}${newParams.toString() ? `?${newParams.toString()}` : ''}${window.location.hash}`;
             window.history.replaceState({}, '', newUrl);
           }
@@ -1105,7 +1191,9 @@ function App() {
     }
     
     // Get currently selected teams that are still in available teams
-    const validSelectedTeams = selectedClubTeams.filter(team => availableClubTeams.includes(team));
+    // availableClubTeams is now array of {slug, displayName}, selectedClubTeams contains slugs
+    const availableSlugs = new Set(availableClubTeams.map(t => t.slug));
+    const validSelectedTeams = selectedClubTeams.filter(slug => availableSlugs.has(slug));
     
     // Find teams that should be auto-selected (newly enabled team types)
     const teamsToAutoSelect: string[] = [];
@@ -1113,31 +1201,52 @@ function App() {
     
     // Check if boys teams were just disabled (unchecked)
     if (!includeBoysTeams && prevIncludeBoys) {
-      const boysTeams = selectedClubTeams.filter(team => team.trim().toUpperCase().startsWith('B'));
+      const boysTeams = selectedClubTeams.filter(slug => {
+        const team = teamSlugMap.get(slug.toLowerCase().trim());
+        return team?.gender === 'boys' || (!team && slug.trim().toUpperCase().startsWith('B'));
+      });
       teamsToRemove.push(...boysTeams);
     }
     
     // Check if girls teams were just disabled (unchecked)
     if (!includeGirlsTeams && prevIncludeGirls) {
-      const girlsTeams = selectedClubTeams.filter(team => team.trim().toUpperCase().startsWith('G'));
+      const girlsTeams = selectedClubTeams.filter(slug => {
+        const team = teamSlugMap.get(slug.toLowerCase().trim());
+        return team?.gender === 'girls' || (!team && slug.trim().toUpperCase().startsWith('G'));
+      });
       teamsToRemove.push(...girlsTeams);
     }
     
     // Check if boys teams were just enabled (newly checked)
     if (includeBoysTeams && !prevIncludeBoys) {
-      const boysTeams = availableClubTeams.filter(team => team.trim().toUpperCase().startsWith('B'));
+      const boysTeams = availableClubTeams
+        .filter(team => {
+          const dbTeam = teamSlugMap.get(team.slug.toLowerCase().trim());
+          return dbTeam?.gender === 'boys' || (!dbTeam && team.slug.trim().toUpperCase().startsWith('B'));
+        })
+        .map(team => team.slug);
       teamsToAutoSelect.push(...boysTeams);
     }
     
     // Check if girls teams were just enabled (newly checked)
     if (includeGirlsTeams && !prevIncludeGirls) {
-      const girlsTeams = availableClubTeams.filter(team => team.trim().toUpperCase().startsWith('G'));
+      const girlsTeams = availableClubTeams
+        .filter(team => {
+          const dbTeam = teamSlugMap.get(team.slug.toLowerCase().trim());
+          return dbTeam?.gender === 'girls' || (!dbTeam && team.slug.trim().toUpperCase().startsWith('G'));
+        })
+        .map(team => team.slug);
       teamsToAutoSelect.push(...girlsTeams);
     }
     
     // Check if black teams were just enabled (newly checked)
     if (includeBlackTeams && !prevIncludeBlack) {
-      const blackTeams = availableClubTeams.filter(team => team.trim().toUpperCase().includes('BLACK'));
+      const blackTeams = availableClubTeams
+        .filter(team => {
+          const dbTeam = teamSlugMap.get(team.slug.toLowerCase().trim());
+          return dbTeam?.variant === 'black' || (!dbTeam && (team.slug.trim().toUpperCase().includes('BLACK') || team.slug.trim().toUpperCase().includes('-BL-')));
+        })
+        .map(team => team.slug);
       teamsToAutoSelect.push(...blackTeams);
     }
     
@@ -1177,19 +1286,21 @@ function App() {
     
     if (!dateKey) return [];
 
-    // Filter teams to only include selected teams
-    const teams = availableClubTeams.filter(team => selectedClubTeams.includes(team));
+    // Filter teams to only include selected teams (selectedClubTeams contains slugs)
+    const selectedSlugs = new Set(selectedClubTeams);
+    const teams = availableClubTeams.filter(team => selectedSlugs.has(team.slug));
 
     const nGames = lastNGames || 10;
 
     // Aggregate data for each team
     const aggregated: MatchData[] = [];
     
-    teams.forEach(teamName => {
+    teams.forEach(teamObj => {
+      const teamSlug = teamObj.slug; // Use slug for filtering match data
       // Get all matches for this team
       let teamMatches = matchData.filter(match => {
-        const team = match[teamKeyForClub];
-        return team && String(team).trim() === teamName;
+        const matchTeamSlug = (match[teamKeyForClub] as string)?.trim();
+        return matchTeamSlug === teamSlug;
       });
 
       // Sort by date (most recent first) and take last N games (or all if less than N)
@@ -1208,8 +1319,12 @@ function App() {
       if (recentMatches.length === 0) return;
 
       // Calculate averages for all numeric columns
+      // teamObj.slug is the slug, use it for the teamKey column
+      // Use displayName for charts (opponentKey is used as x-axis label in charts)
+      const opponentKeyForClub = getOpponentKey();
       const aggregatedMatch: MatchData = {
-        [teamKeyForClub]: teamName,
+        [teamKeyForClub]: teamSlug, // Store slug in match data (for filtering)
+        [opponentKeyForClub]: teamObj.displayName, // Use Display Name for x-axis display in charts
       } as MatchData;
 
       // Get all numeric columns and round to 2 decimal places
@@ -1457,7 +1572,7 @@ function App() {
   // This prevents empty charts from being auto-filled and written to URL
 
   // Handle navigation from sidebar
-  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings') => {
+  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary') => {
     if (view === 'chat') {
       setViewMode('chat');
     } else if (view === 'team-data') {
@@ -1473,6 +1588,8 @@ function App() {
       setViewMode('data-at-a-glance');
     } else if (view === 'settings') {
       setViewMode('settings');
+    } else if (view === 'glossary') {
+      setViewMode('glossary');
     } else {
       setViewMode('dashboard');
     }
@@ -1608,7 +1725,6 @@ function App() {
         <div className="flex-1 ml-16" data-tour="chat-content">
           <ChatFirstView matchData={matchData} columnKeys={columnKeys} sheetConfig={sheetConfig} />
         </div>
-        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1626,6 +1742,7 @@ function App() {
             getOpponentKey={getOpponentKey}
             getLabelKey={getLabelKey}
             parseDateHelper={parseDateHelper}
+            teamSlugMap={teamSlugMap}
             selectedOpponents={selectedOpponents}
             setSelectedOpponents={setSelectedOpponents}
             selectedShootingMetrics={selectedShootingMetrics}
@@ -1648,7 +1765,6 @@ function App() {
             setSelectedTeam={setSelectedTeam}
           />
         </div>
-        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1659,7 +1775,7 @@ function App() {
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="upload-game-data" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16">
-          <UploadGameDataView matchData={matchData} columnKeys={columnKeys} sheetConfig={sheetConfig} />
+          <UploadGameDataView matchData={matchData} columnKeys={columnKeys} sheetConfig={sheetConfig} teamSlugMap={teamSlugMap} />
         </div>
       </div>
     );
@@ -1671,7 +1787,7 @@ function App() {
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="data-at-a-glance" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16">
-          <DataAtAGlanceView matchData={matchData} columnKeys={columnKeys} />
+          <DataAtAGlanceView matchData={matchData} columnKeys={columnKeys} teamSlugMap={teamSlugMap} />
         </div>
       </div>
     );
@@ -1685,7 +1801,21 @@ function App() {
         <div className="flex-1 ml-16">
           <SettingsView />
         </div>
-        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
+        {showWalkthrough && (
+          <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />
+        )}
+      </div>
+    );
+  }
+
+  // Render Glossary view if selected
+  if (viewMode === 'glossary') {
+    return (
+      <div className="flex h-screen bg-gray-50 relative">
+        <Sidebar currentView="glossary" onNavigate={handleNavigation} />
+        <div className="flex-1 ml-16">
+          <Glossary />
+        </div>
       </div>
     );
   }
@@ -1703,6 +1833,7 @@ function App() {
             availableClubTeams={availableClubTeams}
             selectedClubTeams={selectedClubTeams}
             setSelectedClubTeams={setSelectedClubTeams}
+            teamSlugMap={teamSlugMap}
             lastNGames={lastNGames}
             setLastNGames={setLastNGames}
             selectedChartGroup={selectedChartGroup}
@@ -1756,7 +1887,6 @@ function App() {
             getOppPassShareKey={getOppPassShareKey}
           />
         </div>
-        <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
       </div>
     );
   }
@@ -1793,13 +1923,13 @@ function App() {
                 onChange={(e) => {
                   setSelectedTeam(e.target.value || null);
                 }}
-                className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] min-w-[140px]"
-                style={{ borderColor: '#ceff00' }}
+                className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
+                style={{ borderColor: '#ceff00', width: 'auto', minWidth: '140px' }}
               >
                 <option value="">Choose a team...</option>
                 {teams.map((team) => (
-                  <option key={team} value={team}>
-                    {team}
+                  <option key={team.slug} value={team.slug}>
+                    {team.displayName}
                   </option>
                 ))}
               </select>
@@ -1813,7 +1943,8 @@ function App() {
                 onChange={(e) => {
                   setSelectedOpponent(e.target.value || null);
                 }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] min-w-[140px]"
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
+                style={{ width: 'auto', minWidth: '140px' }}
               >
                 <option value="">All Opponents</option>
                 {availableOpponents.map((opponent) => (
@@ -1855,7 +1986,8 @@ function App() {
                     setSelectedCharts([]);
                   }
                 }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] min-w-[160px]"
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
+                style={{ width: 'auto', minWidth: '160px' }}
               >
                 <option value="">Select Group...</option>
                 {CHART_GROUPS.map((group) => (
@@ -2710,6 +2842,8 @@ function App() {
                     oppSpiWKey={getOppSPIWKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('spi')}
                   />
                 )
               )}
@@ -2749,6 +2883,12 @@ function App() {
                     oppAttemptsKey={getOppAttemptsKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('attempts')}
                   />
                 )
               )}
@@ -2767,6 +2907,8 @@ function App() {
                     oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('positionalAttempts')}
                   />
                 )
               )}
@@ -2785,6 +2927,8 @@ function App() {
                     freeKickAgainstKey={getFreeKickAgainstKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('miscStats')}
                   />
                 )
               )}
@@ -2799,6 +2943,8 @@ function App() {
                     oppPassesKey={getOppPassesKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('passes')}
                   />
                 )
               )}
@@ -2813,6 +2959,8 @@ function App() {
                     oppAvgPassLengthKey={getOppAvgPassLengthKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('avgPassLength')}
                   />
                 )
               )}
@@ -2831,6 +2979,7 @@ function App() {
                     lpcKey={getLPCAvgKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    onExpansionChange={handleChartExpansionChange('passStrLength')}
                   />
                 )
               )}
@@ -2850,6 +2999,8 @@ function App() {
                     oppSpiWKey={getOppSPIWKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('spi')}
                   />
                 )
               )}
@@ -2864,6 +3015,8 @@ function App() {
                     oppPassByZoneKeys={getOppPassByZoneKeys()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('passByZone')}
                   />
                 )
               )}
@@ -2878,6 +3031,8 @@ function App() {
                     oppPPMKey={getOppPPMKey()}
                     opponentKey={opponentKey}
                     showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('ppm')}
                   />
                 )
               )}
@@ -2891,6 +3046,11 @@ function App() {
                     passShareKey={getPassShareKey()}
                     oppPassShareKey={getOppPassShareKey()}
                     opponentKey={opponentKey}
+                    possessionKey={columnKeys.includes(getPossessionKey()) ? getPossessionKey() : undefined}
+                    oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
+                    showLabels={showLabels}
+                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                    onExpansionChange={handleChartExpansionChange('passShare')}
                   />
                 )
               )}
@@ -2967,6 +3127,7 @@ function App() {
                             config={config}
                             pairColumnKey={pairColumn || undefined}
                             showLabels={showLabels}
+                            onExpansionChange={handleChartExpansionChange('auto')}
                           />
                         )
                       );
@@ -2984,7 +3145,9 @@ function App() {
         </div>
       </main>
       </div>
-      <Walkthrough onNavigate={handleNavigation} currentView={viewMode} />
+      {showWalkthrough && (
+        <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />
+      )}
     </div>
   );
 }

@@ -1,15 +1,9 @@
 import request from 'supertest';
-import { getApiBaseUrl, cleanupTestData, createTestUser, deleteTestUser } from './helpers/testHelpers.js';
+import { cleanupTestData, createTestUser, deleteTestUser, getTestClient } from './helpers/testHelpers.js';
 
-// Determine if we're testing against a remote server or local app
-const API_BASE_URL = getApiBaseUrl();
-const isRemoteServer = process.env.API_URL !== undefined;
-
-// Helper function to make requests - works for both local and remote
-// For local: server must be running (npm run dev)
-// For remote: set API_URL environment variable
+let client: any;
 function makeRequest() {
-  return request(API_BASE_URL);
+  return client;
 }
 
 describe('Authentication System', () => {
@@ -20,6 +14,7 @@ describe('Authentication System', () => {
   beforeAll(async () => {
     // Clean up any existing test data
     await cleanupTestData();
+    client = await getTestClient();
     // Add a small delay to avoid rate limiting issues
     await new Promise(resolve => setTimeout(resolve, 100));
   });

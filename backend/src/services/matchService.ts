@@ -6,6 +6,7 @@ import type { MatchesTable, GameEventsTable } from '../db/schema.js';
  */
 export async function getMatches(filters?: {
   teamId?: number;
+  teamIds?: number[];
   opponentName?: string;
   startDate?: string;
   endDate?: string;
@@ -19,6 +20,9 @@ export async function getMatches(filters?: {
 
   if (filters?.teamId) {
     query = query.where('team_id', '=', filters.teamId);
+  }
+  if (filters?.teamIds && filters.teamIds.length > 0) {
+    query = query.where('team_id', 'in', filters.teamIds);
   }
 
   if (filters?.opponentName) {

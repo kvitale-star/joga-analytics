@@ -22,3 +22,17 @@ export const getUserTeams = teamService.getUserTeams;
 export const assignTeamToUser = teamService.assignTeamToUser;
 export const removeTeamFromUser = teamService.removeTeamFromUser;
 export const getUserTeamAssignments = teamService.getUserTeamAssignments;
+
+// Admin-only team management (backend API only)
+export const getTeamById = (apiTeamService as any).getTeamById || (async () => {
+  throw new Error('getTeamById is only available in backend API mode');
+});
+export const createTeam = (apiTeamService as any).createTeam || (async () => {
+  throw new Error('createTeam is only available in backend API mode');
+});
+export const updateTeam = (apiTeamService as any).updateTeam || (async () => {
+  throw new Error('updateTeam is only available in backend API mode');
+});
+export const deactivateTeam = (apiTeamService as any).deactivateTeam || (async () => {
+  throw new Error('deactivateTeam is only available in backend API mode');
+});
