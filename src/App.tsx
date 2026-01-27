@@ -27,7 +27,7 @@ import { TSRChart } from './components/TSRChart';
 import { AutoChart } from './components/AutoChart';
 import { ChatFirstView } from './components/ChatFirstView';
 import { getChartConfig, findColumnPairs, shouldExcludeColumn } from './utils/chartUtils';
-import { ChartType, CHART_GROUPS, CHART_LABELS } from './utils/chartGroups';
+import { ChartType, CHART_GROUPS } from './utils/chartGroups';
 import { MultiSelectDropdown } from './components/MultiSelectDropdown';
 import { Sidebar } from './components/Sidebar';
 import { EmptyChart } from './components/EmptyChart';
@@ -1486,8 +1486,8 @@ function App() {
   }, [chartableColumns, specialChartColumns]);
 
   // Determine available charts based on column keys
-  const availableCharts = useMemo<ChartType[]>(() => {
-    const charts: ChartType[] = [];
+  const availableCharts = useMemo<(ChartType | string)[]>(() => {
+    const charts: (ChartType | string)[] = [];
     if (columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey())) {
       charts.push('shots');
     }
@@ -1609,12 +1609,12 @@ function App() {
       const group = CHART_GROUPS.find(g => g.id === selectedChartGroup);
       if (group) {
         // Filter to only include charts that are available
-        const chartsToSelect = group.charts.filter(chart => availableCharts.includes(chart));
+        const chartsToSelect = group.charts.filter(chart => availableCharts.includes(chart)) as ChartType[];
         
         // Only update if we have charts to select and current selection doesn't match
         if (chartsToSelect.length > 0) {
-          const currentMatchesGroup = chartsToSelect.every(chart => selectedCharts.includes(chart)) &&
-                                     selectedCharts.every(chart => chartsToSelect.includes(chart));
+          const currentMatchesGroup = chartsToSelect.every(chart => selectedCharts.includes(chart as any)) &&
+                                     selectedCharts.every(chart => chartsToSelect.includes(chart as ChartType));
           
           if (!currentMatchesGroup) {
             setSelectedCharts(chartsToSelect);
@@ -1925,11 +1925,19 @@ function App() {
             setLastNGames={setLastNGames}
             selectedChartGroup={selectedChartGroup}
             setSelectedChartGroup={setSelectedChartGroup}
-            selectedCharts={selectedCharts}
-            setSelectedCharts={setSelectedCharts}
+            selectedCharts={selectedCharts.filter(chart => typeof chart === 'string' && !chart.startsWith('custom-chart-')) as ChartType[]}
+            setSelectedCharts={(value) => {
+              // Filter out custom charts when setting, as ClubDataView doesn't support them
+              const filteredValue = typeof value === 'function' 
+                ? (value as (prev: ChartType[]) => ChartType[])(selectedCharts.filter(chart => typeof chart === 'string' && !chart.startsWith('custom-chart-')) as ChartType[])
+                : value;
+              // Merge with any custom charts that were already selected
+              const customChartsSelected = selectedCharts.filter(chart => typeof chart === 'string' && chart.startsWith('custom-chart-'));
+              setSelectedCharts([...filteredValue, ...customChartsSelected]);
+            }}
             additionalOptions={additionalOptions}
             setAdditionalOptions={setAdditionalOptions}
-            availableCharts={availableCharts}
+            availableCharts={availableCharts.filter(chart => typeof chart === 'string' && !chart.startsWith('custom-chart-')) as ChartType[]}
             autoChartColumns={autoChartColumns}
             columnPairs={columnPairs}
             getTeamKey={getTeamKey}

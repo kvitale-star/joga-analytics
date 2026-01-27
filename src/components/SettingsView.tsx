@@ -32,7 +32,7 @@ export const SettingsView: React.FC = () => {
       const loadData = async () => {
         try {
           setDataLoading(true);
-          const data = await fetchSheetData();
+          const data = await fetchSheetData(sheetConfig);
           if (Array.isArray(data) && data.length > 0) {
             setMatchData(data);
             setColumnKeys(Object.keys(data[0]));

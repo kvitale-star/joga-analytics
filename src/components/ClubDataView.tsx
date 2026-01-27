@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { MatchData } from '../types';
-import { ChartType, CHART_GROUPS, CHART_LABELS } from '../utils/chartGroups';
+import { ChartType } from '../utils/chartGroups';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
 import { CombinedChartSelector } from './CombinedChartSelector';
 import { FadeTransition } from './FadeTransition';
