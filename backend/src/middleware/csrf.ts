@@ -72,7 +72,9 @@ export function requireCsrfToken(
     return next();
   }
   
-  const sessionId = req.cookies?.sessionId as string;
+  // Also check for common typos (sessionld instead of sessionId)
+  const sessionId = (req.cookies?.sessionId as string) || 
+                    (req.cookies?.sessionld as string); // Handle typo: sessionld
   const csrfToken = req.headers['x-csrf-token'] as string;
   
   if (!sessionId || !csrfToken) {
