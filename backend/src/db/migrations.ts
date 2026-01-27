@@ -502,5 +502,72 @@ export async function runMigrations(): Promise<void> {
     }
   }
 
+  // Run migration 006 if needed - Add custom_charts table for Phase 1 Custom Charts
+  if (version < 6) {
+    console.log('Running migration 006: Add custom_charts table...');
+
+    try {
+      // Create custom_charts table
+      getSqliteDb().prepare(`
+        CREATE TABLE IF NOT EXISTS custom_charts (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          chart_type TEXT NOT NULL CHECK(chart_type IN ('line', 'bar', 'area', 'scatter')),
+          config_json TEXT NOT NULL,
+          is_public BOOLEAN DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, name)
+        )
+      `).run();
+
+      // Create indexes
+      getSqliteDb().prepare(`
+        CREATE INDEX IF NOT EXISTS idx_custom_charts_user_id ON custom_charts(user_id)
+      `).run();
+      getSqliteDb().prepare(`
+        CREATE INDEX IF NOT EXISTS idx_custom_charts_chart_type ON custom_charts(chart_type)
+      `).run();
+
+      // Record migration
+      await db
+        .insertInto('schema_migrations')
+        .values({
+          version: 6,
+          description: 'Add custom_charts table for Phase 1 Custom Charts feature',
+          applied_at: new Date().toISOString(),
+        })
+        .execute();
+
+      console.log('✓ Migration 006 completed successfully');
+    } catch (error: any) {
+      const errorMsg = error?.message || '';
+      if (
+        errorMsg.includes('duplicate column name') ||
+        errorMsg.includes('already exists')
+      ) {
+        console.log('Table already exists, skipping...');
+        // Record migration anyway to mark it as applied
+        try {
+          await db
+            .insertInto('schema_migrations')
+            .values({
+              version: 6,
+              description: 'Add custom_charts table for Phase 1 Custom Charts feature',
+              applied_at: new Date().toISOString(),
+            })
+            .execute();
+        } catch {
+          // Migration already recorded, ignore
+        }
+      } else {
+        console.error('Migration 006 failed:', errorMsg);
+        throw error;
+      }
+    }
+  }
+
   console.log('All migrations completed!');
 }

@@ -17,6 +17,7 @@ export interface Database {
   game_events: GameEventsTable;
   images: ImagesTable;
   metric_definitions: MetricDefinitionsTable;
+  custom_charts: CustomChartsTable;
 }
 
 // Schema Migrations
@@ -178,6 +179,19 @@ export interface MetricDefinitionsTable {
   updated_at: Generated<string>;
 }
 
+// Custom Charts
+export interface CustomChartsTable {
+  id: Generated<number>;
+  user_id: number;
+  name: string;
+  description: string | null;
+  chart_type: 'line' | 'bar' | 'area' | 'scatter';
+  config_json: string; // JSON stored as string
+  is_public: Generated<number>;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
 // Helper types for common operations
 export type UserRow = Selectable<UsersTable>;
 export type NewUser = Insertable<UsersTable>;
@@ -193,3 +207,7 @@ export type MatchUpdate = Updateable<MatchesTable>;
 
 export type SessionRow = Selectable<SessionsTable>;
 export type NewSession = Insertable<SessionsTable>;
+
+export type CustomChartRow = Selectable<CustomChartsTable>;
+export type NewCustomChart = Insertable<CustomChartsTable>;
+export type CustomChartUpdate = Updateable<CustomChartsTable>;

@@ -1,15 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChangePassword } from './ChangePassword';
 import { UserPreferences } from './UserPreferences';
 import { UserManagement } from './UserManagement';
 import { TeamManagement } from './TeamManagement';
 import { UserMenu } from './UserMenu';
+import { CustomChartsManagement } from './CustomChartsManagement';
+import { AllCustomChartsManagement } from './AllCustomChartsManagement';
+import { UserTeamsDisplay } from './UserTeamsDisplay';
+import { Modal } from './Modal';
+import { CustomChartBuilder } from './CustomChartBuilder';
 import { JOGA_COLORS } from '../utils/colors';
+import type { CustomChart } from '../types/customCharts';
+import { sheetConfig } from '../config';
+import { fetchSheetData } from '../services/sheetsService';
+import type { MatchData } from '../types';
 
 export const SettingsView: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'account' | 'users' | 'teams'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'custom-charts' | 'users' | 'teams'>('account');
+  const [isChartBuilderOpen, setIsChartBuilderOpen] = useState(false);
+  const [editingChart, setEditingChart] = useState<CustomChart | null>(null);
+  const [matchData, setMatchData] = useState<MatchData[]>([]);
+  const [columnKeys, setColumnKeys] = useState<string[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [chartsRefreshKey, setChartsRefreshKey] = useState(0);
+
+  // Load match data when chart builder opens
+  useEffect(() => {
+    if (isChartBuilderOpen && matchData.length === 0) {
+      const loadData = async () => {
+        try {
+          setDataLoading(true);
+          const data = await fetchSheetData();
+          if (Array.isArray(data) && data.length > 0) {
+            setMatchData(data);
+            setColumnKeys(Object.keys(data[0]));
+          } else {
+            setMatchData([]);
+            setColumnKeys([]);
+          }
+        } catch (err) {
+          console.error('Failed to load match data:', err);
+          setMatchData([]);
+          setColumnKeys([]);
+        } finally {
+          setDataLoading(false);
+        }
+      };
+      loadData();
+    }
+  }, [isChartBuilderOpen]);
 
   if (!user) {
     return null;
@@ -51,6 +92,26 @@ export const SettingsView: React.FC = () => {
             >
               Account
             </button>
+            <button
+              onClick={() => setActiveTab('preferences')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'preferences'
+                  ? 'border-[#6787aa] text-[#6787aa]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Preferences
+            </button>
+            <button
+              onClick={() => setActiveTab('custom-charts')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'custom-charts'
+                  ? 'border-[#6787aa] text-[#6787aa]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Custom Charts
+            </button>
             {isAdmin && (
               <>
                 <button
@@ -61,7 +122,7 @@ export const SettingsView: React.FC = () => {
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  User Management
+                  Users
                 </button>
                 <button
                   onClick={() => setActiveTab('teams')}
@@ -82,45 +143,7 @@ export const SettingsView: React.FC = () => {
         <div>
           {activeTab === 'account' && (
             <div className="space-y-6">
-              {/* Preferences - First */}
-              <UserPreferences />
-              
-              {/* Tutorial Section - Second */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Tutorial</h2>
-                <p className="text-gray-600 mb-4">
-                  Take a guided tour of JOGA Analytics to learn about all the features and views.
-                </p>
-                <button
-                  onClick={() => {
-                    // Try to call the window function, or dispatch a custom event
-                    if ((window as any).startWalkthrough) {
-                      (window as any).startWalkthrough();
-                    } else {
-                      // Fallback: dispatch custom event
-                      window.dispatchEvent(new CustomEvent('startWalkthrough'));
-                    }
-                  }}
-                  className="font-medium py-2 px-6 rounded-lg transition-colors text-black"
-                  style={{
-                    backgroundColor: JOGA_COLORS.voltYellow,
-                    border: `2px solid ${JOGA_COLORS.voltYellow}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#b8e600';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
-                  }}
-                >
-                  Start Tutorial
-                </button>
-              </div>
-
-              {/* Change Password - Third */}
-              <ChangePassword />
-
-              {/* Account Information - Fourth (Bottom) */}
+              {/* Account Information - First */}
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Account Information</h2>
                 <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -156,6 +179,74 @@ export const SettingsView: React.FC = () => {
                   )}
                 </dl>
               </div>
+
+              {/* Team Access - Second */}
+              <UserTeamsDisplay userId={user.id} />
+
+              {/* Tutorial Section - Third */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Tutorial</h2>
+                <p className="text-gray-600 mb-4">
+                  Take a guided tour of JOGA Analytics to learn about all the features and views.
+                </p>
+                <button
+                  onClick={() => {
+                    // Try to call the window function, or dispatch a custom event
+                    if ((window as any).startWalkthrough) {
+                      (window as any).startWalkthrough();
+                    } else {
+                      // Fallback: dispatch custom event
+                      window.dispatchEvent(new CustomEvent('startWalkthrough'));
+                    }
+                  }}
+                  className="font-medium py-2 px-6 rounded-lg transition-colors text-black"
+                  style={{
+                    backgroundColor: JOGA_COLORS.voltYellow,
+                    border: `2px solid ${JOGA_COLORS.voltYellow}`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#b8e600';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+                  }}
+                >
+                  Start Tutorial
+                </button>
+              </div>
+
+              {/* Change Password - Fourth */}
+              <ChangePassword />
+            </div>
+          )}
+
+          {activeTab === 'preferences' && (
+            <div className="space-y-6">
+              <UserPreferences />
+            </div>
+          )}
+
+          {activeTab === 'custom-charts' && (
+            <div className="space-y-6">
+              {/* User's Custom Charts */}
+              <CustomChartsManagement
+                key={`user-charts-${chartsRefreshKey}`}
+                onEditChart={(chart) => {
+                  setEditingChart(chart);
+                  setIsChartBuilderOpen(true);
+                }}
+              />
+
+              {/* All Custom Charts (Admin Only) */}
+              {isAdmin && (
+                <AllCustomChartsManagement
+                  key={`all-charts-${chartsRefreshKey}`}
+                  onEditChart={(chart) => {
+                    setEditingChart(chart);
+                    setIsChartBuilderOpen(true);
+                  }}
+                />
+              )}
             </div>
           )}
 
@@ -165,6 +256,37 @@ export const SettingsView: React.FC = () => {
         </div>
         </div>
       </div>
+
+      {/* Chart Builder Modal */}
+      <Modal
+        isOpen={isChartBuilderOpen}
+        onClose={() => {
+          setIsChartBuilderOpen(false);
+          setEditingChart(null);
+          // Refresh charts list when modal closes (chart may have been saved)
+          setChartsRefreshKey(prev => prev + 1);
+        }}
+        maxWidth="2xl"
+      >
+        {dataLoading ? (
+          <div className="p-6 text-center">
+            <p className="text-gray-600">Loading chart data...</p>
+          </div>
+        ) : (
+          <CustomChartBuilder
+            chart={editingChart}
+            sheetConfig={sheetConfig}
+            columnKeys={columnKeys}
+            matchData={matchData}
+            onClose={() => {
+              setIsChartBuilderOpen(false);
+              setEditingChart(null);
+              // Refresh charts list when modal closes (chart may have been saved)
+              setChartsRefreshKey(prev => prev + 1);
+            }}
+          />
+        )}
+      </Modal>
     </div>
   );
 };

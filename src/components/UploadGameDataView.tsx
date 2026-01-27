@@ -332,8 +332,8 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
                     style={{ backgroundColor: categoryColor }}
                   >
                     <h2 className={`text-lg font-semibold ${textColor}`}>
-                      {category}
-                    </h2>
+                    {category}
+                  </h2>
                   </div>
                   <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -409,8 +409,8 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({ columnKe
                       );
                     })}
                   </div>
-                  </div>
                 </div>
+              </div>
               </div>
               );
             })}
