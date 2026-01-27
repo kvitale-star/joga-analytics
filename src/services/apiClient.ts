@@ -9,10 +9,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 let csrfTokenFromHeader: string | null = null;
 
 /**
- * Get CSRF token from cookie (non-HttpOnly cookie) or stored header value
+ * Get CSRF token from stored header value or cookie
+ * In cross-origin scenarios (Railway), cookies aren't accessible to JavaScript,
+ * so we prioritize the header value which is set by the backend on every response
  */
 function getCsrfToken(): string | null {
-  // Try cookie first
+  // Prioritize stored header value (works in cross-origin scenarios)
+  if (csrfTokenFromHeader) {
+    return csrfTokenFromHeader;
+  }
+  
+  // Fallback to cookie (works in same-origin scenarios like local dev)
   const cookies = document.cookie.split(';');
   for (const cookie of cookies) {
     const [name, value] = cookie.trim().split('=');
@@ -20,8 +27,8 @@ function getCsrfToken(): string | null {
       return decodeURIComponent(value);
     }
   }
-  // Fallback to stored header value (for cross-origin scenarios)
-  return csrfTokenFromHeader;
+  
+  return null;
 }
 
 /**
@@ -41,37 +48,42 @@ export async function apiRequest<T = any>(
   const skipCsrfPaths = ['/auth/login', '/auth/setup', '/auth/verify-email', '/auth/reset-password'];
   const shouldSkipCsrf = skipCsrfPaths.some(path => endpoint.includes(path));
   
+  // For state-changing requests, ALWAYS ensure we have a CSRF token
+  // In cross-origin scenarios (Railway), we can't read cookies, so we must fetch from header
   let csrfToken = (needsCsrf && !shouldSkipCsrf) ? getCsrfToken() : null;
   
-  // If we need CSRF but don't have it, try to fetch it first via a GET request
-  if (needsCsrf && !shouldSkipCsrf && !csrfToken) {
+  // CRITICAL: In cross-origin scenarios (Railway), cookies aren't accessible to JavaScript
+  // We MUST fetch the token from the response header via /auth/me
+  // Always fetch if we don't have a token, or if we're in production (likely cross-origin)
+  const isProduction = import.meta.env.PROD || import.meta.env.VITE_API_URL?.includes('railway');
+  const shouldFetchToken = needsCsrf && !shouldSkipCsrf && (!csrfToken || isProduction);
+  
+  if (shouldFetchToken) {
     try {
       // Make a lightweight GET request to get CSRF token in response header
+      // This is the ONLY reliable way to get the token in cross-origin scenarios
       const tokenResponse = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
         credentials: 'include',
       });
       
-      // Try to get token from response header first (most reliable for cross-origin)
+      // ALWAYS get token from response header (works in cross-origin)
       const tokenHeader = tokenResponse.headers.get('X-CSRF-Token');
       if (tokenHeader) {
         csrfTokenFromHeader = tokenHeader;
         csrfToken = tokenHeader;
-      } else {
-        // If header not available, try reading from cookie again (might have been set)
-        csrfToken = getCsrfToken();
-      }
-      
-      // If still no token, check if response was successful and try to parse cookie from Set-Cookie header
-      if (!csrfToken && tokenResponse.ok) {
-        // Wait a moment for cookie to be set, then try again
+      } else if (tokenResponse.ok && !isProduction) {
+        // If no header but response is OK, try cookie as fallback (same-origin only, local dev)
         await new Promise(resolve => setTimeout(resolve, 100));
         csrfToken = getCsrfToken();
       }
     } catch (e) {
-      // If fetching token fails, try one more time to read from cookie
-      console.warn('Failed to fetch CSRF token from /auth/me, trying cookie:', e);
-      csrfToken = getCsrfToken();
+      // If fetching token fails, log warning but don't fail silently
+      console.warn('⚠️ Failed to fetch CSRF token from /auth/me:', e);
+      // Try cookie as last resort (won't work in cross-origin but might work locally)
+      if (!isProduction) {
+        csrfToken = getCsrfToken();
+      }
     }
   }
   
@@ -102,11 +114,12 @@ export async function apiRequest<T = any>(
       throw new Error(`Unexpected non-JSON response from API (${snippet})`);
     }
 
-    // Store CSRF token from response header (fallback for cross-origin)
+    // ALWAYS store CSRF token from response header (critical for cross-origin scenarios)
+    // The backend sets this header on every response, so we can always get a fresh token
     const csrfTokenHeader = response.headers.get('X-CSRF-Token');
     if (csrfTokenHeader) {
       csrfTokenFromHeader = csrfTokenHeader;
-      // Also update the token if we're making a state-changing request and didn't have one
+      // Update the token if we're making a state-changing request and didn't have one
       if (needsCsrf && !shouldSkipCsrf && !csrfToken) {
         csrfToken = csrfTokenHeader;
       }

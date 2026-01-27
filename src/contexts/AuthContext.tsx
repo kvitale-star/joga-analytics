@@ -211,6 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
     if (USE_BACKEND_API) {
       // Check session via /auth/me (cookies sent automatically)
+      // This also updates the CSRF token from response headers
       try {
         const { getUserById } = await import('../services/authService');
         const userData = await getUserById(0);
@@ -229,6 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await logout();
         }
       } catch (error) {
+        console.error('Failed to refresh session:', error);
         await logout();
       }
     } else {
