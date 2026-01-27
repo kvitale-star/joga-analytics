@@ -69,6 +69,8 @@ export async function apiRequest<T = any>(
       
       // Check if request was successful
       if (!tokenResponse.ok) {
+        const errorText = await tokenResponse.text().catch(() => '');
+        console.error(`❌ Failed to get CSRF token from /auth/me: ${tokenResponse.status} ${tokenResponse.statusText}`, errorText);
         throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
       }
       
@@ -77,13 +79,25 @@ export async function apiRequest<T = any>(
       if (tokenHeader) {
         csrfTokenFromHeader = tokenHeader;
         csrfToken = tokenHeader;
-      } else if (!isProduction) {
-        // If no header but response is OK, try cookie as fallback (same-origin only, local dev)
-        await new Promise(resolve => setTimeout(resolve, 100));
-        csrfToken = getCsrfToken();
+        if (isProduction) {
+          console.log('✅ CSRF token obtained from header:', tokenHeader.substring(0, 10) + '...');
+        }
       } else {
-        // In production, if no header, we can't proceed - this is a critical error
-        throw new Error('CSRF token not found in response header. This is required for cross-origin requests.');
+        // Log all response headers for debugging
+        const allHeaders: string[] = [];
+        tokenResponse.headers.forEach((value, key) => {
+          allHeaders.push(`${key}: ${value}`);
+        });
+        console.warn('⚠️ X-CSRF-Token header not found in /auth/me response. Available headers:', allHeaders);
+        
+        if (!isProduction) {
+          // If no header but response is OK, try cookie as fallback (same-origin only, local dev)
+          await new Promise(resolve => setTimeout(resolve, 100));
+          csrfToken = getCsrfToken();
+        } else {
+          // In production, if no header, we can't proceed - this is a critical error
+          throw new Error('CSRF token not found in response header. This is required for cross-origin requests.');
+        }
       }
     } catch (e) {
       // If fetching token fails in production, we MUST fail the request
@@ -99,6 +113,7 @@ export async function apiRequest<T = any>(
     
     // Final check: if we still don't have a token and we need one, fail
     if (needsCsrf && !shouldSkipCsrf && !csrfToken) {
+      console.error('❌ CSRF token is required but could not be obtained');
       throw new Error('CSRF token is required but could not be obtained. Please refresh the page and try again.');
     }
   }
