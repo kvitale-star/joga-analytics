@@ -97,7 +97,9 @@ function App() {
 
   // Check if user needs onboarding
   useEffect(() => {
-    if (user && !user.preferences?.onboardingCompleted) {
+    // Only show walkthrough if user exists and onboardingCompleted is not explicitly true
+    // This handles cases where preferences might be null/undefined or onboardingCompleted is false/undefined
+    if (user && user.preferences?.onboardingCompleted !== true) {
       // Small delay to let the page render first
       const timer = setTimeout(() => {
         setShowWalkthrough(true);
