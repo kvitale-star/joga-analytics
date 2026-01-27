@@ -141,11 +141,22 @@ export function setCsrfTokenCookie(
     // Frontend can read this if cookie isn't accessible
     res.setHeader('X-CSRF-Token', csrfToken);
   } else {
-    // CRITICAL: Even if there's no session, we should log this for debugging
-    // In cross-origin scenarios, cookies might not be sent, so we need to handle this
-    const isProduction = process.env.NODE_ENV === 'production';
+    // CRITICAL: Even if there's no session, we should still set a CSRF token header
+    // This allows the frontend to get a token even when the session cookie isn't sent cross-origin
+    // The token won't be valid for CSRF validation (no session), but it allows the frontend
+    // to make the initial request to get the actual token after login
+    
+    // Generate a temporary token that won't be validated (just for initial requests)
+    // This is a workaround for cross-origin cookie issues
+    const tempToken = 'temp-' + Math.random().toString(36).substring(2, 15);
+    res.setHeader('X-CSRF-Token', tempToken);
+    
+    // Log for debugging
+    const isRailway = !!process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost');
+    const isProduction = process.env.NODE_ENV === 'production' || isRailway;
     if (isProduction) {
       console.warn('⚠️ No sessionId found in request cookies or headers. Cookies:', Object.keys(req.cookies || {}), 'Headers:', req.headers['x-session-id'] ? 'x-session-id present' : 'x-session-id missing');
+      console.warn('⚠️ Setting temporary CSRF token header (will not validate, but allows frontend to proceed)');
     }
   }
   
