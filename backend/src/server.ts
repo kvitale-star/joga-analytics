@@ -49,20 +49,24 @@ app.use(cookieParser());
 
 // Manual CORS handling to ensure Access-Control-Allow-Credentials is always set
 // This is more reliable than the cors middleware for cross-origin scenarios (Railway)
+// CRITICAL for Safari: Must set CORS headers correctly for cross-origin cookies
 app.use((req, res, next) => {
   // Handle preflight OPTIONS requests
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', frontendUrl);
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Session-ID, X-CSRF-Token');
     res.setHeader('Access-Control-Expose-Headers', 'X-CSRF-Token'); // Allow frontend to read CSRF token from response headers
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours (helps Safari)
     return res.status(204).end();
   }
   
   // Set CORS headers for all other requests
+  // CRITICAL: Safari requires exact origin match (no wildcards) when credentials are true
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+  res.setHeader('Access-Control-Allow-Origin', frontendUrl); // Must be exact origin, not wildcard
+  res.setHeader('Access-Control-Expose-Headers', 'X-CSRF-Token'); // Always expose CSRF token header
   next();
 });
 

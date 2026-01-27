@@ -48,13 +48,34 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
     // 'none' requires 'secure: true' which is set in production
     const sameSite = isProduction ? 'none' : 'lax';
-    res.cookie('sessionId', result.session.id, {
+    
+    // CRITICAL for Safari: Do NOT set domain attribute - let browser use exact domain
+    // Setting domain can cause Safari to reject cookies in cross-origin scenarios
+    // Also ensure path is '/' and we're using HTTPS in production
+    const cookieOptions: any = {
       httpOnly: true,
       secure: isProduction, // Only send over HTTPS in production (required for sameSite: 'none')
       sameSite: sameSite as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
-    });
+      // Explicitly don't set domain - Safari requires exact domain match for cross-origin cookies
+    };
+    
+    res.cookie('sessionId', result.session.id, cookieOptions);
+    
+    // Debug logging for Safari troubleshooting
+    if (isProduction) {
+      const userAgent = req.headers['user-agent'] || '';
+      const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+      console.log('🔒 Setting sessionId cookie:', {
+        sameSite,
+        secure: isProduction,
+        path: '/',
+        hasDomain: false,
+        isSafari,
+        userAgent: userAgent.substring(0, 50),
+      });
+    }
 
     // Set CSRF token cookie (non-HttpOnly so JS can read it)
     const { generateCsrfToken } = await import('../middleware/csrf.js');
@@ -212,13 +233,34 @@ router.post('/setup', async (req, res) => {
     // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
     // 'none' requires 'secure: true' which is set in production
     const sameSite = isProduction ? 'none' : 'lax';
-    res.cookie('sessionId', result.session.id, {
+    
+    // CRITICAL for Safari: Do NOT set domain attribute - let browser use exact domain
+    // Setting domain can cause Safari to reject cookies in cross-origin scenarios
+    // Also ensure path is '/' and we're using HTTPS in production
+    const cookieOptions: any = {
       httpOnly: true,
       secure: isProduction, // Only send over HTTPS in production (required for sameSite: 'none')
       sameSite: sameSite as 'none' | 'lax', // 'none' for cross-origin, 'lax' for same-origin
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
-    });
+      // Explicitly don't set domain - Safari requires exact domain match for cross-origin cookies
+    };
+    
+    res.cookie('sessionId', result.session.id, cookieOptions);
+    
+    // Debug logging for Safari troubleshooting
+    if (isProduction) {
+      const userAgent = req.headers['user-agent'] || '';
+      const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+      console.log('🔒 Setting sessionId cookie:', {
+        sameSite,
+        secure: isProduction,
+        path: '/',
+        hasDomain: false,
+        isSafari,
+        userAgent: userAgent.substring(0, 50),
+      });
+    }
 
     // Set CSRF token cookie (non-HttpOnly so JS can read it)
     const { generateCsrfToken } = await import('../middleware/csrf.js');
