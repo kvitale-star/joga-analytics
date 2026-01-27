@@ -62,6 +62,11 @@ export async function apiRequest<T = any>(
     try {
       // Make a lightweight GET request to get CSRF token in response header
       // This is the ONLY reliable way to get the token in cross-origin scenarios
+      // Use /api/health instead of /auth/me since it doesn't require authentication
+      // But wait - health doesn't set CSRF token. We need an endpoint that sets the token
+      // even if not authenticated, OR we need to ensure session cookie is sent
+      
+      // Try /auth/me first (requires auth, but sets CSRF token if session exists)
       const tokenResponse = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
         credentials: 'include',
@@ -69,9 +74,18 @@ export async function apiRequest<T = any>(
       
       // Check if request was successful
       if (!tokenResponse.ok) {
+        // If 401, the session cookie might not be sent cross-origin
+        // This is a critical issue - we can't get CSRF token without a valid session
         const errorText = await tokenResponse.text().catch(() => '');
         console.error(`❌ Failed to get CSRF token from /auth/me: ${tokenResponse.status} ${tokenResponse.statusText}`, errorText);
-        throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+        console.error('❌ This usually means the session cookie is not being sent cross-origin. Check cookie settings.');
+        
+        // In production, we MUST have a valid session to get CSRF token
+        if (isProduction) {
+          throw new Error(`Session expired or not found. Please log in again. (Status: ${tokenResponse.status})`);
+        } else {
+          throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+        }
       }
       
       // ALWAYS get token from response header (works in cross-origin)

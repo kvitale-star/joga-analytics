@@ -95,7 +95,8 @@ export function setCsrfTokenCookie(
   res: Response,
   next: NextFunction
 ) {
-  const sessionId = req.cookies?.sessionId as string;
+  const sessionId = (req.cookies?.sessionId as string) || 
+                    (req.headers['x-session-id'] as string);
   
   if (sessionId) {
     // Check if we already have a valid token for this session
@@ -134,6 +135,13 @@ export function setCsrfTokenCookie(
     // Also set in response header as fallback for cross-origin scenarios
     // Frontend can read this if cookie isn't accessible
     res.setHeader('X-CSRF-Token', csrfToken);
+  } else {
+    // CRITICAL: Even if there's no session, we should log this for debugging
+    // In cross-origin scenarios, cookies might not be sent, so we need to handle this
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      console.warn('⚠️ No sessionId found in request cookies or headers. Cookies:', Object.keys(req.cookies || {}), 'Headers:', req.headers['x-session-id'] ? 'x-session-id present' : 'x-session-id missing');
+    }
   }
   
   next();
