@@ -122,7 +122,10 @@ export function setCsrfTokenCookie(
       csrfToken = stored.token;
     }
     
-    const isProduction = process.env.NODE_ENV === 'production';
+    // CRITICAL: Railway may not set NODE_ENV=production, so check for Railway-specific indicators
+    const isRailway = !!process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost');
+    const isProduction = process.env.NODE_ENV === 'production' || isRailway;
+    
     // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
     // 'none' requires 'secure: true' which is set in production
     const sameSite = isProduction ? 'none' : 'strict';
