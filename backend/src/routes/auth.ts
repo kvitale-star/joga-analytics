@@ -80,13 +80,21 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     // Set CSRF token cookie (non-HttpOnly so JS can read it)
     const { generateCsrfToken } = await import('../middleware/csrf.js');
     const csrfToken = generateCsrfToken(result.session.id);
-    res.cookie('csrfToken', csrfToken, {
+    
+    // CRITICAL for Safari: Use same cookie options as sessionId (don't set domain)
+    const csrfCookieOptions: any = {
       httpOnly: false, // Must be readable by JavaScript
       secure: isProduction,
       sameSite: sameSite as 'none' | 'strict', // 'none' for cross-origin, 'strict' for same-origin
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
-    });
+      // Explicitly don't set domain - Safari requires exact domain match
+    };
+    
+    res.cookie('csrfToken', csrfToken, csrfCookieOptions);
+    
+    // Also set in response header (critical for Safari cross-origin)
+    res.setHeader('X-CSRF-Token', csrfToken);
 
     // Return user and session info (but session ID is in cookie)
     res.json({
@@ -265,13 +273,21 @@ router.post('/setup', async (req, res) => {
     // Set CSRF token cookie (non-HttpOnly so JS can read it)
     const { generateCsrfToken } = await import('../middleware/csrf.js');
     const csrfToken = generateCsrfToken(result.session.id);
-    res.cookie('csrfToken', csrfToken, {
+    
+    // CRITICAL for Safari: Use same cookie options as sessionId (don't set domain)
+    const csrfCookieOptions: any = {
       httpOnly: false, // Must be readable by JavaScript
       secure: isProduction,
       sameSite: sameSite as 'none' | 'strict', // 'none' for cross-origin, 'strict' for same-origin
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
-    });
+      // Explicitly don't set domain - Safari requires exact domain match
+    };
+    
+    res.cookie('csrfToken', csrfToken, csrfCookieOptions);
+    
+    // Also set in response header (critical for Safari cross-origin)
+    res.setHeader('X-CSRF-Token', csrfToken);
 
     // Return user and session info (but session ID is in cookie)
     res.json({
