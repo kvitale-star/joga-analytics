@@ -36,6 +36,13 @@ import { DateFilter } from './components/DateFilter';
 import { ClubDataView } from './components/ClubDataView';
 import { UploadGameDataView } from './components/UploadGameDataView';
 import { DataAtAGlanceView } from './components/DataAtAGlanceView';
+import { Modal } from './components/Modal';
+import { CustomChartBuilder } from './components/CustomChartBuilder';
+import { getCustomCharts } from './services/customChartsService';
+import { prepareChartData } from './utils/customChartDataProcessor';
+import { DynamicChartRenderer } from './components/DynamicChartRenderer';
+import { ChartExpandButton } from './components/ChartExpandButton';
+import type { CustomChart } from './types/customCharts';
 import { useAuth } from './contexts/AuthContext';
 import { SetupWizard } from './components/SetupWizard';
 import { LoginPage } from './components/LoginPage';
@@ -47,7 +54,7 @@ import { Glossary } from './components/Glossary';
 import { WalkthroughOverlay } from './components/WalkthroughOverlay';
 import { getAllTeams } from './services/teamService';
 import { Team } from './types/auth';
-import { createTeamSlugMap, getTeamsForDropdown } from './utils/teamMapping';
+import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from './utils/teamMapping';
 import { formatDateWithUserPreference } from './utils/dateFormatting';
 
 type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
@@ -60,6 +67,10 @@ function App() {
   const [columnKeys, setColumnKeys] = useState<string[]>([]);
   const [databaseTeams, setDatabaseTeams] = useState<Team[]>([]);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [customCharts, setCustomCharts] = useState<CustomChart[]>([]);
+  const [customChartData, setCustomChartData] = useState<Record<number, any>>({});
+  const [isChartBuilderOpen, setIsChartBuilderOpen] = useState(false);
+  const [editingChart, setEditingChart] = useState<CustomChart | null>(null);
   
   const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
   
@@ -116,7 +127,23 @@ function App() {
 
   // URL-persisted state - view mode is global (not scoped)
   const [viewMode, setViewMode] = useURLState<ViewMode>('view', 'dashboard');
-  
+
+  // Load custom charts when on dashboard view
+  useEffect(() => {
+    const loadCustomCharts = async () => {
+      if (viewMode === 'dashboard' && user && matchData.length > 0) {
+        try {
+          const charts = await getCustomCharts();
+          setCustomCharts(charts);
+        } catch (err) {
+          console.error('Failed to load custom charts:', err);
+        }
+      }
+    };
+    
+    loadCustomCharts();
+  }, [viewMode, user, matchData.length]);
+ 
   // Dashboard view-scoped state
   const [selectedTeam, setSelectedTeam] = useViewScopedState<string | null>(viewMode, 'team', null, {
     serialize: (v) => v || '',
@@ -133,7 +160,8 @@ function App() {
   });
   // Chart selections - stored in localStorage (not URL) to keep URLs short
   // Chart preferences (which metrics are visible, etc.) are stored in database
-  const [selectedCharts, setSelectedCharts] = useLocalStorageState<ChartType[]>(
+  // Can contain both ChartType values and custom chart IDs (format: 'custom-chart-{id}')
+  const [selectedCharts, setSelectedCharts] = useLocalStorageState<(ChartType | string)[]>(
     viewMode === 'dashboard' ? 'joga.dashboard.charts' : 'joga.clubData.charts',
     [],
     {
@@ -933,6 +961,22 @@ function App() {
     return filtered;
   }, [matchData, selectedTeam, selectedOpponent, lastNGames, selectedDate, columnKeys, parseDateHelper]);
 
+  // Process custom chart data using filteredData (respects Last N Games and other filters)
+  useEffect(() => {
+    if (viewMode === 'dashboard' && customCharts.length > 0 && filteredData.length > 0) {
+      const chartDataMap: Record<number, any> = {};
+      for (const chart of customCharts) {
+        try {
+          const data = prepareChartData(filteredData, chart.config);
+          chartDataMap[chart.id] = data;
+        } catch (err) {
+          console.error(`Failed to process chart ${chart.id}:`, err);
+        }
+      }
+      setCustomChartData(chartDataMap);
+    }
+  }, [viewMode, customCharts, filteredData]);
+
   const teamKey = getTeamKey();
   const opponentKey = getOpponentKey();
 
@@ -1350,8 +1394,10 @@ function App() {
     return aggregated;
   }, [viewMode, matchData, lastNGames, additionalOptions, columnKeys, parseDateHelper, includeBoysTeams, includeGirlsTeams, includeBlackTeams]);
   
-  // Get team display name for labels (use selected team name or default to "Team")
-  const teamDisplayName = selectedTeam || 'Team';
+  // Get team display name for labels (use display name from database or fallback to slug)
+  const teamDisplayName = selectedTeam 
+    ? getDisplayNameForSlug(selectedTeam, teamSlugMap) 
+    : 'Team';
 
   // Get all numeric columns that should be charted
   const chartableColumns = useMemo(() => {
@@ -1498,11 +1544,16 @@ function App() {
     if (columnKeys.includes(getPassShareKey()) || columnKeys.includes(getOppPassShareKey())) {
       charts.push('passShare');
     }
-    if (autoChartColumns.length > 0) {
-      charts.push('auto');
-    }
+    // Note: 'auto' charts removed from dropdown - can be re-enabled later if needed
+    // if (autoChartColumns.length > 0) {
+    //   charts.push('auto');
+    // }
+    // Include individual custom chart IDs (not 'customCharts' group)
+    customCharts.forEach(chart => {
+      charts.push(`custom-chart-${chart.id}`);
+    });
     return charts;
-  }, [columnKeys, autoChartColumns]);
+  }, [columnKeys, autoChartColumns, customCharts]);
 
   // Track if charts came from URL on mount
   const chartsFromURLRef = useRef(false);
@@ -1571,6 +1622,35 @@ function App() {
       }
     }
   }, [selectedChartGroup, availableCharts, selectedCharts]);
+
+  // Filter out invalid selected charts when availableCharts changes
+  // This ensures charts that are no longer available (e.g., due to missing columns) are removed
+  useEffect(() => {
+    // Skip on initial mount or if charts came from URL
+    if (chartsInitialMountRef.current || chartsFromURLRef.current) {
+      return;
+    }
+    
+    // Filter selectedCharts to only include charts that are still available
+    // Handle both ChartType values and custom chart IDs
+    const validCharts = selectedCharts.filter(chart => {
+      // Check if it's a standard chart type
+      if (availableCharts.includes(chart as ChartType)) {
+        return true;
+      }
+      // Check if it's a custom chart ID that still exists
+      if (typeof chart === 'string' && chart.startsWith('custom-chart-')) {
+        const chartId = parseInt(chart.replace('custom-chart-', ''), 10);
+        return customCharts.some(c => c.id === chartId);
+      }
+      return false;
+    });
+    
+    // Only update if there's a difference (some charts were removed)
+    if (validCharts.length !== selectedCharts.length) {
+      setSelectedCharts(validCharts);
+    }
+  }, [availableCharts, selectedCharts]);
 
   // Don't auto-initialize with all charts - let user select charts explicitly
   // This prevents empty charts from being auto-filled and written to URL
@@ -1824,6 +1904,8 @@ function App() {
     );
   }
 
+  // Custom Charts view removed - now managed via chart selector and Settings
+
   // Render Club Data view if selected
   if (viewMode === 'club-data') {
     return (
@@ -2006,17 +2088,36 @@ function App() {
             <div className="flex-shrink-0">
               <label className="block text-xs font-medium text-gray-600 mb-1">Charts</label>
               <MultiSelectDropdown
-                options={availableCharts.map(chart => ({
-                  value: chart,
-                  label: CHART_LABELS[chart]
-                }))}
-                selectedValues={selectedCharts}
+                options={availableCharts.map(chart => {
+                  // Handle custom chart IDs
+                  if (typeof chart === 'string' && chart.startsWith('custom-chart-')) {
+                    const chartId = parseInt(chart.replace('custom-chart-', ''), 10);
+                    const customChart = customCharts.find(c => c.id === chartId);
+                    return {
+                      value: chart,
+                      label: customChart?.name || `Chart ${chartId}`
+                    };
+                  }
+                  // Standard chart type
+                  return {
+                    value: chart,
+                    label: CHART_LABELS[chart as ChartType]
+                  };
+                })}
+                selectedValues={selectedCharts.map(c => String(c))}
                 onSelectionChange={(values) => {
-                  setSelectedCharts(values as ChartType[]);
+                  setSelectedCharts(values as (ChartType | string)[]);
                   setSelectedChartGroup(null);
                 }}
                 placeholder="Select charts..."
                 className="min-w-[180px]"
+                customAction={{
+                  label: 'Create Custom Chart',
+                  onClick: () => {
+                    setEditingChart(null);
+                    setIsChartBuilderOpen(true);
+                  }
+                }}
               />
             </div>
 
@@ -3060,19 +3161,64 @@ function App() {
               )}
                   </div>
 
-                        {/* Defense Section */}
-                  {selectedChartGroup === 'defense' && selectedCharts.includes('auto') && autoChartColumns.length > 0 && (
-                    <>
-                      <h2 className="text-xl font-semibold text-gray-800 mb-4">Defense</h2>
-                    </>
-                  )}
+                        {/* User-Created Custom Charts - Individual charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    {selectedCharts
+                      .filter(chart => typeof chart === 'string' && chart.startsWith('custom-chart-'))
+                      .map(chartId => {
+                        const id = parseInt(String(chartId).replace('custom-chart-', ''), 10);
+                        const chart = customCharts.find(c => c.id === id);
+                        if (!chart) return null;
+                        
+                        const chartKey = `custom-chart-${chart.id}`;
+                        const isExpanded = expandedCharts[chartKey] ?? false;
+                        
+                        const chartData = customChartData[chart.id];
+                        if (!chartData) {
+                          return (
+                            <div key={chart.id} className={isExpanded ? 'lg:col-span-2' : ''}>
+                              <div className="bg-white rounded-lg shadow-md p-6">
+                                <h3 className="text-xl font-bold text-gray-800 mb-2">{chart.name}</h3>
+                                <p className="text-sm text-gray-500">Loading chart data...</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={chart.id} className={isExpanded ? 'lg:col-span-2' : ''}>
+                            <div className="bg-white rounded-lg shadow-md p-6 relative group">
+                              <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-xl font-bold text-gray-800">{chart.name}</h3>
+                                <div className="flex items-center gap-2">
+                                  <ChartExpandButton
+                                    isExpanded={isExpanded}
+                                    onToggle={() => {
+                                      handleChartExpansionChange(chartKey)(!isExpanded);
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              {chart.description && (
+                                <p className="text-sm text-gray-600 mb-4">{chart.description}</p>
+                              )}
+                              <DynamicChartRenderer
+                                chartType={chart.chartType}
+                                data={chartData}
+                                height={400}
+                                showLabels={showLabels}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                      .filter(Boolean)}
+                  </div>
 
-                        {/* Auto-Generated Charts for All Other Columns */}
-                  {selectedCharts.includes('auto') && autoChartColumns.length > 0 && (() => {
+                        {/* Defense Section - Auto Charts Only */}
+                  {selectedChartGroup === 'defense' && selectedCharts.includes('auto') && autoChartColumns.length > 0 && (() => {
               const processedPairs = new Set<string>();
               // Filter to defense-related columns when Defense group is selected
-              const columnsToShow = selectedChartGroup === 'defense' 
-                ? autoChartColumns.filter(col => {
+              const columnsToShow = autoChartColumns.filter(col => {
                     const colLower = col.toLowerCase();
                     return colLower.includes('tackle') ||
                            colLower.includes('intercept') ||
@@ -3083,16 +3229,13 @@ function App() {
                            colLower.includes('possessions won') ||
                            colLower.includes('possession won') ||
                            (colLower.includes('poss') && colLower.includes('won'));
-                  })
-                : autoChartColumns;
+                  });
               
               if (columnsToShow.length === 0) return null;
               
                     return (
                       <>
-                        <h2 className={`text-2xl font-bold text-gray-900 mb-6 ${selectedChartGroup === 'defense' ? 'mt-0' : 'mt-8'}`}>
-                          {selectedChartGroup === 'defense' ? 'Defensive Statistics' : 'Additional Statistics'}
-                        </h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6 mt-8">Defensive Statistics</h2>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {columnsToShow.map((columnKey) => {
                       // Skip if this column was already processed as part of a pair
@@ -3152,6 +3295,39 @@ function App() {
       {showWalkthrough && (
         <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />
       )}
+
+      {/* Chart Builder Modal */}
+      <Modal
+        isOpen={isChartBuilderOpen}
+        onClose={() => {
+          setIsChartBuilderOpen(false);
+          setEditingChart(null);
+        }}
+        maxWidth="2xl"
+      >
+        <CustomChartBuilder
+          chart={editingChart}
+          sheetConfig={sheetConfig}
+          columnKeys={columnKeys}
+          matchData={matchData}
+          onClose={() => {
+            setIsChartBuilderOpen(false);
+            setEditingChart(null);
+            // Reload custom charts after save - data will be processed automatically by useEffect
+            const loadCustomCharts = async () => {
+              if (user && matchData.length > 0) {
+                try {
+                  const charts = await getCustomCharts();
+                  setCustomCharts(charts);
+                } catch (err) {
+                  console.error('Failed to load custom charts:', err);
+                }
+              }
+            };
+            loadCustomCharts();
+          }}
+        />
+      </Modal>
     </div>
   );
 }

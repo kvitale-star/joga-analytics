@@ -60,22 +60,32 @@
 **Goal:** Transform app from static reporting tool to dynamic analysis platform where coaches can create, customize, and save their own visualizations.
 
 ### Phase 1: Custom Charts (Weeks 3-6)
+**Status:** ✅ COMPLETE - Phase 1 implemented  
 **Priority:** HIGH  
-**Estimated Time:** 3-4 weeks
+**Estimated Time:** 3-4 weeks (COMPLETED)
 
-- [ ] Create `CustomChartBuilder` component
-- [ ] Create `DynamicChartRenderer` component
-- [ ] Create `MetricExplorer` component
-- [ ] Add `custom_charts` database table
-- [ ] Create API routes for custom charts:
-  - `POST /api/custom-charts` - Create chart
-  - `GET /api/custom-charts` - List user's charts
-  - `GET /api/custom-charts/:id` - Get chart config
-  - `PUT /api/custom-charts/:id` - Update chart
-  - `DELETE /api/custom-charts/:id` - Delete chart
-  - `POST /api/custom-charts/:id/render` - Get chart data
-- [ ] Add "Custom Charts" to navigation
-- [ ] Add chart library/export functionality
+**Completed:**
+- ✅ Create `CustomChartBuilder` component (with modal overlay, confirmation dialog)
+- ✅ Create `DynamicChartRenderer` component (supports line, bar, area, scatter charts)
+- ✅ Add `custom_charts` database table (with migrations)
+- ✅ Create API routes for custom charts:
+  - ✅ `POST /api/custom-charts` - Create chart
+  - ✅ `GET /api/custom-charts` - List user's charts
+  - ✅ `GET /api/custom-charts/:id` - Get chart config
+  - ✅ `PUT /api/custom-charts/:id` - Update chart
+  - ✅ `DELETE /api/custom-charts/:id` - Delete chart
+- ✅ Integrate custom charts into Charts dropdown (individual chart selection)
+- ✅ Add "Create Custom Chart" action to Charts dropdown
+- ✅ Add custom chart management to Settings view (edit/delete)
+- ✅ Custom charts react to global filters (Last N Games, Team, Opponent, Date)
+- ✅ Custom charts support expansion (full-width toggle)
+- ✅ Custom charts support `showLabels` option
+- ✅ Chart builder modal with dark blurred background (matching walkthrough style)
+- ✅ Confirmation dialog for canceling chart creation (matching walkthrough pattern)
+
+**Remaining (Future Phases):**
+- [ ] Create `MetricExplorer` component (for Phase 2: Calculated Metrics)
+- [ ] Add chart library/export functionality (Phase 4)
 
 **Reference:** [ROADMAP_USER_AGENCY.md](./ROADMAP_USER_AGENCY.md), [STRATEGY_USER_AGENCY.md](./STRATEGY_USER_AGENCY.md)
 

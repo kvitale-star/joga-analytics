@@ -381,25 +381,25 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
               style={{ backgroundColor: getCardHeaderColor(1) }}
             >
               <div className="flex items-center justify-between">
-                <div>
+              <div>
                   <h2 className={`text-xl font-semibold ${getCardHeaderColor(1) === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white'}`}>
                     Detected Data Columns
                   </h2>
                   <p className={`text-sm mt-1 ${getCardHeaderColor(1) === JOGA_COLORS.voltYellow ? 'text-gray-700' : 'text-white/90'}`}>
-                    {columnKeys.length} column{columnKeys.length !== 1 ? 's' : ''} detected in your data
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowColumns(!showColumns)}
+                  {columnKeys.length} column{columnKeys.length !== 1 ? 's' : ''} detected in your data
+                </p>
+              </div>
+              <button
+                onClick={() => setShowColumns(!showColumns)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     getCardHeaderColor(1) === JOGA_COLORS.voltYellow
                       ? 'text-gray-900 bg-white/90 hover:bg-white'
                       : 'text-white bg-white/20 hover:bg-white/30'
                   }`}
-                >
-                  {showColumns ? 'Hide' : 'Show'} Columns
-                </button>
-              </div>
+              >
+                {showColumns ? 'Hide' : 'Show'} Columns
+              </button>
+            </div>
             </div>
             <div className="p-6">
             {showColumns && (
@@ -434,8 +434,8 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
                 Click "Show Columns" to see all {columnKeys.length} detected data columns organized by category.
               </div>
             )}
-            </div>
           </div>
+        </div>
     </PageLayout>
   );
 };

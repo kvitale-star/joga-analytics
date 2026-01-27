@@ -125,7 +125,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
   };
 
   const inputFooter = (
-    <div className="px-6 py-4">
+        <div className="px-6 py-4">
       <div className="max-w-6xl mx-auto w-full">
         <div className="flex space-x-3">
           <input
@@ -163,14 +163,14 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
           >
             Send
           </button>
-        </div>
+            </div>
         {!aiConfigured && (
           <p className="text-xs text-gray-500 mt-2">
             AI service requires GEMINI_API_KEY in backend .env file. Contact your administrator.
           </p>
         )}
-      </div>
-    </div>
+            </div>
+          </div>
   );
 
   return (

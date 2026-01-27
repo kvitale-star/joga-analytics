@@ -20,7 +20,8 @@ export type ChartType =
   | 'ppm'
   | 'passShare'
   | 'tsr'
-  | 'auto';
+  | 'auto'
+  | 'customCharts';
 
 export interface ChartGroup {
   id: string;
@@ -40,7 +41,7 @@ export const CHART_GROUPS: ChartGroup[] = [
     id: 'defense',
     name: 'Defense',
     description: 'Defensive metrics and statistics',
-    charts: ['auto'], // Includes Possessions Won and Opp Possessions Won via auto charts
+    charts: [], // Defense charts will be added when specific defensive metrics are implemented
   },
   {
     id: 'passing',
@@ -86,6 +87,7 @@ export const CHART_LABELS: Record<ChartType, string> = {
   ppm: 'Passes Per Minute',
   tsr: 'Total Shots Ratio',
   passShare: 'Pass Share',
-  auto: 'Custom Charts',
+  auto: 'Auto Charts', // Not shown in dropdown currently
+  customCharts: 'Custom Charts',
 };
 

@@ -7,6 +7,10 @@ interface MultiSelectDropdownProps {
   placeholder?: string;
   className?: string;
   isTeamDropdown?: boolean;
+  customAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
@@ -16,6 +20,7 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
   placeholder = 'Select...',
   className = '',
   isTeamDropdown = false,
+  customAction,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -91,6 +96,21 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
               </label>
             );
           })}
+          {customAction && (
+            <>
+              <div className="border-t border-gray-200 my-1"></div>
+              <button
+                onClick={() => {
+                  customAction.onClick();
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center px-3 py-2 hover:bg-gray-50 text-sm text-gray-700 whitespace-nowrap"
+              >
+                <span className="mr-2">+</span>
+                <span>{customAction.label}</span>
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
