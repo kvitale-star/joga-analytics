@@ -19,14 +19,19 @@ let attempts = 0;
 
 async function checkBackendHealth() {
   try {
+    // Create abort controller for timeout (more compatible than AbortSignal.timeout)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await fetch(HEALTH_CHECK_ENDPOINT, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
       },
-      // Add a timeout to prevent hanging
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: controller.signal,
     });
+    
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json().catch(() => ({}));
