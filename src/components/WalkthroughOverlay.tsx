@@ -107,6 +107,13 @@ export const WalkthroughOverlay: React.FC<WalkthroughOverlayProps> = ({ onClose 
         }
       } catch (err) {
         console.error('Failed to save onboarding status:', err);
+        // If session expired, don't show error - user will need to log in again
+        // The error is already logged, and the user will see the login screen on next action
+        if (err instanceof Error && err.message.includes('SESSION_EXPIRED')) {
+          // Session expired - don't try to save, just close the walkthrough
+          // User will need to log in again and can complete onboarding then
+          console.warn('Session expired while saving onboarding status. User will need to log in again.');
+        }
       }
     }
     onClose();

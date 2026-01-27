@@ -93,11 +93,27 @@ export async function apiRequest<T = any>(
           console.error('   2. Session cookie not being sent cross-origin (check cookie sameSite/secure settings)');
           console.error('   3. Backend not setting X-CSRF-Token header');
           
-          // In production, we MUST have a valid session to get CSRF token
-          if (isProduction) {
-            throw new Error('Your session has expired. Please refresh the page and log in again.');
+          // Check if this is a 401 - if so, the session is definitely expired/invalid
+          if (tokenResponse.status === 401) {
+            // Session is expired - clear any stored state and redirect to login
+            console.error('❌ Session expired (401). User needs to log in again.');
+            
+            // Clear any stored CSRF token
+            csrfTokenFromHeader = null;
+            
+            // In production, provide a clear error message
+            if (isProduction) {
+              throw new Error('SESSION_EXPIRED: Your session has expired. Please refresh the page and log in again.');
+            } else {
+              throw new Error(`Session expired. Please log in again. (Status: ${tokenResponse.status})`);
+            }
           } else {
-            throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+            // Other error - still can't get token
+            if (isProduction) {
+              throw new Error('Failed to get CSRF token. Please refresh the page and log in again.');
+            } else {
+              throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+            }
           }
         }
       }
