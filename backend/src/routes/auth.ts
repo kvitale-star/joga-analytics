@@ -41,7 +41,10 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     }
 
     // Set HttpOnly Secure cookie with session ID
-    const isProduction = process.env.NODE_ENV === 'production';
+    // CRITICAL: Railway may not set NODE_ENV=production, so check for Railway-specific indicators
+    // If FRONTEND_URL is set and different from localhost, we're in production (Railway)
+    const isRailway = !!process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost');
+    const isProduction = process.env.NODE_ENV === 'production' || isRailway;
     // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
     // 'none' requires 'secure: true' which is set in production
     const sameSite = isProduction ? 'none' : 'lax';
@@ -202,7 +205,10 @@ router.post('/setup', async (req, res) => {
     }
 
     // Set HttpOnly Secure cookie with session ID
-    const isProduction = process.env.NODE_ENV === 'production';
+    // CRITICAL: Railway may not set NODE_ENV=production, so check for Railway-specific indicators
+    // If FRONTEND_URL is set and different from localhost, we're in production (Railway)
+    const isRailway = !!process.env.FRONTEND_URL && !process.env.FRONTEND_URL.includes('localhost');
+    const isProduction = process.env.NODE_ENV === 'production' || isRailway;
     // Use 'none' for cross-origin requests (Railway frontend/backend on different domains)
     // 'none' requires 'secure: true' which is set in production
     const sameSite = isProduction ? 'none' : 'lax';

@@ -23,10 +23,13 @@ export async function authenticateSession(
   next: NextFunction
 ) {
   // Try cookie first (new approach), then header (backward compatibility)
+  // Also check for common typos (sessionld instead of sessionId)
   const sessionId = (req.cookies?.sessionId as string) || 
+                    (req.cookies?.sessionld as string) || // Handle typo: sessionld
                     (req.headers['x-session-id'] as string);
 
   if (!sessionId) {
+<<<<<<< HEAD
     // Debug: Log what cookies we received
     const cookieNames = Object.keys(req.cookies || {});
     const cookieHeader = req.headers['cookie'] || '';
@@ -34,6 +37,15 @@ export async function authenticateSession(
     console.warn('⚠️ Cookie header (first 200 chars):', cookieHeader.substring(0, 200));
     console.warn('⚠️ Request origin:', req.headers['origin']);
     console.warn('⚠️ Request referer:', req.headers['referer']);
+=======
+    // Log available cookies for debugging
+    const cookieNames = Object.keys(req.cookies || {});
+    console.warn('⚠️ No sessionId found. Available cookies:', cookieNames);
+    console.warn('⚠️ Request headers:', {
+      'x-session-id': req.headers['x-session-id'],
+      'cookie': req.headers['cookie']?.substring(0, 100) + '...'
+    });
+>>>>>>> 0fed3aa9acb61e89366e1c57ef65bbc8746e2387
     return res.status(401).json({ error: 'No session provided' });
   }
 
