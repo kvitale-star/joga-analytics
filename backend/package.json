@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "prestart": "npm run build",
+    "prestart": "node scripts/ensure-build.js",
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
     "reset-users": "tsx src/scripts/reset-users.ts",
