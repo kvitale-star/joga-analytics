@@ -32,9 +32,11 @@ router.get('/data', async (req, res) => {
     console.error('📊 Sheets API - Error:', error.message);
     console.error('📊 Sheets API - Full error:', error);
     // Pass through the error message from Google Sheets API
-    const statusCode = error.message?.includes('403') ? 403 :
-                       error.message?.includes('404') ? 404 :
-                       error.message?.includes('400') ? 400 : 500;
+    // Check for specific error message patterns from sheetsService
+    const statusCode = error.message?.includes('access denied') ? 403 :
+                       error.message?.includes('not found') || error.message?.includes('Spreadsheet not found') ? 404 :
+                       error.message?.includes('Invalid request') || error.message?.includes('Invalid range') ? 400 :
+                       error.message?.includes('Quota exceeded') ? 429 : 500;
     res.status(statusCode).json({ error: error.message || 'Failed to fetch sheet data' });
   }
 });

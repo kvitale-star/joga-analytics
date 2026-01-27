@@ -516,10 +516,15 @@ export async function updateUserPreferences(
   userId: number,
   preferences: Record<string, any>
 ): Promise<void> {
+  // Get existing preferences and merge with new ones
+  const user = await getUserById(userId);
+  const existingPreferences = user?.preferences || {};
+  const mergedPreferences = { ...existingPreferences, ...preferences };
+  
   await db
     .updateTable('users')
     .set({
-      preferences: JSON.stringify(preferences),
+      preferences: JSON.stringify(mergedPreferences),
       updated_at: new Date().toISOString(),
     })
     .where('id', '=', userId)
