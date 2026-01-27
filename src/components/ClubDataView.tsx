@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { MatchData } from '../types';
 import { ChartType, CHART_GROUPS, CHART_LABELS } from '../utils/chartGroups';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
+import { CombinedChartSelector } from './CombinedChartSelector';
 import { FadeTransition } from './FadeTransition';
 import { UserMenu } from './UserMenu';
 import { ShotsChart } from './ShotsChart';
@@ -211,67 +212,27 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                 selectedValues={selectedClubTeams}
                 onSelectionChange={setSelectedClubTeams}
                 placeholder="Select teams..."
-                className="min-w-[180px]"
+                className="min-w-[240px]"
                 isTeamDropdown={true}
               />
             </div>
 
-            {/* Chart Group Selector */}
-            <div className="flex-shrink-0">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Chart Group</label>
-              <select
-                value={selectedChartGroup || ''}
-                onChange={(e) => {
-                  const groupId = e.target.value || null;
-                  setSelectedChartGroup(groupId);
-                  if (groupId) {
-                    const group = CHART_GROUPS.find(g => g.id === groupId);
-                    if (group) {
-                      // Filter to only include charts that are available
-                      const chartsToSelect = group.charts.filter(chart => availableCharts.includes(chart));
-                      if (chartsToSelect.length > 0) {
-                        setSelectedCharts(chartsToSelect);
-                      } else {
-                        setSelectedCharts([]);
-                      }
-                    }
-                  } else {
-                    setSelectedCharts([]);
-                  }
-                }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-                style={{ width: 'auto', minWidth: '160px' }}
-              >
-                <option value="">Select Group...</option>
-                {[...CHART_GROUPS].sort((a, b) => {
-                  // "All Charts" always at top
-                  if (a.id === 'all') return -1;
-                  if (b.id === 'all') return 1;
-                  // Rest alphabetically
-                  return a.name.localeCompare(b.name);
-                }).map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Chart Selector */}
+            {/* Combined Chart Selector */}
             <div className="flex-shrink-0">
               <label className="block text-xs font-medium text-gray-600 mb-1">Charts</label>
-              <MultiSelectDropdown
-                options={availableCharts.map(chart => ({
-                  value: chart,
-                  label: CHART_LABELS[chart]
-                }))}
-                selectedValues={selectedCharts}
+              <CombinedChartSelector
+                availableCharts={availableCharts}
+                selectedCharts={selectedCharts}
                 onSelectionChange={(values) => {
                   setSelectedCharts(values as ChartType[]);
-                  setSelectedChartGroup(null);
                 }}
-                placeholder="Select charts..."
-                className="min-w-[180px]"
+                selectedChartGroup={selectedChartGroup}
+                onGroupChange={setSelectedChartGroup}
+                customCharts={[]} // Club Data doesn't support custom charts yet
+                onCreateCustomChart={() => {
+                  // No-op for club data
+                }}
+                className="min-w-[200px]"
               />
             </div>
 

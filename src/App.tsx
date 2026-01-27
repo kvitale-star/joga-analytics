@@ -42,6 +42,7 @@ import { getCustomCharts } from './services/customChartsService';
 import { prepareChartData } from './utils/customChartDataProcessor';
 import { DynamicChartRenderer } from './components/DynamicChartRenderer';
 import { ChartExpandButton } from './components/ChartExpandButton';
+import { CombinedChartSelector } from './components/CombinedChartSelector';
 import type { CustomChart } from './types/customCharts';
 import { useAuth } from './contexts/AuthContext';
 import { SetupWizard } from './components/SetupWizard';
@@ -2010,7 +2011,7 @@ function App() {
                   setSelectedTeam(e.target.value || null);
                 }}
                 className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-                style={{ borderColor: '#ceff00', width: 'auto', minWidth: '140px' }}
+                style={{ borderColor: '#ceff00', width: 'auto', minWidth: '240px' }}
               >
                 <option value="">Choose a team...</option>
                 {teams.map((team) => (
@@ -2048,76 +2049,23 @@ function App() {
               availableDates={availableDates}
             />
 
-            {/* Chart Group Selector */}
-            <div className="flex-shrink-0">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Chart Group</label>
-              <select
-                data-tour="chart-group-selector"
-                value={selectedChartGroup || ''}
-                onChange={(e) => {
-                  const groupId = e.target.value || null;
-                  setSelectedChartGroup(groupId);
-                  if (groupId) {
-                    const group = CHART_GROUPS.find(g => g.id === groupId);
-                    if (group) {
-                      // Filter to only include charts that are available
-                      const chartsToSelect = group.charts.filter(chart => availableCharts.includes(chart));
-                      if (chartsToSelect.length > 0) {
-                        setSelectedCharts(chartsToSelect);
-                      } else {
-                        setSelectedCharts([]);
-                      }
-                    }
-                  } else {
-                    setSelectedCharts([]);
-                  }
-                }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-                style={{ width: 'auto', minWidth: '160px' }}
-              >
-                <option value="">Select Group...</option>
-                {CHART_GROUPS.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Chart Selector - Custom multiselect dropdown */}
+            {/* Combined Chart Selector */}
             <div className="flex-shrink-0">
               <label className="block text-xs font-medium text-gray-600 mb-1">Charts</label>
-              <MultiSelectDropdown
-                options={availableCharts.map(chart => {
-                  // Handle custom chart IDs
-                  if (typeof chart === 'string' && chart.startsWith('custom-chart-')) {
-                    const chartId = parseInt(chart.replace('custom-chart-', ''), 10);
-                    const customChart = customCharts.find(c => c.id === chartId);
-                    return {
-                      value: chart,
-                      label: customChart?.name || `Chart ${chartId}`
-                    };
-                  }
-                  // Standard chart type
-                  return {
-                    value: chart,
-                    label: CHART_LABELS[chart as ChartType]
-                  };
-                })}
-                selectedValues={selectedCharts.map(c => String(c))}
+              <CombinedChartSelector
+                availableCharts={availableCharts}
+                selectedCharts={selectedCharts}
                 onSelectionChange={(values) => {
                   setSelectedCharts(values as (ChartType | string)[]);
-                  setSelectedChartGroup(null);
                 }}
-                placeholder="Select charts..."
-                className="min-w-[180px]"
-                customAction={{
-                  label: 'Create Custom Chart',
-                  onClick: () => {
-                    setEditingChart(null);
-                    setIsChartBuilderOpen(true);
-                  }
+                selectedChartGroup={selectedChartGroup}
+                onGroupChange={setSelectedChartGroup}
+                customCharts={customCharts}
+                onCreateCustomChart={() => {
+                  setEditingChart(null);
+                  setIsChartBuilderOpen(true);
                 }}
+                className="min-w-[200px]"
               />
             </div>
 

@@ -54,15 +54,19 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
     ? `${selectedValues.length} selected`
     : placeholder;
 
+  // Extract minWidth from className if present (e.g., "min-w-[320px]")
+  const minWidthMatch = className.match(/min-w-\[(\d+)px\]/);
+  const minWidthValue = minWidthMatch ? `${minWidthMatch[1]}px` : 'fit-content';
+  
   return (
-    <div className={`relative z-[200] ${className}`} ref={dropdownRef} style={{ width: 'auto', minWidth: 'fit-content' }}>
+    <div className={`relative z-[200] ${className}`} ref={dropdownRef} style={{ width: 'auto', minWidth: minWidthValue }}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between whitespace-nowrap ${className} ${
+        className={`pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between whitespace-nowrap ${
           isTeamDropdown ? 'border-2 border-[#ceff00]' : 'border border-gray-300'
         }`}
-        style={isTeamDropdown ? { borderColor: '#ceff00', width: 'auto', minWidth: 'fit-content' } : { width: 'auto', minWidth: 'fit-content' }}
+        style={isTeamDropdown ? { borderColor: '#ceff00', width: 'auto', minWidth: minWidthValue } : { width: 'auto', minWidth: minWidthValue }}
       >
         <span className={`${selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-900'} whitespace-nowrap`}>
           {displayText}
