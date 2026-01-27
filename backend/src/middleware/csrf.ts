@@ -130,6 +130,10 @@ export function setCsrfTokenCookie(
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/',
     });
+    
+    // Also set in response header as fallback for cross-origin scenarios
+    // Frontend can read this if cookie isn't accessible
+    res.setHeader('X-CSRF-Token', csrfToken);
   }
   
   next();
