@@ -27,6 +27,13 @@ export async function authenticateSession(
                     (req.headers['x-session-id'] as string);
 
   if (!sessionId) {
+    // Debug: Log what cookies we received
+    const cookieNames = Object.keys(req.cookies || {});
+    const cookieHeader = req.headers['cookie'] || '';
+    console.warn('⚠️ No sessionId found in request. Available cookies:', cookieNames);
+    console.warn('⚠️ Cookie header (first 200 chars):', cookieHeader.substring(0, 200));
+    console.warn('⚠️ Request origin:', req.headers['origin']);
+    console.warn('⚠️ Request referer:', req.headers['referer']);
     return res.status(401).json({ error: 'No session provided' });
   }
 
