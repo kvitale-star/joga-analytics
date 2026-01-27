@@ -67,23 +67,39 @@ export async function apiRequest<T = any>(
         credentials: 'include',
       });
       
+      // Check if request was successful
+      if (!tokenResponse.ok) {
+        throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+      }
+      
       // ALWAYS get token from response header (works in cross-origin)
       const tokenHeader = tokenResponse.headers.get('X-CSRF-Token');
       if (tokenHeader) {
         csrfTokenFromHeader = tokenHeader;
         csrfToken = tokenHeader;
-      } else if (tokenResponse.ok && !isProduction) {
+      } else if (!isProduction) {
         // If no header but response is OK, try cookie as fallback (same-origin only, local dev)
         await new Promise(resolve => setTimeout(resolve, 100));
         csrfToken = getCsrfToken();
+      } else {
+        // In production, if no header, we can't proceed - this is a critical error
+        throw new Error('CSRF token not found in response header. This is required for cross-origin requests.');
       }
     } catch (e) {
-      // If fetching token fails, log warning but don't fail silently
-      console.warn('⚠️ Failed to fetch CSRF token from /auth/me:', e);
-      // Try cookie as last resort (won't work in cross-origin but might work locally)
-      if (!isProduction) {
+      // If fetching token fails in production, we MUST fail the request
+      // In local dev, try cookie as last resort
+      if (isProduction) {
+        console.error('❌ CRITICAL: Failed to fetch CSRF token in production:', e);
+        throw new Error('Failed to get CSRF token. Please refresh the page and try again.');
+      } else {
+        console.warn('⚠️ Failed to fetch CSRF token from /auth/me, trying cookie:', e);
         csrfToken = getCsrfToken();
       }
+    }
+    
+    // Final check: if we still don't have a token and we need one, fail
+    if (needsCsrf && !shouldSkipCsrf && !csrfToken) {
+      throw new Error('CSRF token is required but could not be obtained. Please refresh the page and try again.');
     }
   }
   
