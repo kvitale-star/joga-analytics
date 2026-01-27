@@ -74,17 +74,31 @@ export async function apiRequest<T = any>(
       
       // Check if request was successful
       if (!tokenResponse.ok) {
-        // If 401, the session cookie might not be sent cross-origin
+        // If 401, the session cookie might not be sent cross-origin or session expired
         // This is a critical issue - we can't get CSRF token without a valid session
         const errorText = await tokenResponse.text().catch(() => '');
         console.error(`❌ Failed to get CSRF token from /auth/me: ${tokenResponse.status} ${tokenResponse.statusText}`, errorText);
-        console.error('❌ This usually means the session cookie is not being sent cross-origin. Check cookie settings.');
         
-        // In production, we MUST have a valid session to get CSRF token
-        if (isProduction) {
-          throw new Error(`Session expired or not found. Please log in again. (Status: ${tokenResponse.status})`);
+        // Check if CSRF token is in the response header even on 401 (might be set by middleware)
+        const tokenHeader = tokenResponse.headers.get('X-CSRF-Token');
+        if (tokenHeader) {
+          console.log('✅ CSRF token found in 401 response header (session expired but token available)');
+          csrfTokenFromHeader = tokenHeader;
+          csrfToken = tokenHeader;
         } else {
-          throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+          // No token in header - session is required
+          console.error('❌ No CSRF token in response header. Session cookie may not be sent cross-origin.');
+          console.error('   This usually means:');
+          console.error('   1. Session expired - user needs to log in again');
+          console.error('   2. Session cookie not being sent cross-origin (check cookie sameSite/secure settings)');
+          console.error('   3. Backend not setting X-CSRF-Token header');
+          
+          // In production, we MUST have a valid session to get CSRF token
+          if (isProduction) {
+            throw new Error('Your session has expired. Please refresh the page and log in again.');
+          } else {
+            throw new Error(`Failed to get CSRF token: ${tokenResponse.status} ${tokenResponse.statusText}`);
+          }
         }
       }
       
