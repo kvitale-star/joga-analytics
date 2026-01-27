@@ -97,9 +97,7 @@ export function setCsrfTokenCookie(
   res: Response,
   next: NextFunction
 ) {
-  // Also check for common typos (sessionld instead of sessionId)
   const sessionId = (req.cookies?.sessionId as string) || 
-                    (req.cookies?.sessionld as string) || // Handle typo: sessionld
                     (req.headers['x-session-id'] as string);
   
   if (sessionId) {
