@@ -53,6 +53,7 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
 
     let syncedCount = 0;
     const now = new Date().toISOString();
+    const metricNamesInSheet = new Set<string>();
 
     // Fallback categorization (used only when the sheet row has no Category)
     const categorizeMetric = (metricName: string): string | null => {
@@ -101,6 +102,7 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
 
     // Process each metric
     for (const [metricName, meta] of Object.entries(metadata)) {
+      metricNamesInSheet.add(metricName);
       // `fetchColumnMetadata` lowercases headers; Category will be available as `meta.category`
       const rawCategory = (meta.category as string | undefined)?.trim();
       const categoryTokensFromSheet = rawCategory ? normalizeCategoryList(rawCategory) : [];
@@ -151,6 +153,35 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
       }
       
       syncedCount++;
+    }
+
+    // Prune stale metrics that were previously synced from sheets but are no longer present.
+    // This is important now that "Glossary" is curated and may intentionally omit/recombine metrics.
+    const existingGoogleSheetMetrics = await db
+      .selectFrom('metric_definitions')
+      .select(['metric_name'])
+      .where('source', '=', 'google_sheets')
+      .execute();
+
+    const staleNames = existingGoogleSheetMetrics
+      .map((r) => r.metric_name)
+      .filter((name) => !metricNamesInSheet.has(name));
+
+    // Kysely/SQLite has a limit on bound parameters; chunk defensively.
+    const CHUNK_SIZE = 800;
+    let deletedCount = 0;
+    for (let i = 0; i < staleNames.length; i += CHUNK_SIZE) {
+      const chunk = staleNames.slice(i, i + CHUNK_SIZE);
+      const res = await db
+        .deleteFrom('metric_definitions')
+        .where('source', '=', 'google_sheets')
+        .where('metric_name', 'in', chunk)
+        .executeTakeFirst();
+      deletedCount += Number(res?.numDeletedRows ?? 0);
+    }
+
+    if (deletedCount > 0) {
+      console.log(`📚 Removed ${deletedCount} stale metric definitions not present in Glossary sheet`);
     }
 
     console.log(`📚 Synced ${syncedCount} metric definitions from Google Sheets`);
