@@ -131,7 +131,7 @@ export const Glossary: React.FC = () => {
       title="Metric Glossary"
       subtitle="Definitions and explanations for all metrics used in JOGA Analytics"
       headerActions={syncButton}
-      maxWidth="6xl"
+      maxWidth="full"
     >
           {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center mb-6">
@@ -198,7 +198,7 @@ export const Glossary: React.FC = () => {
                   <h2 className={`text-xl font-semibold ${textColor}`}>{category}</h2>
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200 table-auto">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
@@ -228,13 +228,13 @@ export const Glossary: React.FC = () => {
                             <div className="text-sm font-semibold text-gray-900">{def.metric_name}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900 max-w-md">{def.description || '-'}</div>
+                            <div className="text-sm text-gray-900">{def.description || '-'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">{def.units || '-'}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-900 max-w-xs">
+                            <div className="text-sm text-gray-900">
                               {def.calculation ? (
                                 <code className="bg-gray-100 px-2 py-1 rounded text-xs">{def.calculation}</code>
                               ) : (
@@ -246,7 +246,7 @@ export const Glossary: React.FC = () => {
                             <div className="text-sm text-gray-900">{def.example || '-'}</div>
                           </td>
                           <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600 max-w-md">{def.notes || '-'}</div>
+                            <div className="text-sm text-gray-600">{def.notes || '-'}</div>
                           </td>
                         </tr>
                       ))}
