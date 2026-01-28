@@ -224,6 +224,50 @@ curl -X POST https://your-backend-production.up.railway.app/api/auth/setup \
 
 ## Troubleshooting
 
+### “404” in Railway / “I’m lost” / Service keeps restarting
+
+This is almost always one of:
+
+- **Wrong domain**: You’re opening the backend domain expecting the frontend (or vice versa).
+- **Health check mismatch**: The service health check is set to a path the service does not serve.
+- **Pinned old commit / GitHub rate limits**: Railway may say it’s tracking `main`, but still be using an older commit SHA during GitHub incidents.
+
+#### Quick mapping (what should return 200)
+
+- **Backend service**
+  - `GET /api/health` → `200` JSON `{ status: "ok", ... }`
+  - `GET /` → may be `404` (that’s fine)
+- **Frontend service**
+  - `GET /` → `200` (static site)
+  - `GET /api/health` → typically `404` (frontend does not serve backend endpoints)
+
+If your **frontend** health check is set to `/api/health`, Railway will often restart it in a loop.
+
+#### How to confirm which commit Railway is actually using
+
+Railway sometimes shows a link like:
+
+- `railway.json` managed at `.../blob/<SHA>/railway.json`
+
+If that SHA is older than your latest `main`, Railway is currently deploying an older revision.
+
+**Fix:**
+
+1. Wait for GitHub to recover if there is an ongoing GitHub incident (rate limiting / maintenance can prevent Railway from fetching the newest commit).
+2. In Railway, trigger a **Redeploy** of the affected service.
+3. If it still points at an old SHA:
+   - **Clear build cache** for that service (if available), then redeploy.
+   - **Disconnect/reconnect** the GitHub repo integration for that service.
+
+#### Verify health checks (recommended)
+
+Configure per-service health checks in Railway UI:
+
+- **Backend**: `/api/health`
+- **Frontend**: `/` (or disable health checks)
+
+If health checks appear “managed by `railway.json`” and you cannot override them, remove any `deploy`/healthcheck settings from `railway.json` and redeploy.
+
 ### Backend Not Starting
 
 1. Check logs in Railway dashboard
