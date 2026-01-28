@@ -298,17 +298,25 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // Start server (when running normally)
 export async function startServer() {
-  await initializeDatabase();
-
   // Railway requires binding to 0.0.0.0, not just localhost
   const HOST = process.env.HOST || '0.0.0.0';
 
+  // CRITICAL: Start listening IMMEDIATELY so Railway health checks work
+  // Initialize database in background - health endpoint doesn't need it
   app.listen(PORT, HOST, () => {
     console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
     console.log(`📊 API available at http://${HOST}:${PORT}/api`);
     console.log(`💚 Health check: http://${HOST}:${PORT}/api/health`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔒 CORS origin: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    
+    // Initialize database in background (non-blocking)
+    // This allows Railway health checks to work immediately
+    initializeDatabase().catch((error) => {
+      console.error('❌ Database initialization failed:', error);
+      // Don't exit - server is already running, just log the error
+      // Routes that need database will fail gracefully
+    });
   });
 }
 
