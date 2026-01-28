@@ -8,6 +8,7 @@ const stubBcryptjs = () => ({
     if (id === 'bcryptjs') {
       return id; // Return the id to mark it as resolved
     }
+    return null; // Return null for other modules (required by Vite)
   },
   load(id: string) {
     if (id === 'bcryptjs') {
@@ -29,6 +30,7 @@ const stubBcryptjs = () => ({
         };
       `;
     }
+    return null; // Return null for other modules (required by Vite)
   },
 });
 
