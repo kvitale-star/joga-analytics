@@ -2,9 +2,11 @@
  * Browser-based authentication service
  * Uses SQL.js (browser database) for all operations
  * This is the original implementation before backend API migration
+ * 
+ * NOTE: This file is only used when VITE_USE_BACKEND_API=false (browser mode)
+ * In production, the backend API is always used, so this file is not executed.
  */
 
-import bcrypt from 'bcryptjs';
 import { getDatabase, execute, queryOne } from '../db/database';
 import { User, UserRole, LoginCredentials, Session, SetupWizardData, UserWithPassword } from '../types/auth';
 import { validatePassword } from '../utils/passwordValidation';
@@ -13,10 +15,57 @@ const SALT_ROUNDS = 12;
 const SESSION_DURATION_DAYS = 7;
 const SESSION_ID_LENGTH = 32;
 
+// Use a type-only import for bcryptjs to avoid bundling it
+// In production builds, this will be replaced with a stub
+type BcryptModule = {
+  hash: (data: string, saltRounds: number) => Promise<string>;
+  compare: (data: string, hash: string) => Promise<boolean>;
+};
+
+// Stub implementation for production builds
+// This file should never be executed in production (backend API is used instead)
+const bcryptStub: BcryptModule = {
+  hash: async () => {
+    throw new Error('bcryptjs not available - browser auth service should not be used in production');
+  },
+  compare: async () => {
+    throw new Error('bcryptjs not available - browser auth service should not be used in production');
+  },
+};
+
+// In browser mode, bcryptjs will be loaded dynamically
+// In production builds, this will use the stub
+let bcryptImpl: BcryptModule | null = null;
+
+async function getBcrypt(): Promise<BcryptModule> {
+  if (bcryptImpl) {
+    return bcryptImpl;
+  }
+  
+  // Check if we're in production (backend API mode)
+  const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
+  if (USE_BACKEND_API || import.meta.env.PROD) {
+    // Should never happen in production, but provide stub as fallback
+    return bcryptStub;
+  }
+  
+  // Browser mode - try to load bcryptjs
+  try {
+    // Use a type assertion to avoid static analysis issues
+    const bcryptModule = await import('bcryptjs' as any);
+    bcryptImpl = (bcryptModule.default || bcryptModule) as BcryptModule;
+    return bcryptImpl;
+  } catch (error) {
+    console.error('Failed to load bcryptjs:', error);
+    throw new Error('bcryptjs is required for browser mode but could not be loaded');
+  }
+}
+
 /**
  * Hash a password
  */
 export async function hashPassword(password: string): Promise<string> {
+  const bcrypt = await getBcrypt();
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
@@ -24,6 +73,7 @@ export async function hashPassword(password: string): Promise<string> {
  * Verify a password against a hash
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  const bcrypt = await getBcrypt();
   return bcrypt.compare(password, hash);
 }
 
