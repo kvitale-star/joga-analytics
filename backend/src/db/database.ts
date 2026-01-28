@@ -27,10 +27,17 @@ const dbPath = railwayVolumePath
       : (process.env.NODE_ENV === 'test' ? defaultTestDbPath : defaultDbPath)); // Separate DB for tests
 
 // Ensure data directory exists
+// Use try-catch to handle permission errors gracefully
 const dataDir = path.dirname(dbPath);
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-  console.log(`📁 Created database directory: ${dataDir}`);
+try {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`📁 Created database directory: ${dataDir}`);
+  }
+} catch (dirError) {
+  console.error(`⚠️  Failed to create database directory ${dataDir}:`, dirError);
+  // Continue anyway - database creation might still work if directory exists
+  // Or it will fail with a clearer error message
 }
 
 console.log(`💾 Database path: ${dbPath}`);
