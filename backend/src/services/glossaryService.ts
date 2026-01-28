@@ -22,12 +22,16 @@ export interface MetricDefinition {
 }
 
 /**
- * Sync metric definitions from Google Sheets Metadata tab
+ * Sync metric definitions from Google Sheets "Glossary" tab
+ *
+ * Expected headers (case-insensitive):
+ * Metric Name | Description | Units | Calculation | Notes | Example | Category
  */
 export async function syncMetricDefinitionsFromSheet(): Promise<number> {
   try {
-    // Fetch metadata from Google Sheets
-    const metadata = await fetchColumnMetadata('Metadata!A1:Z100');
+    // Fetch glossary definitions from Google Sheets
+    // Use a wider range to capture all rows
+    const metadata = await fetchColumnMetadata('Glossary!A1:Z1000');
     
     if (!metadata || Object.keys(metadata).length === 0) {
       console.log('📚 No metadata found in Google Sheets');
@@ -37,7 +41,7 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
     let syncedCount = 0;
     const now = new Date().toISOString();
 
-    // Categorize metrics based on their names (similar to GameDataView categorization)
+    // Fallback categorization (used only when the sheet row has no Category)
     const categorizeMetric = (metricName: string): string | null => {
       const nameLower = metricName.toLowerCase();
       
@@ -76,7 +80,7 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
           nameLower.includes('competition') || nameLower.includes('result') ||
           nameLower.includes('match') || nameLower.includes('team') || 
           nameLower.includes('opponent')) {
-        return 'Other';
+        return 'Game Info';
       }
       
       return null;
@@ -84,7 +88,10 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
 
     // Process each metric
     for (const [metricName, meta] of Object.entries(metadata)) {
-      const category = categorizeMetric(metricName);
+      // `fetchColumnMetadata` lowercases headers; Category will be available as `meta.category`
+      const rawCategory = (meta.category as string | undefined)?.trim();
+      const categoryFromSheet = rawCategory ? (rawCategory.toLowerCase() === 'other' ? 'Game Info' : rawCategory) : null;
+      const category = categoryFromSheet ?? categorizeMetric(metricName);
       
       // Check if metric already exists
       const existing = await db
@@ -101,7 +108,8 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
         calculation: meta.calculation || null,
         notes: meta.notes || null,
         example: meta.example || null,
-        data_type: meta.dataType || null,
+        // These columns may not exist on the Glossary tab; keep null if absent
+        data_type: (meta['data type'] as string | undefined) || (meta.data_type as string | undefined) || null,
         availability: meta.availability || null,
         source: 'google_sheets',
         last_synced_at: now,

@@ -64,7 +64,7 @@ router.get('/:metricName', async (req, res) => {
 
 /**
  * POST /api/glossary/sync
- * Sync metric definitions from Google Sheets Metadata tab
+ * Sync metric definitions from Google Sheets "Glossary" tab
  * Admin only
  */
 router.post('/sync', async (req, res) => {

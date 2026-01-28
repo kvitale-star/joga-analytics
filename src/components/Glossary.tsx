@@ -71,7 +71,8 @@ export const Glossary: React.FC = () => {
 
   // Group by category
   const groupedDefinitions = filteredDefinitions.reduce((acc, def) => {
-    const category = def.category || 'Uncategorized';
+    const categoryRaw = def.category || 'Uncategorized';
+    const category = categoryRaw === 'Other' ? 'Game Info' : categoryRaw;
     if (!acc[category]) {
       acc[category] = [];
     }

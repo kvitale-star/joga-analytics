@@ -31,7 +31,9 @@ export async function getMetricDefinitions(category?: string): Promise<MetricDef
  * Get all unique categories
  */
 export async function getMetricCategories(): Promise<string[]> {
-  return await apiGet<string[]>('/glossary/categories');
+  const categories = await apiGet<string[]>('/glossary/categories');
+  // UI label normalization
+  return categories.map((c) => (c === 'Other' ? 'Game Info' : c));
 }
 
 /**
