@@ -178,7 +178,6 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
       title="JOGA Analytics AI"
       subtitle="AI-Powered Match Data Analysis"
       maxWidth="7xl"
-      headerBgColor={JOGA_COLORS.voltYellow}
       footer={inputFooter}
     >
           {!aiConfigured ? (
@@ -189,7 +188,7 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
               </p>
             </div>
           ) : showWelcome && messages.length === 0 ? (
-            <div className="bg-white rounded-lg p-8 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
               <WelcomeMessage 
                 matchData={matchData}
                 columnKeys={columnKeys}
