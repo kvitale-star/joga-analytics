@@ -117,7 +117,9 @@ export async function initializeDatabase() {
     console.log('✓ Database initialized and migrations completed');
   } catch (error) {
     console.error('✗ Database initialization failed:', error);
-    process.exit(1);
+    // Don't exit here - let the caller decide how to handle the error
+    // This allows the server to start even if database init fails (for health checks)
+    throw error;
   }
 }
 
