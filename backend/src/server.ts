@@ -303,7 +303,7 @@ export async function startServer() {
 
   // CRITICAL: Start listening IMMEDIATELY so Railway health checks work
   // Initialize database in background - health endpoint doesn't need it
-  app.listen(PORT, HOST, () => {
+  const server = app.listen(PORT, HOST, () => {
     console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
     console.log(`📊 API available at http://${HOST}:${PORT}/api`);
     console.log(`💚 Health check: http://${HOST}:${PORT}/api/health`);
@@ -320,15 +320,33 @@ export async function startServer() {
   });
   
   // Keep process alive - handle graceful shutdown
-  // Note: Don't delay SIGTERM - Railway expects immediate response
-  process.on('SIGTERM', () => {
-    console.log('⚠️  SIGTERM received, shutting down gracefully...');
-    process.exit(0);
+  // Railway sends SIGTERM to stop containers - we need to handle it gracefully
+  const gracefulShutdown = (signal: string) => {
+    console.log(`⚠️  ${signal} received, shutting down gracefully...`);
+    server.close(() => {
+      console.log('✅ HTTP server closed');
+      process.exit(0);
+    });
+    
+    // Force shutdown after 10 seconds if server doesn't close
+    setTimeout(() => {
+      console.error('❌ Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+  };
+  
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  
+  // Keep process alive - prevent accidental exits
+  process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    // Don't exit - log and continue (server might still be usable)
   });
   
-  process.on('SIGINT', () => {
-    console.log('⚠️  SIGINT received, shutting down gracefully...');
-    process.exit(0);
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    // Don't exit - log and continue
   });
 }
 
