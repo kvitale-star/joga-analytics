@@ -318,6 +318,20 @@ export async function startServer() {
       // Routes that need database will fail gracefully
     });
   });
+  
+  // Keep process alive - handle graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('⚠️  SIGTERM received, shutting down gracefully...');
+    // Give Railway time to see the service is healthy
+    setTimeout(() => {
+      process.exit(0);
+    }, 5000);
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('⚠️  SIGINT received, shutting down gracefully...');
+    process.exit(0);
+  });
 }
 
 // In test runs we import the app into supertest without listening.
