@@ -5,7 +5,12 @@
     "nixpacksConfig": {
       "phases": {
         "setup": {
-          "nixPkgs": ["nodejs_20", "python3"]
+          "nixPkgs": ["nodejs_20", "python3", "gcc", "make"]
+        },
+        "install": {
+          "cmds": [
+            "npm ci --prefer-offline --no-audit"
+          ]
         }
       }
     }
