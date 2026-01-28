@@ -16,7 +16,10 @@ export default defineConfig({
     commonjsOptions: {
       include: [/sql.js/, /node_modules/],
       transformMixedEsModules: true
-    }
+    },
+    rollupOptions: {
+      external: ['bcryptjs'], // Browser auth service not used in production (backend API used instead)
+    },
   }
 })
 
