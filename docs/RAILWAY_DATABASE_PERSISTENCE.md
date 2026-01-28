@@ -4,7 +4,7 @@
 
 Railway uses **ephemeral storage** by default, which means files in your project directory (including SQLite database files) are **wiped on every deployment**. This causes your database to reset each time you push code.
 
-## Solution: Use Railway Persistent Volume
+## Solution: Use Railway Persistent Volume (SQLite)
 
 Railway provides persistent storage via **Volumes**. You need to:
 
@@ -53,22 +53,23 @@ After deploying with the volume mounted:
 
 If data persists, you're all set! ✅
 
-## Alternative: Use Railway PostgreSQL Database
+## Alternative (Recommended): Use Railway PostgreSQL Database
 
-If you prefer not to use volumes, Railway offers managed PostgreSQL databases:
+If you prefer not to use volumes, Railway offers managed PostgreSQL databases. **This repo now supports Postgres via `DATABASE_URL`**, so you can switch without rewriting the app.
 
 1. **Add PostgreSQL Service:**
    - In your Railway project, click **"+ New"**
    - Select **"Database"** → **"PostgreSQL"** (or **"Add PostgreSQL"**)
    - Railway will automatically create the database and set `DATABASE_URL` environment variable
 
-2. **Update Code:**
-   - Replace `better-sqlite3` with `pg` (PostgreSQL driver)
-   - Update Kysely dialect to use PostgreSQL
-   - Migrate schema to PostgreSQL syntax
-   - Update connection to use `DATABASE_URL`
+2. **Configure the Backend Service:**
+   - Add the Railway Postgres database plugin
+   - Ensure `DATABASE_URL` is set in the backend service variables (Railway will provide it)
+   - Redeploy the backend
 
-**Note:** This requires significant code changes. Using a volume with SQLite is much simpler and works with your existing code.
+On startup, the backend will run migrations against Postgres automatically when `DATABASE_URL` is present.
+
+**Note:** When `DATABASE_URL` is set, the backend will **ignore SQLite** and use Postgres. You can remove the SQLite volume if you no longer need it.
 
 ## Current Configuration
 

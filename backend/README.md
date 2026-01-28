@@ -1,11 +1,12 @@
 # JOGA Backend API
 
-Backend REST API server using Express, Kysely (type-safe query builder), and SQLite.
+Backend REST API server using Express, Kysely (type-safe query builder), and SQLite/Postgres.
 
 ## Features
 
 - ✅ Type-safe database queries with Kysely
-- ✅ SQLite database (same for local and production)
+- ✅ SQLite database for local/dev (default)
+- ✅ Postgres support for production via `DATABASE_URL` (recommended)
 - ✅ Authentication with sessions
 - ✅ User management (admin only)
 - ✅ Team assignments
@@ -31,7 +32,11 @@ PORT=3001
 FRONTEND_URL=http://localhost:3000
 NODE_ENV=development
 
-# Database (SQLite)
+# Database (choose one)
+# Option A (recommended for production): Postgres
+DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DBNAME
+
+# Option B (default for local/dev): SQLite
 DATABASE_PATH=./data/joga.db
 
 # JWT Secret (CHANGE THIS IN PRODUCTION!)

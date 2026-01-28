@@ -326,9 +326,8 @@ export async function startServer() {
       
       // Close database connection
       try {
-        const { getSqliteDb } = await import('./db/database.js');
-        const sqliteDb = getSqliteDb();
-        sqliteDb.close();
+        const { closeDatabase } = await import('./db/database.js');
+        await closeDatabase();
         console.log('✅ Database connection closed');
       } catch (dbError) {
         console.warn('⚠️  Error closing database:', dbError);
