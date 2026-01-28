@@ -45,9 +45,12 @@ try {
   sqliteDb.pragma('foreign_keys = ON');
   sqliteDb.pragma('journal_mode = WAL'); // Better concurrency
   sqliteDb.pragma('synchronous = NORMAL'); // Good balance of speed and safety
+  console.log('✅ Database connection established');
 } catch (error) {
   console.error('❌ Failed to create database connection:', error);
-  // Re-throw but with better error message
+  // Log error but don't crash - server can start and handle errors when database is used
+  // This allows health checks to work even if database is temporarily unavailable
+  // The error will be caught by server startup try-catch
   throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);
 }
 
