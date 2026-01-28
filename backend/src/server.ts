@@ -93,6 +93,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check - register EARLY so Railway can check it immediately
+// This must be before database initialization so Railway health checks work
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Request logging (development)
 if (process.env.NODE_ENV !== 'production') {
   app.use((req, res, next) => {
@@ -123,14 +132,6 @@ app.use('/api/sheets', sheetsRoutes);
 app.use('/api/glossary', glossaryRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/custom-charts', customChartsRoutes);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-  });
-});
 
 // NOTE: /api/config/check endpoint removed for security reasons
 // It exposed which environment variables were configured, aiding reconnaissance
