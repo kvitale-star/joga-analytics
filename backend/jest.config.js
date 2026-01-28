@@ -19,7 +19,8 @@ export default {
     '!src/scripts/**',
   ],
   testTimeout: 15000, // Increased timeout for tests that may hit rate limits
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
+  setupFiles: ['<rootDir>/src/__tests__/load-env.ts'], // Load .env BEFORE test files load
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'], // Run AFTER test files load (for migrations, cleanup)
   maxWorkers: 1, // Run tests sequentially to avoid database conflicts
   forceExit: true, // Force Jest to exit after tests complete (prevents hanging)
   detectOpenHandles: true, // Detect open handles that might prevent Jest from exiting

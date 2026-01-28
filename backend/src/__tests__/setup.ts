@@ -1,14 +1,5 @@
 // Test setup file
-// Set NODE_ENV to test if not already set
-if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'test';
-}
-
-// Allow separate test DB connection string so tests don't hit dev/prod DB.
-if (process.env.DATABASE_URL_TEST && !process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = process.env.DATABASE_URL_TEST;
-}
-
+// .env is loaded by load-env.ts (via setupFiles) BEFORE this file runs
 // Ensure password validation is enabled in tests (we want to test it!)
 if (!process.env.ENABLE_PASSWORD_VALIDATION) {
   process.env.ENABLE_PASSWORD_VALIDATION = 'true';

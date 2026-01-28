@@ -5,7 +5,11 @@ import type { Database as AppDatabase } from './schema.js';
 export const isPostgres = true;
 
 let pgPool: pg.Pool | null = null;
-const connectionString = process.env.DATABASE_URL;
+// In test environment, prefer DATABASE_URL_TEST, fall back to DATABASE_URL
+const connectionString = process.env.NODE_ENV === 'test' 
+  ? (process.env.DATABASE_URL_TEST || process.env.DATABASE_URL)
+  : process.env.DATABASE_URL;
+
 if (!connectionString) {
   throw new Error('DATABASE_URL is required. Postgres is the only supported database for this project.');
 }
