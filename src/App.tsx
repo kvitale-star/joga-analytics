@@ -57,6 +57,7 @@ import { getAllTeams } from './services/teamService';
 import { Team } from './types/auth';
 import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from './utils/teamMapping';
 import { formatDateWithUserPreference } from './utils/dateFormatting';
+import { JOGA_COLORS } from './utils/colors';
 
 type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
 
@@ -1690,6 +1691,45 @@ function App() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Initializing...</p>
           <p className="mt-2 text-sm text-gray-500">Setting up database...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check for backend unreachable error
+  const backendError = (window as any).__JOGA_BACKEND_ERROR__;
+  if (backendError) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">⚠️ Backend Unreachable</h2>
+          <p className="text-gray-700 mb-4">
+            Cannot connect to the backend server. Please check:
+          </p>
+          <ul className="list-disc list-inside text-gray-600 mb-4 space-y-2">
+            <li>Your internet connection</li>
+            <li>Backend server status</li>
+            <li>API URL configuration</li>
+          </ul>
+          <button
+            onClick={() => {
+              delete (window as any).__JOGA_BACKEND_ERROR__;
+              window.location.reload();
+            }}
+            className="font-medium py-2 px-4 rounded-lg transition-colors text-black"
+            style={{
+              backgroundColor: JOGA_COLORS.voltYellow,
+              border: `2px solid ${JOGA_COLORS.voltYellow}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#b8e600';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+            }}
+          >
+            Retry Connection
+          </button>
         </div>
       </div>
     );

@@ -80,9 +80,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         console.log('Users found, setup not required');
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error checking for users:', error);
-        // If we can't check, assume setup is needed
+        
+        // If backend is unreachable, show error message instead of setup wizard
+        if (error?.message?.includes('BACKEND_UNREACHABLE')) {
+          console.error('Backend is unreachable - cannot proceed');
+          // Set error state (we'll need to add this to the context)
+          setIsLoading(false);
+          setIsSetupRequired(false); // Don't show setup wizard if backend is down
+          setUser(null);
+          setSession(null);
+          // Store error for display
+          (window as any).__JOGA_BACKEND_ERROR__ = error.message;
+          return;
+        }
+        
+        // If we can't check for other reasons, assume setup is needed
         console.log('Error checking users, showing setup wizard as fallback');
         setIsSetupRequired(true);
         setIsLoading(false);

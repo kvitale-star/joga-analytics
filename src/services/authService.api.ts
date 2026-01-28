@@ -10,13 +10,29 @@ import { User, UserRole, LoginCredentials, Session, SetupWizardData } from '../t
  * Check if any users exist
  */
 export async function hasUsers(): Promise<boolean> {
+  let timeoutId: NodeJS.Timeout | undefined;
   try {
+    // Add timeout to prevent hanging if backend is unreachable
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
     const response = await apiGet<{ setupRequired: boolean }>('/auth/setup-required');
+    
+    if (timeoutId) clearTimeout(timeoutId);
     console.log('hasUsers check result:', response);
     return !response.setupRequired;
-  } catch (error) {
+  } catch (error: any) {
+    if (timeoutId) clearTimeout(timeoutId);
     console.error('Error checking for users:', error);
-    // If API call fails, we can't determine if users exist
+    
+    // If timeout or network error, backend is likely unreachable
+    if (error.name === 'AbortError' || error.message?.includes('fetch failed') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
+      console.error('Backend appears to be unreachable. Showing error state.');
+      // Throw error so AuthContext can handle it appropriately
+      throw new Error('BACKEND_UNREACHABLE: Cannot connect to backend. Please check your connection and try again.');
+    }
+    
+    // If API call fails for other reasons, we can't determine if users exist
     // Return false to show setup wizard (safer than assuming users exist)
     return false;
   }
