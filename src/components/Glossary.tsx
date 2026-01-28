@@ -16,6 +16,15 @@ export const Glossary: React.FC = () => {
 
   const isAdmin = user?.role === 'admin';
 
+  const splitCategories = (categoryRaw: string | null): string[] => {
+    if (!categoryRaw) return [];
+    return categoryRaw
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .map((c) => (c === 'Other' ? 'Game Info' : c));
+  };
+
   useEffect(() => {
     loadData();
   }, [selectedCategory]);
@@ -71,12 +80,15 @@ export const Glossary: React.FC = () => {
 
   // Group by category
   const groupedDefinitions = filteredDefinitions.reduce((acc, def) => {
-    const categoryRaw = def.category || 'Uncategorized';
-    const category = categoryRaw === 'Other' ? 'Game Info' : categoryRaw;
-    if (!acc[category]) {
-      acc[category] = [];
+    const categoriesForDef = splitCategories(def.category);
+    const categories = categoriesForDef.length > 0 ? categoriesForDef : ['Uncategorized'];
+
+    for (const category of categories) {
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(def);
     }
-    acc[category].push(def);
     return acc;
   }, {} as Record<string, MetricDefinition[]>);
 

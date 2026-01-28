@@ -21,6 +21,19 @@ export interface MetricDefinition {
   updated_at?: string;
 }
 
+function normalizeCategoryList(categoryRaw: string): string[] {
+  return categoryRaw
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean)
+    .map((c) => (c.toLowerCase() === 'other' ? 'Game Info' : c));
+}
+
+function toStoredCategory(categoryList: string[]): string | null {
+  const unique = Array.from(new Set(categoryList.map((c) => c.trim()).filter(Boolean)));
+  return unique.length > 0 ? unique.join(', ') : null;
+}
+
 /**
  * Sync metric definitions from Google Sheets "Glossary" tab
  *
@@ -90,8 +103,11 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
     for (const [metricName, meta] of Object.entries(metadata)) {
       // `fetchColumnMetadata` lowercases headers; Category will be available as `meta.category`
       const rawCategory = (meta.category as string | undefined)?.trim();
-      const categoryFromSheet = rawCategory ? (rawCategory.toLowerCase() === 'other' ? 'Game Info' : rawCategory) : null;
-      const category = categoryFromSheet ?? categorizeMetric(metricName);
+      const categoryTokensFromSheet = rawCategory ? normalizeCategoryList(rawCategory) : [];
+      const fallbackCategory = categorizeMetric(metricName);
+      const storedCategory = toStoredCategory(
+        categoryTokensFromSheet.length > 0 ? categoryTokensFromSheet : (fallbackCategory ? [fallbackCategory] : []),
+      );
       
       // Check if metric already exists
       const existing = await db
@@ -102,7 +118,7 @@ export async function syncMetricDefinitionsFromSheet(): Promise<number> {
 
       const definition: Partial<MetricDefinition> = {
         metric_name: metricName,
-        category,
+        category: storedCategory,
         description: meta.description || null,
         units: meta.units || null,
         calculation: meta.calculation || null,
@@ -156,7 +172,17 @@ export async function getMetricDefinitions(category?: string): Promise<MetricDef
     .orderBy('metric_name', 'asc');
 
   if (category) {
-    query = query.where('category', '=', category) as any;
+    // Categories are stored as a normalized comma+space-separated list (e.g. "Shooting, Possession").
+    // Match a token within the list without false positives.
+    const cat = category.trim();
+    query = query.where((eb) =>
+      eb.or([
+        eb('category', '=', cat),
+        eb('category', 'like', `${cat}, %`),
+        eb('category', 'like', `%, ${cat}`),
+        eb('category', 'like', `%, ${cat}, %`),
+      ]),
+    ) as any;
   }
 
   return await query.execute();
@@ -182,10 +208,16 @@ export async function getMetricCategories(): Promise<string[]> {
   const results = await db
     .selectFrom('metric_definitions')
     .select('category')
-    .distinct()
     .where('category', 'is not', null)
-    .orderBy('category', 'asc')
     .execute();
 
-  return results.map(r => r.category).filter((c): c is string => c !== null);
+  const set = new Set<string>();
+  for (const row of results) {
+    if (!row.category) continue;
+    for (const token of normalizeCategoryList(row.category)) {
+      set.add(token);
+    }
+  }
+
+  return Array.from(set).sort((a, b) => a.localeCompare(b));
 }
