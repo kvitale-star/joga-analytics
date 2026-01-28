@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Backend API for JOGA Analytics",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
