@@ -35,7 +35,7 @@ pgPool = new pg.Pool({
 });
 
 const dialect = new PostgresDialect({
-  pool: pgPool,
+  pool: pgPool as pg.Pool,
 });
 
 // Create Kysely instance with type-safe database (shared export)

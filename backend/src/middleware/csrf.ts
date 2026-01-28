@@ -73,11 +73,18 @@ export function requireCsrfToken(
   }
   
   // Also check for common typos (sessionld instead of sessionId)
-  const sessionId = (req.cookies?.sessionId as string) || 
-                    (req.cookies?.sessionld as string); // Handle typo: sessionld
+  const sessionId = (req.cookies?.sessionId as string) ||
+                    (req.cookies?.sessionld as string) || // Handle typo: sessionld
+                    (req.headers['x-session-id'] as string);
   const csrfToken = req.headers['x-csrf-token'] as string;
   
-  if (!sessionId || !csrfToken) {
+  // If no session is present, let auth middleware handle the request.
+  // CSRF protection is only meaningful once a session exists.
+  if (!sessionId) {
+    return next();
+  }
+
+  if (!csrfToken) {
     return res.status(403).json({ error: 'CSRF token required' });
   }
   

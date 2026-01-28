@@ -13,6 +13,7 @@ services:
       - '5432:5432'
     volumes:
       - joga_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d joga_analytics']
       interval: 3s

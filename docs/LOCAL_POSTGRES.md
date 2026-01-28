@@ -28,6 +28,14 @@ In `backend/.env`:
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/joga_analytics
 ```
 
+## 2b) Configure test DB (recommended)
+
+Add this to `backend/.env` so Jest uses a separate database:
+
+```env
+DATABASE_URL_TEST=postgres://postgres:postgres@localhost:5432/joga_analytics_test
+```
+
 ## 3) Run migrations
 
 ```bash
