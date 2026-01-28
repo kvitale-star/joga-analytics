@@ -131,7 +131,7 @@ export const Glossary: React.FC = () => {
       title="Metric Glossary"
       subtitle="Definitions and explanations for all metrics used in JOGA Analytics"
       headerActions={syncButton}
-      maxWidth="full"
+      maxWidth="4xl"
     >
           {/* Filters */}
       <div className="flex flex-wrap gap-4 items-center mb-6">
