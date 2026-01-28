@@ -177,7 +177,8 @@ export const ChatFirstView: React.FC<ChatFirstViewProps> = ({ matchData, columnK
     <PageLayout
       title="JOGA Analytics AI"
       subtitle="AI-Powered Match Data Analysis"
-      maxWidth="6xl"
+      maxWidth="7xl"
+      headerBgColor={JOGA_COLORS.voltYellow}
       footer={inputFooter}
     >
           {!aiConfigured ? (
