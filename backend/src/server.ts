@@ -311,6 +311,7 @@ export async function startServer() {
     console.log(`💚 Health check: http://${HOST}:${PORT}/api/health`);
     console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔒 CORS origin: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`✅ Server is ready and listening on port ${PORT}`);
     
     // Initialize database in background (non-blocking)
     // This allows Railway health checks to work immediately
@@ -321,12 +322,41 @@ export async function startServer() {
     });
   });
   
+  // Handle server errors
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      process.exit(1);
+    } else {
+      console.error('❌ Server error:', error);
+      throw error;
+    }
+  });
+  
   // Keep process alive - handle graceful shutdown
   // Railway sends SIGTERM to stop containers - we need to handle it gracefully
-  const gracefulShutdown = (signal: string) => {
+  const gracefulShutdown = async (signal: string) => {
     console.log(`⚠️  ${signal} received, shutting down gracefully...`);
-    server.close(() => {
-      console.log('✅ HTTP server closed');
+    
+    // Stop accepting new connections
+    server.close(async (err) => {
+      if (err) {
+        console.error('❌ Error closing server:', err);
+        process.exit(1);
+      } else {
+        console.log('✅ HTTP server closed');
+      }
+      
+      // Close database connection
+      try {
+        const { getSqliteDb } = await import('./db/database.js');
+        const sqliteDb = getSqliteDb();
+        sqliteDb.close();
+        console.log('✅ Database connection closed');
+      } catch (dbError) {
+        console.warn('⚠️  Error closing database:', dbError);
+      }
+      
       process.exit(0);
     });
     
@@ -337,19 +367,38 @@ export async function startServer() {
     }, 10000);
   };
   
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  // Register signal handlers BEFORE server starts listening
+  // This ensures they're set up even if Railway sends SIGTERM immediately
+  process.on('SIGTERM', () => {
+    console.log('📡 SIGTERM signal received');
+    gracefulShutdown('SIGTERM').catch((err) => {
+      console.error('❌ Error during graceful shutdown:', err);
+      process.exit(1);
+    });
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('📡 SIGINT signal received');
+    gracefulShutdown('SIGINT').catch((err) => {
+      console.error('❌ Error during graceful shutdown:', err);
+      process.exit(1);
+    });
+  });
   
   // Keep process alive - prevent accidental exits
   process.on('uncaughtException', (error) => {
     console.error('❌ Uncaught Exception:', error);
+    console.error('Stack:', error.stack);
     // Don't exit - log and continue (server might still be usable)
   });
   
   process.on('unhandledRejection', (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    console.error('❌ Unhandled Rejection at:', promise);
+    console.error('Reason:', reason);
     // Don't exit - log and continue
   });
+  
+  return server; // Return server instance for potential cleanup
 }
 
 // In test runs we import the app into supertest without listening.
