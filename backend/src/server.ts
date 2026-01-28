@@ -303,40 +303,17 @@ export async function startServer() {
   // Railway requires binding to 0.0.0.0, not just localhost
   const HOST = process.env.HOST || '0.0.0.0';
 
-  // CRITICAL: Start listening IMMEDIATELY so Railway health checks work
-  // Initialize database in background - health endpoint doesn't need it
-  const server = app.listen(PORT, HOST, () => {
-    console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
-    console.log(`📊 API available at http://${HOST}:${PORT}/api`);
-    console.log(`💚 Health check: http://${HOST}:${PORT}/api/health`);
-    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS origin: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-    console.log(`✅ Server is ready and listening on port ${PORT}`);
-    
-    // Initialize database in background (non-blocking)
-    // This allows Railway health checks to work immediately
-    initializeDatabase().catch((error) => {
-      console.error('❌ Database initialization failed:', error);
-      // Don't exit - server is already running, just log the error
-      // Routes that need database will fail gracefully
-    });
-  });
+  // CRITICAL: Register signal handlers BEFORE creating server
+  // Railway may send SIGTERM immediately, so handlers must be ready
+  let server: ReturnType<typeof app.listen> | null = null;
   
-  // Handle server errors
-  server.on('error', (error: NodeJS.ErrnoException) => {
-    if (error.code === 'EADDRINUSE') {
-      console.error(`❌ Port ${PORT} is already in use`);
-      process.exit(1);
-    } else {
-      console.error('❌ Server error:', error);
-      throw error;
-    }
-  });
-  
-  // Keep process alive - handle graceful shutdown
-  // Railway sends SIGTERM to stop containers - we need to handle it gracefully
   const gracefulShutdown = async (signal: string) => {
     console.log(`⚠️  ${signal} received, shutting down gracefully...`);
+    
+    if (!server) {
+      console.log('⚠️  Server not started yet, exiting immediately');
+      process.exit(0);
+    }
     
     // Stop accepting new connections
     server.close(async (err) => {
@@ -367,8 +344,7 @@ export async function startServer() {
     }, 10000);
   };
   
-  // Register signal handlers BEFORE server starts listening
-  // This ensures they're set up even if Railway sends SIGTERM immediately
+  // Register signal handlers FIRST (before server starts)
   process.on('SIGTERM', () => {
     console.log('📡 SIGTERM signal received');
     gracefulShutdown('SIGTERM').catch((err) => {
@@ -396,6 +372,36 @@ export async function startServer() {
     console.error('❌ Unhandled Rejection at:', promise);
     console.error('Reason:', reason);
     // Don't exit - log and continue
+  });
+
+  // CRITICAL: Start listening IMMEDIATELY so Railway health checks work
+  // Initialize database in background - health endpoint doesn't need it
+  server = app.listen(PORT, HOST, () => {
+    console.log(`🚀 Backend server running on http://${HOST}:${PORT}`);
+    console.log(`📊 API available at http://${HOST}:${PORT}/api`);
+    console.log(`💚 Health check: http://${HOST}:${PORT}/api/health`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔒 CORS origin: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`✅ Server is ready and listening on port ${PORT}`);
+    
+    // Initialize database in background (non-blocking)
+    // This allows Railway health checks to work immediately
+    initializeDatabase().catch((error) => {
+      console.error('❌ Database initialization failed:', error);
+      // Don't exit - server is already running, just log the error
+      // Routes that need database will fail gracefully
+    });
+  });
+  
+  // Handle server errors
+  server.on('error', (error: NodeJS.ErrnoException) => {
+    if (error.code === 'EADDRINUSE') {
+      console.error(`❌ Port ${PORT} is already in use`);
+      process.exit(1);
+    } else {
+      console.error('❌ Server error:', error);
+      throw error;
+    }
   });
   
   return server; // Return server instance for potential cleanup
