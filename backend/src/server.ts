@@ -354,8 +354,17 @@ export async function startServer() {
 
 // In test runs we import the app into supertest without listening.
 if (process.env.NODE_ENV !== 'test' && !process.env.JEST_WORKER_ID) {
-  startServer().catch((error) => {
-    console.error('Failed to start server:', error);
+  // Wrap in try-catch to handle any synchronous errors during import
+  try {
+    startServer().catch((error) => {
+      console.error('❌ Failed to start server:', error);
+      console.error('Error details:', error instanceof Error ? error.stack : error);
+      process.exit(1);
+    });
+  } catch (error) {
+    // Handle synchronous errors (e.g., during module import)
+    console.error('❌ Synchronous error during server startup:', error);
+    console.error('Error details:', error instanceof Error ? error.stack : error);
     process.exit(1);
-  });
+  }
 }

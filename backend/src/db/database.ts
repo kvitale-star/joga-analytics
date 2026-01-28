@@ -35,13 +35,21 @@ if (!fs.existsSync(dataDir)) {
 
 console.log(`💾 Database path: ${dbPath}`);
 
-// Create SQLite database instance
-const sqliteDb = new Database(dbPath);
-
-// Enable foreign keys and optimize for production
-sqliteDb.pragma('foreign_keys = ON');
-sqliteDb.pragma('journal_mode = WAL'); // Better concurrency
-sqliteDb.pragma('synchronous = NORMAL'); // Good balance of speed and safety
+// Create SQLite database instance with error handling
+// Wrap in try-catch to prevent crashes during module import
+let sqliteDb: InstanceType<typeof Database>;
+try {
+  sqliteDb = new Database(dbPath);
+  
+  // Enable foreign keys and optimize for production
+  sqliteDb.pragma('foreign_keys = ON');
+  sqliteDb.pragma('journal_mode = WAL'); // Better concurrency
+  sqliteDb.pragma('synchronous = NORMAL'); // Good balance of speed and safety
+} catch (error) {
+  console.error('❌ Failed to create database connection:', error);
+  // Re-throw but with better error message
+  throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+}
 
 // Create Kysely instance with type-safe database
 export const db = new Kysely<AppDatabase>({
