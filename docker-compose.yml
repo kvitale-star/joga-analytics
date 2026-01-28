@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: joga-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: joga_analytics
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - joga_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d joga_analytics']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  joga_postgres_data:

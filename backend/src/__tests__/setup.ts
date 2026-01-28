@@ -10,20 +10,8 @@ if (!process.env.ENABLE_PASSWORD_VALIDATION) {
 }
 
 // Ensure DB connections don't keep Jest alive
-import { db, getSqliteDb } from '../db/database.js';
+import { closeDatabase } from '../db/database.js';
 
 afterAll(async () => {
-  try {
-    await db.destroy();
-  } catch {
-    // ignore
-  }
-  try {
-    const sqliteDb = getSqliteDb();
-    if (sqliteDb) {
-      sqliteDb.close();
-    }
-  } catch {
-    // ignore
-  }
+  await closeDatabase();
 });

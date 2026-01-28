@@ -8,7 +8,7 @@
  * Or: tsx src/scripts/reset-users.ts
  */
 
-import { db, getSqliteDb } from '../db/database.js';
+import { db } from '../db/database.js';
 
 async function resetUsers() {
   try {
