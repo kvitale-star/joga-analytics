@@ -320,12 +320,10 @@ export async function startServer() {
   });
   
   // Keep process alive - handle graceful shutdown
+  // Note: Don't delay SIGTERM - Railway expects immediate response
   process.on('SIGTERM', () => {
     console.log('⚠️  SIGTERM received, shutting down gracefully...');
-    // Give Railway time to see the service is healthy
-    setTimeout(() => {
-      process.exit(0);
-    }, 5000);
+    process.exit(0);
   });
   
   process.on('SIGINT', () => {
