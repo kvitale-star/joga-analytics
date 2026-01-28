@@ -21,16 +21,17 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({
         className="px-8 py-6"
         style={{ backgroundColor: JOGA_COLORS.voltYellow }}
       >
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl font-bold text-gray-900">
           🤖 Welcome to JOGA Analytics AI
         </h1>
-        <h2 className="text-lg font-semibold text-gray-800">
-          I can help you analyze match data for your team or groups of teams. Try asking:
-        </h2>
       </div>
 
       {/* Content Section */}
       <div className="px-8 py-6 space-y-6">
+        <h2 className="text-lg font-semibold text-gray-800">
+          I can help you analyze match data for your team or groups of teams. Try asking:
+        </h2>
+        
         {/* Clickable Example Questions */}
         <div className="flex justify-center">
           <div className="space-y-2 w-full max-w-2xl">
