@@ -8,23 +8,29 @@ import { UserMenu } from './UserMenu';
 import { CustomChartsManagement } from './CustomChartsManagement';
 import { AllCustomChartsManagement } from './AllCustomChartsManagement';
 import { UserTeamsDisplay } from './UserTeamsDisplay';
+import { DataAtAGlanceView } from './DataAtAGlanceView';
 import { Modal } from './Modal';
 import { CustomChartBuilder } from './CustomChartBuilder';
 import { JOGA_COLORS } from '../utils/colors';
 import type { CustomChart } from '../types/customCharts';
 import { sheetConfig } from '../config';
 import { fetchSheetData } from '../services/sheetsService';
+import { getAllTeams } from '../services/teamService';
+import { createTeamSlugMap } from '../utils/teamMapping';
 import type { MatchData } from '../types';
+import type { Team } from '../types/auth';
 
 export const SettingsView: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'custom-charts' | 'users' | 'teams'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'custom-charts' | 'data-at-a-glance' | 'users' | 'teams'>('account');
   const [isChartBuilderOpen, setIsChartBuilderOpen] = useState(false);
   const [editingChart, setEditingChart] = useState<CustomChart | null>(null);
   const [matchData, setMatchData] = useState<MatchData[]>([]);
   const [columnKeys, setColumnKeys] = useState<string[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [chartsRefreshKey, setChartsRefreshKey] = useState(0);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [dataAtAGlanceLoading, setDataAtAGlanceLoading] = useState(false);
 
   // Load match data when chart builder opens
   useEffect(() => {
@@ -51,6 +57,38 @@ export const SettingsView: React.FC = () => {
       loadData();
     }
   }, [isChartBuilderOpen]);
+
+  // Load teams and match data when Data at a Glance tab is active
+  useEffect(() => {
+    if (activeTab === 'data-at-a-glance') {
+      const loadData = async () => {
+        try {
+          setDataAtAGlanceLoading(true);
+          // Load teams
+          const loadedTeams = await getAllTeams();
+          setTeams(loadedTeams);
+          
+          // Load match data
+          const data = await fetchSheetData(sheetConfig);
+          if (Array.isArray(data) && data.length > 0) {
+            setMatchData(data);
+            setColumnKeys(Object.keys(data[0]));
+          } else {
+            setMatchData([]);
+            setColumnKeys([]);
+          }
+        } catch (err) {
+          console.error('Failed to load data for Data at a Glance:', err);
+          setMatchData([]);
+          setColumnKeys([]);
+          setTeams([]);
+        } finally {
+          setDataAtAGlanceLoading(false);
+        }
+      };
+      loadData();
+    }
+  }, [activeTab]);
 
   if (!user) {
     return null;
@@ -111,6 +149,16 @@ export const SettingsView: React.FC = () => {
               }`}
             >
               Custom Charts
+            </button>
+            <button
+              onClick={() => setActiveTab('data-at-a-glance')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'data-at-a-glance'
+                  ? 'border-[#6787aa] text-[#6787aa]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Data at a Glance
             </button>
             {isAdmin && (
               <>
@@ -245,6 +293,22 @@ export const SettingsView: React.FC = () => {
                     setEditingChart(chart);
                     setIsChartBuilderOpen(true);
                   }}
+                />
+              )}
+            </div>
+          )}
+
+          {activeTab === 'data-at-a-glance' && (
+            <div>
+              {dataAtAGlanceLoading ? (
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <p className="text-gray-600">Loading data...</p>
+                </div>
+              ) : (
+                <DataAtAGlanceView
+                  matchData={matchData}
+                  columnKeys={columnKeys}
+                  teamSlugMap={createTeamSlugMap(teams)}
                 />
               )}
             </div>

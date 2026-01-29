@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { MatchData } from '../types';
 import { Team } from '../types/auth';
 import { getAllSeasons } from '../services/seasonService.api';
-import { PageLayout } from './PageLayout';
 import { JOGA_COLORS } from '../utils/colors';
 import { formatDateWithMonthName } from '../utils/dateFormatting';
 // import { getDisplayNameForSlug } from '../utils/teamMapping'; // Reserved for future use
@@ -149,7 +148,6 @@ const categorizeColumns = (columnKeys: string[]): Record<string, string[]> => {
 };
 
 export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData, columnKeys, teamSlugMap: _teamSlugMap }) => {
-  const [showColumns, setShowColumns] = useState(false);
   const [activeSeason, setActiveSeason] = useState<string | null>(null);
   const [loadingSeason, setLoadingSeason] = useState(true);
 
@@ -312,23 +310,84 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
     return cardHeaderColors[index % cardHeaderColors.length];
   };
 
-  const categoryColors: Record<string, string> = {
-    'Game Info': 'bg-blue-50 border-blue-200 text-blue-800',
-    'Shooting': 'bg-red-50 border-red-200 text-red-800',
-    'Passing': 'bg-green-50 border-green-200 text-green-800',
-    'Possession': 'bg-purple-50 border-purple-200 text-purple-800',
-    'JOGA Metrics': 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    'Defense': 'bg-orange-50 border-orange-200 text-orange-800',
-    'Set Pieces': 'bg-pink-50 border-pink-200 text-pink-800',
-    'Other': 'bg-gray-50 border-gray-200 text-gray-800',
+  // Helper to convert hex to rgba
+  const hexToRgba = (hex: string, alpha: number): string => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  // Use JOGA colors for category backgrounds
+  const getCategoryStyle = (category: string): React.CSSProperties => {
+    const baseStyle: React.CSSProperties = {
+      borderWidth: '1px',
+      borderRadius: '0.5rem',
+      padding: '1rem',
+    };
+
+    switch (category) {
+      case 'Game Info':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.valorBlue, 0.1),
+          borderColor: hexToRgba(JOGA_COLORS.valorBlue, 0.3),
+          color: JOGA_COLORS.valorBlue,
+        };
+      case 'Shooting':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.pinkFoam, 0.2),
+          borderColor: hexToRgba(JOGA_COLORS.pinkFoam, 0.4),
+          color: '#1f2937', // gray-800
+        };
+      case 'Passing':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.valorBlue, 0.1),
+          borderColor: hexToRgba(JOGA_COLORS.valorBlue, 0.3),
+          color: JOGA_COLORS.valorBlue,
+        };
+      case 'Possession':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.voltYellow, 0.2),
+          borderColor: hexToRgba(JOGA_COLORS.voltYellow, 0.4),
+          color: '#1f2937',
+        };
+      case 'JOGA Metrics':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.voltYellow, 0.2),
+          borderColor: hexToRgba(JOGA_COLORS.voltYellow, 0.4),
+          color: '#1f2937',
+        };
+      case 'Defense':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.pinkFoam, 0.2),
+          borderColor: hexToRgba(JOGA_COLORS.pinkFoam, 0.4),
+          color: '#1f2937',
+        };
+      case 'Set Pieces':
+        return {
+          ...baseStyle,
+          backgroundColor: hexToRgba(JOGA_COLORS.valorBlue, 0.1),
+          borderColor: hexToRgba(JOGA_COLORS.valorBlue, 0.3),
+          color: JOGA_COLORS.valorBlue,
+        };
+      default:
+        return {
+          ...baseStyle,
+          backgroundColor: '#f9fafb', // gray-50
+          borderColor: '#e5e7eb', // gray-200
+          color: '#1f2937', // gray-800
+        };
+    }
   };
 
   return (
-    <PageLayout
-      title="Data at a Glance"
-      subtitle="Overview of your match data"
-      maxWidth="6xl"
-    >
+    <div className="space-y-6">
           <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
             <div 
               className="px-6 py-4 border-b border-gray-200"
@@ -380,7 +439,6 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
               className="px-6 py-4 border-b border-gray-200"
               style={{ backgroundColor: getCardHeaderColor(1) }}
             >
-              <div className="flex items-center justify-between">
               <div>
                   <h2 className={`text-xl font-semibold ${getCardHeaderColor(1) === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white'}`}>
                     Detected Data Columns
@@ -389,23 +447,11 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
                   {columnKeys.length} column{columnKeys.length !== 1 ? 's' : ''} detected in your data
                 </p>
               </div>
-              <button
-                onClick={() => setShowColumns(!showColumns)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    getCardHeaderColor(1) === JOGA_COLORS.voltYellow
-                      ? 'text-gray-900 bg-white/90 hover:bg-white'
-                      : 'text-white bg-white/20 hover:bg-white/30'
-                  }`}
-              >
-                {showColumns ? 'Hide' : 'Show'} Columns
-              </button>
-            </div>
             </div>
             <div className="p-6">
-            {showColumns && (
               <div className="space-y-4">
                 {Object.entries(categorizedColumns).map(([category, columns]) => (
-                  <div key={category} className={`border rounded-lg p-4 ${categoryColors[category] || categoryColors['Other']}`}>
+                  <div key={category} style={getCategoryStyle(category)}>
                     <h3 className="font-semibold text-sm mb-3 flex items-center">
                       <span className="w-2 h-2 rounded-full bg-current mr-2"></span>
                       {category}
@@ -427,16 +473,9 @@ export const DataAtAGlanceView: React.FC<DataAtAGlanceViewProps> = ({ matchData,
                   </div>
                 ))}
               </div>
-            )}
-
-            {!showColumns && (
-              <div className="text-sm text-gray-600">
-                Click "Show Columns" to see all {columnKeys.length} detected data columns organized by category.
-              </div>
-            )}
-          </div>
+            </div>
         </div>
-    </PageLayout>
+    </div>
   );
 };
 

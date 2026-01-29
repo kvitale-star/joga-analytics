@@ -1,6 +1,6 @@
 import { useURLState } from './useURLState';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
 
 /**
  * Get the view-scoped key for a state variable
@@ -15,7 +15,6 @@ function getViewScopedKey(view: ViewMode, key: string): string {
     'game-data': 'gameData',
     'club-data': 'clubData',
     'upload-game-data': 'uploadGameData',
-    'data-at-a-glance': 'dataAtAGlance',
     'settings': 'settings',
     'chat': 'chat',
     'glossary': 'glossary',
