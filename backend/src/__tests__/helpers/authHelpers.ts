@@ -481,11 +481,23 @@ export function getAuthHeaders(cookies: string[], csrfToken?: string) {
   const headers: Record<string, string> = {};
   
   if (cookies.length > 0) {
-    headers['Cookie'] = cookies.join('; ');
+    // Join cookies with '; ' separator (standard Cookie header format)
+    const cookieHeader = cookies.join('; ');
+    headers['Cookie'] = cookieHeader;
+    
+    // Debug: Log cookie header being sent
+    if (process.env.DEBUG_TESTS) {
+      console.log('🔍 Setting Cookie header:', cookieHeader);
+    }
   }
   
   if (csrfToken) {
     headers['X-CSRF-Token'] = csrfToken;
+    
+    // Debug: Log CSRF token being sent
+    if (process.env.DEBUG_TESTS) {
+      console.log('🔍 Setting X-CSRF-Token header:', csrfToken);
+    }
   }
   
   return headers;

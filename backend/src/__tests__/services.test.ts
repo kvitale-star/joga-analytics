@@ -276,7 +276,10 @@ describe('Service Layer Data Integrity Tests', () => {
       const retrievedMatch = await getMatchById(match.id);
       
       expect(retrievedMatch).toBeDefined();
-      expect(retrievedMatch?.matchDate).toBe(matchDate);
+      // Postgres returns full ISO timestamps, so compare date parts
+      const expectedDate = new Date(matchDate).toISOString().split('T')[0];
+      const receivedDate = retrievedMatch?.matchDate ? new Date(retrievedMatch.matchDate).toISOString().split('T')[0] : null;
+      expect(receivedDate).toBe(expectedDate);
       
       await cleanupExtended();
     });

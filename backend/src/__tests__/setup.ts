@@ -18,6 +18,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Clear data between tests to avoid cross-test contamination.
   // Keep schema_migrations intact so migrations don't re-run every test.
+  // NOTE: Sessions are deleted first, then users (to avoid foreign key issues)
+  // Test helpers should recreate users and sessions AFTER this cleanup runs
   await db.deleteFrom('sessions').execute();
   await db.deleteFrom('user_teams').execute();
   await db.deleteFrom('custom_charts').execute();
@@ -29,6 +31,9 @@ beforeEach(async () => {
   await db.deleteFrom('teams').execute();
   await db.deleteFrom('seasons').execute();
   await db.deleteFrom('users').execute();
+  
+  // Small delay to ensure database commits before next test
+  await new Promise(resolve => setTimeout(resolve, 10));
 });
 
 afterAll(async () => {

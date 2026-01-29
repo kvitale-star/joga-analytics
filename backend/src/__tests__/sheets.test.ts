@@ -18,11 +18,14 @@ describe('Google Sheets Integration API', () => {
     client = await getTestClient();
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    admin = await createTestAdmin();
-    
     // Set required env vars for tests
     process.env.GOOGLE_SHEETS_SPREADSHEET_ID = 'test-spreadsheet-id';
     process.env.GOOGLE_SHEETS_API_KEY = 'test-api-key';
+  });
+
+  beforeEach(async () => {
+    // Recreate test users and sessions AFTER beforeEach cleanup runs
+    admin = await createTestAdmin();
   });
 
   afterAll(async () => {

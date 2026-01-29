@@ -18,8 +18,11 @@ describe('User Management API', () => {
     await cleanupTestData();
     client = await getTestClient();
     await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Create test users with different roles
+  });
+
+  beforeEach(async () => {
+    // Recreate test users and sessions AFTER beforeEach cleanup runs
+    // This ensures sessions exist when tests run
     admin = await createTestAdmin();
     coach = await createTestCoach();
     viewer = await createTestViewer();
@@ -57,9 +60,9 @@ describe('User Management API', () => {
     it('should return all users for admin', async () => {
       const response = await makeRequest()
         .get('/api/users')
-        .set(getAuthHeaders(admin.cookies))
-        .expect(200);
+        .set(getAuthHeaders(admin.cookies));
       
+      expect(response.status).toBe(200);
       expect(Array.isArray(response.body)).toBe(true);
       expect(response.body.length).toBeGreaterThan(0);
       

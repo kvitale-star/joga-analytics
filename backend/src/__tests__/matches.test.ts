@@ -21,7 +21,10 @@ describe('Matches Management API', () => {
     await cleanupTestData();
     client = await getTestClient();
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+  });
+
+  beforeEach(async () => {
+    // Recreate test users and sessions AFTER beforeEach cleanup runs
     try {
       admin = await createTestAdmin();
     } catch (error) {

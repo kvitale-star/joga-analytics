@@ -21,7 +21,10 @@ describe('Role/Permission Matrix Tests', () => {
     await cleanupTestData();
     client = await getTestClient();
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+  });
+
+  beforeEach(async () => {
+    // Recreate test users and sessions AFTER beforeEach cleanup runs
     admin = await createTestAdmin();
     coach = await createTestCoach();
     coachWithTeam = await createTestCoach(undefined, 'TestPassword123!', 'Coach With Team');

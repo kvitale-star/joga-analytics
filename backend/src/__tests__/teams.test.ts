@@ -19,7 +19,10 @@ describe('Teams Management API', () => {
     await cleanupTestData();
     client = await getTestClient();
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+  });
+
+  beforeEach(async () => {
+    // Recreate test users and sessions AFTER beforeEach cleanup runs
     admin = await createTestAdmin();
     coach = await createTestCoach();
 
@@ -818,6 +821,42 @@ describe('Teams Management API', () => {
     });
 
     beforeEach(async () => {
+      // Recreate seasons if they were deleted by global beforeEach
+      const now = new Date().toISOString();
+      const existing2024 = await db
+        .selectFrom('seasons')
+        .select(['id'])
+        .where('name', '=', '2024')
+        .executeTakeFirst();
+      
+      if (existing2024?.id) {
+        season2024Id = existing2024.id;
+      } else {
+        const result = await db
+          .insertInto('seasons')
+          .values({ name: '2024', is_active: 0, created_at: now })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+        season2024Id = result.id;
+      }
+      
+      const existing2025 = await db
+        .selectFrom('seasons')
+        .select(['id'])
+        .where('name', '=', '2025')
+        .executeTakeFirst();
+      
+      if (existing2025?.id) {
+        season2025Id = existing2025.id;
+      } else {
+        const result = await db
+          .insertInto('seasons')
+          .values({ name: '2025', is_active: 0, created_at: now })
+          .returning('id')
+          .executeTakeFirstOrThrow();
+        season2025Id = result.id;
+      }
+      
       // Create parent team in 2024
       parentTeam = await createTestTeam(
         'Parent Team',

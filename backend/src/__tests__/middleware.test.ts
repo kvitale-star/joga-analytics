@@ -19,7 +19,10 @@ describe('Middleware Tests', () => {
     await cleanupTestData();
     client = await getTestClient();
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+  });
+
+  beforeEach(async () => {
+    // Recreate test users and sessions AFTER beforeEach cleanup runs
     try {
       admin = await createTestAdmin();
       if (!admin || !admin.cookies || admin.cookies.length === 0) {
