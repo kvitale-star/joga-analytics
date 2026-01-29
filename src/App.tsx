@@ -35,7 +35,6 @@ import { GameDataView } from './components/GameDataView';
 import { DateFilter } from './components/DateFilter';
 import { ClubDataView } from './components/ClubDataView';
 import { UploadGameDataView } from './components/UploadGameDataView';
-import { DataAtAGlanceView } from './components/DataAtAGlanceView';
 import { Modal } from './components/Modal';
 import { CustomChartBuilder } from './components/CustomChartBuilder';
 import { getCustomCharts } from './services/customChartsService';
@@ -59,7 +58,7 @@ import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from '.
 import { formatDateWithUserPreference } from './utils/dateFormatting';
 import { JOGA_COLORS } from './utils/colors';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
 
 function App() {
   const { user, isLoading, isSetupRequired } = useAuth();
@@ -1662,7 +1661,7 @@ function App() {
   // This prevents empty charts from being auto-filled and written to URL
 
   // Handle navigation from sidebar
-  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary') => {
+  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary') => {
     if (view === 'chat') {
       setViewMode('chat');
     } else if (view === 'team-data') {
@@ -1674,8 +1673,6 @@ function App() {
       setViewMode('club-data');
     } else if (view === 'upload-game-data') {
       setViewMode('upload-game-data');
-    } else if (view === 'data-at-a-glance') {
-      setViewMode('data-at-a-glance');
     } else if (view === 'settings') {
       setViewMode('settings');
     } else if (view === 'glossary') {
@@ -1905,18 +1902,6 @@ function App() {
         <Sidebar currentView="upload-game-data" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16">
           <UploadGameDataView matchData={matchData} columnKeys={columnKeys} sheetConfig={sheetConfig} teamSlugMap={teamSlugMap} />
-        </div>
-      </div>
-    );
-  }
-
-  // Render Data at a Glance view if selected
-  if (viewMode === 'data-at-a-glance') {
-    return (
-      <div className="flex h-screen bg-gray-50 relative">
-        <Sidebar currentView="data-at-a-glance" onNavigate={handleNavigation} />
-        <div className="flex-1 ml-16">
-          <DataAtAGlanceView matchData={matchData} columnKeys={columnKeys} teamSlugMap={teamSlugMap} />
         </div>
       </div>
     );

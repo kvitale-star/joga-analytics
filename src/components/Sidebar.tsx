@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 
-type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
+type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'data-at-a-glance' | 'settings' | 'glossary';
+  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
   onNavigate: (view: ViewType) => void;
 }
 
@@ -249,40 +249,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 }`}
               >
                 Upload Game Data
-              </span>
-            </button>
-            <button
-              onClick={() => onNavigate('data-at-a-glance')}
-              className={`w-full flex items-center py-3 text-sm transition-colors ${
-                isExpanded ? 'px-4 justify-start' : 'justify-center'
-              } ${
-                currentView === 'data-at-a-glance'
-                  ? 'bg-gray-700 text-white'
-                  : 'hover:bg-gray-700 text-gray-300'
-              }`}
-              title={!isExpanded ? 'Data at a Glance' : undefined}
-            >
-              <svg
-                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span 
-                className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
-                  isExpanded 
-                    ? 'opacity-100 max-w-[200px]' 
-                    : 'opacity-0 max-w-0 overflow-hidden'
-                }`}
-              >
-                Data at a Glance
               </span>
             </button>
             <button
