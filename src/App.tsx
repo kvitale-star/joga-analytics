@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { MatchData } from './types';
 import { fetchSheetData } from './services/sheetsService';
 import { invalidateAIContextCache } from './services/aiService';
@@ -244,12 +244,14 @@ function App() {
     loadExpansionStates();
   }, [user]);
   
-  const handleChartExpansionChange = (chartType: string) => (isExpanded: boolean) => {
-    setExpandedCharts(prev => ({
-      ...prev,
-      [chartType]: isExpanded,
-    }));
-  };
+  const handleChartExpansionChange = useCallback((chartType: string) => {
+    return (isExpanded: boolean) => {
+      setExpandedCharts(prev => ({
+        ...prev,
+        [chartType]: isExpanded,
+      }));
+    };
+  }, []); // Empty deps - function doesn't depend on any props/state
   
   // Selected teams for Club Data (multiselect)
   const [selectedClubTeams, setSelectedClubTeams] = useViewScopedState<string[]>('club-data', 'teams', [], {

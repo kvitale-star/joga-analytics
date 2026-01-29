@@ -3,7 +3,7 @@
  * Reduces code duplication across chart components
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChartConfig } from '../types/chartConfig';
 import { getChartConfig, saveChartConfig, resetChartConfig } from '../services/chartPreferencesService';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +20,7 @@ export function useChartConfig({ chartType, defaultConfig, globalIncludeOpponent
   const [config, setConfig] = useState<ChartConfig>(defaultConfig);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const lastNotifiedExpandedRef = useRef<boolean | undefined>(undefined);
 
   // Load user preferences on mount
   useEffect(() => {
@@ -111,10 +112,15 @@ export function useChartConfig({ chartType, defaultConfig, globalIncludeOpponent
     }
   };
   
-  // Notify parent of initial expansion state on load
+  // Notify parent of expansion state changes (only when value actually changes)
   useEffect(() => {
     if (!isLoading && onExpansionChange) {
-      onExpansionChange(config.isExpanded ?? false);
+      const currentExpanded = config.isExpanded ?? false;
+      // Only call if the value has actually changed
+      if (lastNotifiedExpandedRef.current !== currentExpanded) {
+        lastNotifiedExpandedRef.current = currentExpanded;
+        onExpansionChange(currentExpanded);
+      }
     }
   }, [isLoading, config.isExpanded, onExpansionChange]);
 
