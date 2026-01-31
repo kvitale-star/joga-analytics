@@ -2193,7 +2193,8 @@ function App() {
               {/* Shooting Section */}
               {selectedChartGroup === 'shooting' && (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Shooting - Team Averages</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Shooting - Team Averages</h2>
+                  <div className="border-t border-gray-300 mb-4"></div>
                   {selectedTeam !== null && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                       {/* [Team Name] Shooting Card */}
@@ -2810,8 +2811,8 @@ function App() {
                   {/* Charts Section - Only show header/divider when Shooting group is selected */}
                   {selectedChartGroup === 'shooting' && (
                     <>
-                      <div className="border-t border-gray-300 my-8"></div>
-                      <h2 className="text-xl font-semibold text-gray-800 mb-4">Shooting Charts</h2>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-8">Shooting Charts</h2>
+                      <div className="border-t border-gray-300 mb-4"></div>
                     </>
                   )}
 
