@@ -135,10 +135,11 @@ export const ShotsChart: React.FC<ShotsChartProps> = ({
   };
 
   // Available metrics - only "For" metrics, no "Against"
+  // List Goals For first as requested
   const availableMetrics = [
+    ...(goalsForKey ? [{ id: 'goalsFor', label: 'Goals For', required: false }] : []),
     { id: 'shotsFor', label: 'Shots For', required: false },
     ...(attemptsForKey ? [{ id: 'attemptsFor', label: 'Attempts For', required: false }] : []),
-    ...(goalsForKey ? [{ id: 'goalsFor', label: 'Goals For', required: false }] : []),
   ];
 
   // Generate dynamic title

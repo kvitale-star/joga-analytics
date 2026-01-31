@@ -12,11 +12,8 @@ import { ShotsChart } from './components/ShotsChart';
 import { PossessionChart } from './components/PossessionChart';
 import { XGChart } from './components/xGChart';
 import { ConversionRateChart } from './components/ConversionRateChart';
-import { GoalsChart } from './components/GoalsChart';
 import { SPIChart } from './components/SPIChart';
-import { AttemptsChart } from './components/AttemptsChart';
 import { PositionalAttemptsChart } from './components/PositionalAttemptsChart';
-import { MiscStatsChart } from './components/MiscStatsChart';
 import { PassesChart } from './components/PassesChart';
 import { AvgPassLengthChart } from './components/AvgPassLengthChart';
 import { PassStrLengthChart } from './components/PassStrLengthChart';
@@ -576,6 +573,14 @@ function App() {
 
   const getOutsideBoxConvRateKey = (): string => {
     return findColumnKey(['Outside Box Conv Rate', 'outside box conv rate', 'OutsideBoxConvRate', 'outside_box_conv_rate', 'Outside Box Conv', 'OB Conv Rate']) || 'Outside Box Conv Rate';
+  };
+
+  const getOppInsideBoxConvRateKey = (): string => {
+    return findColumnKey(['Opp Inside Box Conv Rate', 'opp inside box conv rate', 'OppInsideBoxConvRate', 'opp_inside_box_conv_rate', 'Opp Inside Box Conv', 'Opp IB Conv Rate', 'Opponent Inside Box Conv Rate']) || 'Opp Inside Box Conv Rate';
+  };
+
+  const getOppOutsideBoxConvRateKey = (): string => {
+    return findColumnKey(['Opp Outside Box Conv Rate', 'opp outside box conv rate', 'OppOutsideBoxConvRate', 'opp_outside_box_conv_rate', 'Opp Outside Box Conv', 'Opp OB Conv Rate', 'Opponent Outside Box Conv Rate']) || 'Opp Outside Box Conv Rate';
   };
 
   const getInsideBoxAttemptsPctKey = (): string => {
@@ -2848,26 +2853,7 @@ function App() {
                 </div>
               )}
 
-              {selectedCharts.includes('goals') && columnKeys.includes(getGoalsForKey()) && columnKeys.includes(getGoalsAgainstKey()) && (
-                <div className={expandedCharts['goals'] ? 'lg:col-span-2' : ''}>
-                  {selectedTeam === null ? (
-                    <EmptyChart showTitle={false} />
-                  ) : (
-                    <GoalsChart
-                      data={dataToDisplay}
-                      goalsForKey={getGoalsForKey()}
-                      goalsAgainstKey={getGoalsAgainstKey()}
-                      opponentKey={opponentKey}
-                      showLabels={showLabels}
-                      xGKey={columnKeys.includes(getxGKey()) ? getxGKey() : undefined}
-                      xGAKey={columnKeys.includes(getxGAKey()) ? getxGAKey() : undefined}
-                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                      onExpansionChange={handleChartExpansionChange('goals')}
-                    />
-                  )}
-                </div>
-              )}
+              {/* Removed Goals chart as requested */}
 
               {selectedCharts.includes('possession') && columnKeys.includes(getPossessionKey()) && (
                 <div className={expandedCharts['possession'] ? 'lg:col-span-2' : ''}>
@@ -2975,65 +2961,35 @@ function App() {
                 );
               })()}
 
-              {selectedCharts.includes('attempts') && columnKeys.includes(getAttemptsKey()) && columnKeys.includes(getOppAttemptsKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <AttemptsChart
-                    data={dataToDisplay}
-                    attemptsKey={getAttemptsKey()}
-                    oppAttemptsKey={getOppAttemptsKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('attempts')}
-                  />
-                )
-              )}
+              {/* Removed Attempts chart as requested */}
 
               {selectedCharts.includes('positionalAttempts') && 
-               (columnKeys.includes(getInsideBoxAttemptsPctKey()) || columnKeys.includes(getOutsideBoxAttemptsPctKey())) &&
-               (columnKeys.includes(getOppInsideBoxAttemptsPctKey()) || columnKeys.includes(getOppOutsideBoxAttemptsPctKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PositionalAttemptsChart
-                    data={dataToDisplay}
-                    insideBoxAttemptsPctKey={getInsideBoxAttemptsPctKey()}
-                    outsideBoxAttemptsPctKey={getOutsideBoxAttemptsPctKey()}
-                    oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
-                    oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('positionalAttempts')}
-                  />
-                )
+               (columnKeys.includes(getInsideBoxAttemptsPctKey()) || columnKeys.includes(getOutsideBoxAttemptsPctKey()) ||
+                columnKeys.includes(getInsideBoxConvRateKey()) || columnKeys.includes(getOutsideBoxConvRateKey())) && (
+                <div className={expandedCharts['positionalAttempts'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PositionalAttemptsChart
+                      data={dataToDisplay}
+                      insideBoxAttemptsPctKey={getInsideBoxAttemptsPctKey()}
+                      outsideBoxAttemptsPctKey={getOutsideBoxAttemptsPctKey()}
+                      oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
+                      oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                      outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                      oppInsideBoxConvRateKey={columnKeys.includes(getOppInsideBoxConvRateKey()) ? getOppInsideBoxConvRateKey() : undefined}
+                      oppOutsideBoxConvRateKey={columnKeys.includes(getOppOutsideBoxConvRateKey()) ? getOppOutsideBoxConvRateKey() : undefined}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('positionalAttempts')}
+                    />
+                  )}
+                </div>
               )}
 
-              {selectedCharts.includes('miscStats') && 
-               (columnKeys.includes(getCornersForKey()) || columnKeys.includes(getCornersAgainstKey())) &&
-               (columnKeys.includes(getFreeKickForKey()) || columnKeys.includes(getFreeKickAgainstKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <MiscStatsChart
-                    data={dataToDisplay}
-                    cornersForKey={getCornersForKey()}
-                    cornersAgainstKey={getCornersAgainstKey()}
-                    freeKickForKey={getFreeKickForKey()}
-                    freeKickAgainstKey={getFreeKickAgainstKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('miscStats')}
-                  />
-                )
-              )}
+              {/* Removed Corner & Free Kicks chart as requested */}
 
               {selectedCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && columnKeys.includes(getOppPassesKey()) && (
                 selectedTeam === null ? (

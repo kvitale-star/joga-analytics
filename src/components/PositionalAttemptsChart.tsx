@@ -15,6 +15,11 @@ interface PositionalAttemptsChartProps {
   oppOutsideBoxAttemptsPctKey: string;
   opponentKey: string;
   showLabels?: boolean;
+  // Optional conversion rate keys
+  insideBoxConvRateKey?: string;
+  outsideBoxConvRateKey?: string;
+  oppInsideBoxConvRateKey?: string;
+  oppOutsideBoxConvRateKey?: string;
   globalIncludeOpponents?: boolean; // Global override for includeOpponent
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
@@ -27,6 +32,10 @@ export const PositionalAttemptsChart: React.FC<PositionalAttemptsChartProps> = (
   oppOutsideBoxAttemptsPctKey,
   opponentKey,
   showLabels = false,
+  insideBoxConvRateKey,
+  outsideBoxConvRateKey,
+  oppInsideBoxConvRateKey,
+  oppOutsideBoxConvRateKey,
   globalIncludeOpponents,
   onExpansionChange,
 }) => {
@@ -44,20 +53,36 @@ export const PositionalAttemptsChart: React.FC<PositionalAttemptsChartProps> = (
     };
 
     // Add JOGA team metrics
+    // Conversion rates
+    if (config.visibleMetrics.includes('insideBoxConvRate') && insideBoxConvRateKey) {
+      base['Inside Box Conv Rate'] = typeof match[insideBoxConvRateKey] === 'number' ? match[insideBoxConvRateKey] : null;
+    }
+    if (config.visibleMetrics.includes('outsideBoxConvRate') && outsideBoxConvRateKey) {
+      base['Outside Box Conv Rate'] = typeof match[outsideBoxConvRateKey] === 'number' ? match[outsideBoxConvRateKey] : null;
+    }
+    // Attempt percentages
     if (config.visibleMetrics.includes('insideBoxAttempts')) {
-      base['Team Inside Box'] = typeof match[insideBoxAttemptsPctKey] === 'number' ? match[insideBoxAttemptsPctKey] : null;
+      base['% Attempts Inside Box'] = typeof match[insideBoxAttemptsPctKey] === 'number' ? match[insideBoxAttemptsPctKey] : null;
     }
     if (config.visibleMetrics.includes('outsideBoxAttempts')) {
-      base['Team Outside Box'] = typeof match[outsideBoxAttemptsPctKey] === 'number' ? match[outsideBoxAttemptsPctKey] : null;
+      base['% Attempts Outside Box'] = typeof match[outsideBoxAttemptsPctKey] === 'number' ? match[outsideBoxAttemptsPctKey] : null;
     }
 
     // Add opponent metrics when includeOpponent is true
     if (config.includeOpponent) {
+      // Conversion rates
+      if (config.visibleMetrics.includes('insideBoxConvRate') && oppInsideBoxConvRateKey) {
+        base['Opp Inside Box Conv Rate'] = typeof match[oppInsideBoxConvRateKey] === 'number' ? match[oppInsideBoxConvRateKey] : null;
+      }
+      if (config.visibleMetrics.includes('outsideBoxConvRate') && oppOutsideBoxConvRateKey) {
+        base['Opp Outside Box Conv Rate'] = typeof match[oppOutsideBoxConvRateKey] === 'number' ? match[oppOutsideBoxConvRateKey] : null;
+      }
+      // Attempt percentages
       if (config.visibleMetrics.includes('insideBoxAttempts')) {
-        base['Opp Inside Box'] = typeof match[oppInsideBoxAttemptsPctKey] === 'number' ? match[oppInsideBoxAttemptsPctKey] : null;
+        base['Opp % Attempts Inside Box'] = typeof match[oppInsideBoxAttemptsPctKey] === 'number' ? match[oppInsideBoxAttemptsPctKey] : null;
       }
       if (config.visibleMetrics.includes('outsideBoxAttempts')) {
-        base['Opp Outside Box'] = typeof match[oppOutsideBoxAttemptsPctKey] === 'number' ? match[oppOutsideBoxAttemptsPctKey] : null;
+        base['Opp % Attempts Outside Box'] = typeof match[oppOutsideBoxAttemptsPctKey] === 'number' ? match[oppOutsideBoxAttemptsPctKey] : null;
       }
     }
 
@@ -65,38 +90,71 @@ export const PositionalAttemptsChart: React.FC<PositionalAttemptsChartProps> = (
   });
 
   // Determine which bars to render based on config
+  // Order: Conversion rates first, then attempt percentages
   const renderBars = () => {
     const bars: JSX.Element[] = [];
 
+    // Conversion rates - Team
+    if (config.visibleMetrics.includes('insideBoxConvRate') && insideBoxConvRateKey) {
+      bars.push(
+        <Bar key="Inside Box Conv Rate" dataKey="Inside Box Conv Rate" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Inside Box Conv Rate" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('outsideBoxConvRate') && outsideBoxConvRateKey) {
+      bars.push(
+        <Bar key="Outside Box Conv Rate" dataKey="Outside Box Conv Rate" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Outside Box Conv Rate" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        </Bar>
+      );
+    }
+    // Attempt percentages - Team
     if (config.visibleMetrics.includes('insideBoxAttempts')) {
       bars.push(
-        <Bar key="Team Inside Box" dataKey="Team Inside Box" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Team Inside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        <Bar key="% Attempts Inside Box" dataKey="% Attempts Inside Box" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
+          {showLabels && <LabelList dataKey="% Attempts Inside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
         </Bar>
       );
     }
     if (config.visibleMetrics.includes('outsideBoxAttempts')) {
       bars.push(
-        <Bar key="Team Outside Box" dataKey="Team Outside Box" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Team Outside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        <Bar key="% Attempts Outside Box" dataKey="% Attempts Outside Box" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="% Attempts Outside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
         </Bar>
       );
     }
 
     // Opponent bars (only when includeOpponent is true)
     if (config.includeOpponent) {
+      // Conversion rates - Opponent
+      if (config.visibleMetrics.includes('insideBoxConvRate') && oppInsideBoxConvRateKey) {
+        bars.push(
+          <Bar key="Opp Inside Box Conv Rate" dataKey="Opp Inside Box Conv Rate" fill={OPPONENT_COLORS.primary} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opp Inside Box Conv Rate" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+          </Bar>
+        );
+      }
+      if (config.visibleMetrics.includes('outsideBoxConvRate') && oppOutsideBoxConvRateKey) {
+        bars.push(
+          <Bar key="Opp Outside Box Conv Rate" dataKey="Opp Outside Box Conv Rate" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opp Outside Box Conv Rate" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+          </Bar>
+        );
+      }
+      // Attempt percentages - Opponent
       if (config.visibleMetrics.includes('insideBoxAttempts')) {
         bars.push(
-          <Bar key="Opp Inside Box" dataKey="Opp Inside Box" fill={OPPONENT_COLORS.primary} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Opp Inside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+          <Bar key="Opp % Attempts Inside Box" dataKey="Opp % Attempts Inside Box" fill={OPPONENT_COLORS.dark} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opp % Attempts Inside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
           </Bar>
         );
       }
       if (config.visibleMetrics.includes('outsideBoxAttempts')) {
         bars.push(
-          <Bar key="Opp Outside Box" dataKey="Opp Outside Box" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Opp Outside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
-          </Bar>
+          <Bar key="Opp % Attempts Outside Box" dataKey="Opp % Attempts Outside Box" fill={OPPONENT_COLORS.light} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Opp % Attempts Outside Box" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        </Bar>
         );
       }
     }
@@ -104,10 +162,12 @@ export const PositionalAttemptsChart: React.FC<PositionalAttemptsChartProps> = (
     return bars;
   };
 
-  // Available metrics
+  // Available metrics - accurate names as requested
   const availableMetrics = [
-    { id: 'insideBoxAttempts', label: 'Inside Box %', required: false },
-    { id: 'outsideBoxAttempts', label: 'Outside Box %', required: false },
+    ...(insideBoxConvRateKey ? [{ id: 'insideBoxConvRate', label: 'Inside Box Conv Rate %', required: false }] : []),
+    ...(outsideBoxConvRateKey ? [{ id: 'outsideBoxConvRate', label: 'Outside Box Conv Rate %', required: false }] : []),
+    { id: 'insideBoxAttempts', label: '% Attempts Inside Box', required: false },
+    { id: 'outsideBoxAttempts', label: '% Attempts Outside Box', required: false },
   ];
 
   // Generate dynamic title

@@ -45,7 +45,7 @@ export const DEFAULT_CONVERSION_RATE_CONFIG: ChartConfig = {
 
 export const DEFAULT_TSR_CONFIG: ChartConfig = {
   visibleMetrics: ['tsr', 'attemptsFor'], // Attempts on by default
-  includeOpponent: true,
+  includeOpponent: false, // Turn off by default as requested
   isExpanded: false,
 };
 
@@ -98,9 +98,9 @@ export const DEFAULT_MISC_STATS_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_POSITIONAL_ATTEMPTS_CONFIG: ChartConfig = {
-  visibleMetrics: ['insideBoxAttempts', 'outsideBoxAttempts'],
+  visibleMetrics: ['insideBoxConvRate', 'outsideBoxConvRate', 'insideBoxAttempts', 'outsideBoxAttempts'],
   includeOpponent: true,
-  isExpanded: false,
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_PASS_BY_ZONE_CONFIG: ChartConfig = {
@@ -147,8 +147,8 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       goalsFor: 'Goals',
     },
     tsr: {
-      tsr: 'TSR',
-      shotsFor: 'Shots',
+      tsr: 'Total Shots Ratio',
+      attemptsFor: 'Attempts',
     },
     passes: {
       passesFor: 'Passes',
@@ -182,8 +182,10 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       freeKickFor: 'Free Kicks',
     },
     positionalAttempts: {
-      insideBoxAttempts: 'Inside Box',
-      outsideBoxAttempts: 'Outside Box',
+      insideBoxConvRate: 'Inside Box Conv Rate',
+      outsideBoxConvRate: 'Outside Box Conv Rate',
+      insideBoxAttempts: '% Attempts Inside Box',
+      outsideBoxAttempts: '% Attempts Outside Box',
     },
     passByZone: {
       // Dynamic - zones will be added based on available data
@@ -217,7 +219,7 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       spi: 'Sustained Passing Index',
       attempts: 'Attempts',
       miscStats: 'Corners & Free Kicks',
-      positionalAttempts: 'Attempts by Position',
+      positionalAttempts: 'Conversion Rates & Attempts by Field Position',
       passByZone: 'Pass % by Zone',
       auto: 'Chart',
     };
