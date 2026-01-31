@@ -2980,8 +2980,6 @@ function App() {
                       showLabels={showLabels}
                       insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
                       outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
-                      oppInsideBoxConvRateKey={columnKeys.includes(getOppInsideBoxConvRateKey()) ? getOppInsideBoxConvRateKey() : undefined}
-                      oppOutsideBoxConvRateKey={columnKeys.includes(getOppOutsideBoxConvRateKey()) ? getOppOutsideBoxConvRateKey() : undefined}
                       globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
                       onExpansionChange={handleChartExpansionChange('positionalAttempts')}
                     />

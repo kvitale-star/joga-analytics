@@ -15,7 +15,7 @@ export interface ChartPreferences {
 
 export const DEFAULT_SHOTS_CONFIG: ChartConfig = {
   visibleMetrics: ['goalsFor', 'shotsFor', 'attemptsFor'],
-  includeOpponent: true,
+  includeOpponent: false, // Turn off by default as requested
   isExpanded: true, // Full width by default
 };
 
@@ -141,10 +141,10 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       goalsFor: 'Goals',
     },
     conversionRate: {
-      conversionRate: 'Conversion Rate',
+      conversionRate: 'Conversion Rates',
+      insideBoxConvRate: 'Inside Box Conv Rate',
+      outsideBoxConvRate: 'Outside Box Conv Rate',
       attemptsFor: 'Attempts',
-      shotsFor: 'Shots',
-      goalsFor: 'Goals',
     },
     tsr: {
       tsr: 'Total Shots Ratio',
@@ -182,9 +182,9 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       freeKickFor: 'Free Kicks',
     },
     positionalAttempts: {
-      insideBoxConvRate: 'Inside Box Conv Rate',
-      outsideBoxConvRate: 'Outside Box Conv Rate',
+      insideBoxConvRate: 'Inside Box Conv Rate %',
       insideBoxAttempts: '% Attempts Inside Box',
+      outsideBoxConvRate: 'Outside Box Conv Rate %',
       outsideBoxAttempts: '% Attempts Outside Box',
     },
     passByZone: {
@@ -209,7 +209,7 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       possession: 'Possession',
       goals: 'Goals',
       xg: 'Expected Goals (xG)',
-      conversionRate: 'Conversion Rate',
+      conversionRate: 'Conversion Rates',
       tsr: 'Total Shots Ratio',
       passes: 'Passes',
       passShare: 'Pass Share',
