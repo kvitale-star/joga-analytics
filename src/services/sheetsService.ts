@@ -175,7 +175,13 @@ export async function fetchMergedMatchData(options?: {
   startDate?: string;
   endDate?: string;
 }): Promise<MatchData[]> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // VITE_API_URL might include /api or not - handle both cases
+  let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // Remove trailing slash if present
+  apiUrl = apiUrl.replace(/\/$/, '');
+  // If VITE_API_URL already includes /api, use it as-is, otherwise append /api
+  const baseUrl = apiUrl.includes('/api') ? apiUrl.replace(/\/api$/, '') : apiUrl;
+  
   const params = new URLSearchParams();
   
   if (options?.range) {
@@ -191,7 +197,7 @@ export async function fetchMergedMatchData(options?: {
     params.append('endDate', options.endDate);
   }
   
-  const url = `${apiUrl}/api/sheets/merged${params.toString() ? `?${params.toString()}` : ''}`;
+  const url = `${baseUrl}/api/sheets/merged${params.toString() ? `?${params.toString()}` : ''}`;
   
   try {
     const response = await fetch(url, {
