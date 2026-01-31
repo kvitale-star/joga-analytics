@@ -2811,7 +2811,7 @@ function App() {
                   {/* Charts Section - Only show header/divider when Shooting group is selected */}
                   {selectedChartGroup === 'shooting' && (
                     <>
-                      <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-8">Shooting Charts</h2>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-12">Shooting Charts</h2>
                       <div className="border-t border-gray-300 mb-4"></div>
                     </>
                   )}
