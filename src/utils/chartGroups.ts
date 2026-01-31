@@ -35,7 +35,7 @@ export const CHART_GROUPS: ChartGroup[] = [
     id: 'all',
     name: 'All Charts',
     description: 'Show all available charts',
-    charts: ['shots', 'goals', 'possession', 'xg', 'spi', 'conversionRate', 'attempts', 'positionalAttempts', 'miscStats'],
+    charts: ['shots', 'possession', 'xg', 'spi', 'conversionRate', 'positionalAttempts'],
   },
   {
     id: 'defense',
@@ -65,7 +65,7 @@ export const CHART_GROUPS: ChartGroup[] = [
     id: 'shooting',
     name: 'Shooting',
     description: 'Shots, goals, xG, and conversion rates',
-    charts: ['shots', 'goals', 'xg', 'tsr', 'conversionRate', 'attempts', 'positionalAttempts', 'miscStats'],
+    charts: ['shots', 'xg', 'tsr', 'conversionRate', 'positionalAttempts'],
   },
 ];
 
@@ -75,9 +75,9 @@ export const CHART_LABELS: Record<ChartType, string> = {
   possession: 'Possession',
   xg: 'Expected Goals (xG)',
   spi: 'Sustained Passing Index',
-  conversionRate: 'Conversion Rate',
+  conversionRate: 'Conversion Rates',
   attempts: 'Attempts',
-  positionalAttempts: 'Attempts by Field Position',
+  positionalAttempts: 'Conversion Rates & Attempts by Field Position',
   miscStats: 'Corners & Free Kicks',
   passes: 'Passes per Game',
   avgPassLength: 'Average Pass Length',
