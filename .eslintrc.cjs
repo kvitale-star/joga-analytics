@@ -20,6 +20,9 @@ module.exports = {
       varsIgnorePattern: '^_'
     }],
     'prefer-const': 'warn',
+    'no-case-declarations': 'off', // Allow declarations in case blocks (use block scope)
+    'no-useless-escape': 'warn', // Allow escape characters (may be needed for regex)
+    'no-useless-catch': 'warn', // Allow useless catch (may be intentional)
   },
 }
 
