@@ -70,22 +70,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Check for users (works in both browser and API mode)
       try {
-        console.log('Checking if users exist...');
+        console.log('🔍 Checking if users exist...');
         const usersExist = await hasUsers();
-        console.log('Users exist:', usersExist);
+        console.log('✅ Users exist:', usersExist);
         if (!usersExist) {
-          console.log('No users found, showing setup wizard');
+          console.log('📝 No users found, showing setup wizard');
           setIsSetupRequired(true);
           setIsLoading(false);
           return;
         }
-        console.log('Users found, setup not required');
+        console.log('✅ Users found, setup not required');
       } catch (error: any) {
-        console.error('Error checking for users:', error);
+        console.error('❌ Error checking for users:', error);
         
         // If backend is unreachable, show error message instead of setup wizard
         if (error?.message?.includes('BACKEND_UNREACHABLE')) {
-          console.error('Backend is unreachable - cannot proceed');
+          console.error('❌ Backend is unreachable - cannot proceed');
           // Set error state (we'll need to add this to the context)
           setIsLoading(false);
           setIsSetupRequired(false); // Don't show setup wizard if backend is down
@@ -96,11 +96,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
         
-        // If we can't check for other reasons, assume setup is needed
-        console.log('Error checking users, showing setup wizard as fallback');
-        setIsSetupRequired(true);
-        setIsLoading(false);
-        return;
+        // If we can't check for other reasons, try to check session instead
+        // If session exists, users definitely exist, so don't show setup wizard
+        console.warn('⚠️ Error checking users, but hasUsers() should have handled this. Checking session instead...');
+        
+        // Continue to session check below - if session exists, users exist
+        // If no session, we'll show login page (not setup wizard)
+        // This prevents false setup wizard when users exist but check failed
       }
 
       // Check for existing session via /auth/me (cookies are sent automatically)

@@ -109,6 +109,7 @@ export interface MatchesTable {
   match_date: string;
   competition_type: string | null;
   result: string | null;
+  is_home: boolean | null;
   stats_json: string | null; // JSON stored as string
   stats_source: string | null;
   stats_computed_at: string | null;

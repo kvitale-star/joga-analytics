@@ -316,5 +316,22 @@ async function runPostgresMigrations(): Promise<void> {
     console.log('✓ Migration 006 (Postgres) completed successfully');
   }
 
+  if (version < 7) {
+    console.log('Running migration 007 (Postgres): Add is_home field to matches table...');
+    await sql`
+      ALTER TABLE matches
+      ADD COLUMN IF NOT EXISTS is_home BOOLEAN
+    `.execute(db);
+    await db
+      .insertInto('schema_migrations')
+      .values({
+        version: 7,
+        description: 'Add is_home field to matches table for home/away tracking',
+        applied_at: new Date().toISOString(),
+      })
+      .execute();
+    console.log('✓ Migration 007 (Postgres) completed successfully');
+  }
+
   console.log('All migrations completed!');
 }

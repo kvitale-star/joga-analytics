@@ -19,11 +19,35 @@ export async function hasUsers(): Promise<boolean> {
     const response = await apiGet<{ setupRequired: boolean }>('/auth/setup-required');
     
     if (timeoutId) clearTimeout(timeoutId);
-    console.log('hasUsers check result:', response);
+    console.log('✅ hasUsers check result:', response);
     return !response.setupRequired;
   } catch (error: any) {
     if (timeoutId) clearTimeout(timeoutId);
-    console.error('Error checking for users:', error);
+    
+    // Ignore browser extension errors (they don't affect our API calls)
+    const errorMessage = error?.message || String(error);
+    if (errorMessage.includes('Could not establish connection') || 
+        errorMessage.includes('Receiving end does not exist')) {
+      console.warn('⚠️ Browser extension error detected (ignoring):', errorMessage);
+      // Try the request again without the abort controller to see if it works
+      try {
+        const response = await apiGet<{ setupRequired: boolean }>('/auth/setup-required');
+        console.log('✅ hasUsers check result (retry after extension error):', response);
+        return !response.setupRequired;
+      } catch (retryError: any) {
+        // If retry also fails, treat as network error
+        console.error('❌ Retry also failed:', retryError);
+        if (retryError.name === 'AbortError' || retryError.message?.includes('fetch failed') || retryError.message?.includes('network') || retryError.message?.includes('Failed to fetch')) {
+          throw new Error('BACKEND_UNREACHABLE: Cannot connect to backend. Please check your connection and try again.');
+        }
+        // For other errors on retry, assume users exist (don't show setup wizard)
+        // This prevents showing setup wizard when users actually exist but there's a transient error
+        console.warn('⚠️ Assuming users exist due to non-network error');
+        return true;
+      }
+    }
+    
+    console.error('❌ Error checking for users:', error);
     
     // If timeout or network error, backend is likely unreachable
     if (error.name === 'AbortError' || error.message?.includes('fetch failed') || error.message?.includes('network') || error.message?.includes('Failed to fetch')) {
@@ -32,9 +56,11 @@ export async function hasUsers(): Promise<boolean> {
       throw new Error('BACKEND_UNREACHABLE: Cannot connect to backend. Please check your connection and try again.');
     }
     
-    // If API call fails for other reasons, we can't determine if users exist
-    // Return false to show setup wizard (safer than assuming users exist)
-    return false;
+    // If API call fails for other reasons (e.g., 500 error, CSRF error, etc.)
+    // Assume users exist rather than showing setup wizard
+    // This prevents showing setup wizard when users exist but there's a transient error
+    console.warn('⚠️ Non-network error checking for users. Assuming users exist to avoid false setup wizard.');
+    return true;
   }
 }
 

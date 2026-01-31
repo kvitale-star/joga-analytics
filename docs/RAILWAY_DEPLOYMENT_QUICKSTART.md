@@ -69,23 +69,46 @@ Railway should auto-detect your backend. If not:
 
 1. Go to "Settings" → "Build"
 2. **Build Command:** `npm install && npm run build`
-3. **Start Command:** `npm start`
+3. **Start Command:** `node scripts/start.js`
+   - **Important:** Use `node scripts/start.js` instead of `npm start` to allow SIGTERM signals to reach your app for graceful shutdown. This prevents Railway from reporting false "crashes" when the app is actually working.
 4. Save
 
-### 3.4 Add Environment Variables
+### 3.4 Set Up Database
+
+**Option A: PostgreSQL (Recommended)**
+
+1. Add PostgreSQL service:
+   - Click **"+ New"** → **"Database"** → **"PostgreSQL"**
+   - Railway creates the database and sets `DATABASE_URL` automatically
+   - See [RAILWAY_POSTGRES_SETUP.md](./RAILWAY_POSTGRES_SETUP.md) for detailed instructions
+
+2. Verify `DATABASE_URL` is available:
+   - Go to backend service → **"Variables"** tab
+   - `DATABASE_URL` should be present (Railway shares it automatically)
+
+**Option B: SQLite with Volume (Legacy)**
+
+If you prefer SQLite, you'll need a persistent volume:
+- See [RAILWAY_DATABASE_PERSISTENCE.md](./RAILWAY_DATABASE_PERSISTENCE.md) for SQLite setup
+- **Note:** Postgres is recommended for production
+
+### 3.5 Add Environment Variables
 
 Go to "Variables" tab and add:
 
 ```env
 NODE_ENV=production
 FRONTEND_URL=https://your-frontend.railway.app
-DATABASE_PATH=./data/joga.db
+# DATABASE_URL is auto-set by Railway Postgres (if using Option A above)
+# DATABASE_PATH=./data/joga.db  # Only if using SQLite (Option B)
 JWT_SECRET=your-production-secret-key-here
+BOOTSTRAP_SECRET=your-bootstrap-secret-key-here
 SENDGRID_API_KEY=SG.your_api_key_here
-SENDGRID_FROM_EMAIL=kvitale@gmail.com
+SENDGRID_FROM_EMAIL=jogafc.analytics@gmail.com
 ENABLE_PASSWORD_VALIDATION=true
 GOOGLE_SHEETS_SPREADSHEET_ID=your-spreadsheet-id-here
 GOOGLE_SHEETS_API_KEY=your-google-api-key-here
+GEMINI_API_KEY=your-gemini-api-key-here  # Optional, for AI chat
 ```
 
 **Note:** Do NOT set `PORT` manually - Railway automatically sets this environment variable. Setting it manually will cause the backend to be unreachable.
@@ -102,7 +125,7 @@ GOOGLE_SHEETS_API_KEY=your-google-api-key-here
     - For public sheets: API key is sufficient
     - For private sheets: You may need OAuth or service account (not currently implemented)
 
-### 3.5 Get Backend URL
+### 3.6 Get Backend URL
 
 1. Go to "Settings" → "Domains"
 2. Railway provides a URL like: `your-backend-production.up.railway.app`
@@ -290,10 +313,18 @@ If health checks appear “managed by `railway.json`” and you cannot override 
 
 ### Database Issues
 
-1. First deployment: Database is created automatically by migrations
-2. Check logs for migration errors
-3. Verify `DATABASE_PATH` is set correctly
-4. Database file persists on Railway's filesystem
+**For PostgreSQL:**
+1. Verify Postgres service is running (green status)
+2. Check `DATABASE_URL` is set in backend variables
+3. Check logs for: `✅ Database connection established`
+4. Migrations run automatically on startup
+5. See [RAILWAY_POSTGRES_SETUP.md](./RAILWAY_POSTGRES_SETUP.md) for troubleshooting
+
+**For SQLite:**
+1. Verify volume is mounted (if using persistent storage)
+2. Check `DATABASE_PATH` is set correctly
+3. Check logs for migration errors
+4. See [RAILWAY_DATABASE_PERSISTENCE.md](./RAILWAY_DATABASE_PERSISTENCE.md) for SQLite setup
 
 ## Next Steps
 
@@ -307,13 +338,13 @@ If health checks appear “managed by `railway.json`” and you cannot override 
 **Backend Service:**
 - Root: `backend`
 - Build: `npm install && npm run build`
-- Start: `npm start`
+- Start: `node scripts/start.js` (use this instead of `npm start` for proper SIGTERM handling)
 - Port: 3001 (auto-set by Railway)
 
 **Frontend Service:**
 - Root: `.`
 - Build: `npm install && npm run build`
-- Start: `npm start` (uses serve)
+- Start: `node scripts/start.js` (use this instead of `npm start` for proper SIGTERM handling) (uses serve)
 - Port: Auto-set by Railway
 
 **Environment Variables:**

@@ -50,6 +50,7 @@ export async function getMatches(filters?: {
     matchDate: match.match_date,
     competitionType: match.competition_type,
     result: match.result,
+    isHome: match.is_home !== null ? Boolean(match.is_home) : null,
     statsJson: match.stats_json ? JSON.parse(match.stats_json) : null,
     statsSource: match.stats_source,
     statsComputedAt: match.stats_computed_at ? new Date(match.stats_computed_at) : null,
@@ -83,6 +84,7 @@ export async function getMatchById(matchId: number) {
     matchDate: match.match_date,
     competitionType: match.competition_type,
     result: match.result,
+    isHome: match.is_home !== null ? Boolean(match.is_home) : null,
     statsJson: match.stats_json ? JSON.parse(match.stats_json) : null,
     statsSource: match.stats_source,
     statsComputedAt: match.stats_computed_at ? new Date(match.stats_computed_at) : null,
@@ -107,6 +109,7 @@ export async function createMatch(
     matchDate: string;
     competitionType?: string | null;
     result?: string | null;
+    isHome?: boolean | null;
     statsJson?: any;
     statsSource?: string | null;
     statsComputedAt?: string | null;
@@ -127,6 +130,7 @@ export async function createMatch(
       match_date: matchData.matchDate,
       competition_type: matchData.competitionType || null,
       result: matchData.result || null,
+      is_home: matchData.isHome !== undefined && matchData.isHome !== null ? Boolean(matchData.isHome) : null,
       stats_json: matchData.statsJson ? JSON.stringify(matchData.statsJson) : null,
       stats_source: matchData.statsSource || null,
       stats_computed_at: matchData.statsComputedAt || null,
@@ -156,6 +160,7 @@ export async function updateMatch(
     matchDate?: string;
     competitionType?: string | null;
     result?: string | null;
+    isHome?: boolean | null;
     statsJson?: any;
     statsSource?: string | null;
     statsComputedAt?: string | null;
@@ -175,6 +180,7 @@ export async function updateMatch(
   if (updates.matchDate !== undefined) updateData.match_date = updates.matchDate;
   if (updates.competitionType !== undefined) updateData.competition_type = updates.competitionType;
   if (updates.result !== undefined) updateData.result = updates.result;
+  if (updates.isHome !== undefined) updateData.is_home = updates.isHome !== null ? Boolean(updates.isHome) : null;
   if (updates.statsJson !== undefined) updateData.stats_json = updates.statsJson ? JSON.stringify(updates.statsJson) : null;
   if (updates.statsSource !== undefined) updateData.stats_source = updates.statsSource;
   if (updates.statsComputedAt !== undefined) updateData.stats_computed_at = updates.statsComputedAt;
