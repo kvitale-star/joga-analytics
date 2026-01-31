@@ -2193,7 +2193,7 @@ function App() {
               {/* Shooting Section */}
               {selectedChartGroup === 'shooting' && (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Shooting</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Shooting - Team Averages</h2>
                   {selectedTeam !== null && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                       {/* [Team Name] Shooting Card */}
