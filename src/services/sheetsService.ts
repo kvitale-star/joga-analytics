@@ -199,7 +199,35 @@ export async function fetchMergedMatchData(options?: {
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch merged data: ${response.statusText}`);
+      // Provide more detailed error information
+      let errorMessage = `Failed to fetch merged data: ${response.status} ${response.statusText}`;
+      
+      // Handle different error status codes
+      if (response.status === 401 || response.status === 403) {
+        errorMessage = 'Authentication required. Please log in to view match data.';
+      } else if (response.status === 404) {
+        errorMessage = 'API endpoint not found. Please check that the backend server is running and the endpoint is available.';
+      } else {
+        // Try to parse error response
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            try {
+              const errorJson = JSON.parse(errorText);
+              if (errorJson.error) {
+                errorMessage = `Failed to fetch merged data: ${errorJson.error}`;
+              }
+            } catch {
+              // If not JSON, use the text as-is
+              errorMessage = `Failed to fetch merged data: ${errorText}`;
+            }
+          }
+        } catch {
+          // If we can't read the response, use the status text
+        }
+      }
+      
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();
