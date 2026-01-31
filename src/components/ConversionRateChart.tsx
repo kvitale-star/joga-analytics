@@ -14,10 +14,10 @@ interface ConversionRateChartProps {
   opponentKey: string;
   showLabels?: boolean;
   // Optional metrics (if available in data)
-  shotsForKey?: string;
-  shotsAgainstKey?: string;
-  goalsForKey?: string;
-  goalsAgainstKey?: string;
+  insideBoxConvRateKey?: string;
+  outsideBoxConvRateKey?: string;
+  attemptsForKey?: string;
+  attemptsAgainstKey?: string;
   globalIncludeOpponents?: boolean; // Global override for includeOpponent
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
@@ -28,10 +28,10 @@ export const ConversionRateChart: React.FC<ConversionRateChartProps> = ({
   oppConversionRateKey,
   opponentKey,
   showLabels = false,
-  shotsForKey,
-  shotsAgainstKey,
-  goalsForKey,
-  goalsAgainstKey,
+  insideBoxConvRateKey,
+  outsideBoxConvRateKey,
+  attemptsForKey,
+  attemptsAgainstKey,
   globalIncludeOpponents,
   onExpansionChange,
 }) => {
@@ -52,11 +52,14 @@ export const ConversionRateChart: React.FC<ConversionRateChartProps> = ({
     if (config.visibleMetrics.includes('conversionRate')) {
       base['Conversion Rate'] = typeof match[conversionRateKey] === 'number' ? match[conversionRateKey] : 0;
     }
-    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
-      base['Shots For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
+    if (config.visibleMetrics.includes('insideBoxConvRate') && insideBoxConvRateKey) {
+      base['Inside Box Conv Rate'] = typeof match[insideBoxConvRateKey] === 'number' ? match[insideBoxConvRateKey] : 0;
     }
-    if (config.visibleMetrics.includes('goalsFor') && goalsForKey) {
-      base['Goals For'] = typeof match[goalsForKey] === 'number' ? match[goalsForKey] : 0;
+    if (config.visibleMetrics.includes('outsideBoxConvRate') && outsideBoxConvRateKey) {
+      base['Outside Box Conv Rate'] = typeof match[outsideBoxConvRateKey] === 'number' ? match[outsideBoxConvRateKey] : 0;
+    }
+    if (config.visibleMetrics.includes('attemptsFor') && attemptsForKey) {
+      base['Attempts For'] = typeof match[attemptsForKey] === 'number' ? match[attemptsForKey] : 0;
     }
 
     // Add opponent metrics when includeOpponent is true
@@ -64,11 +67,8 @@ export const ConversionRateChart: React.FC<ConversionRateChartProps> = ({
       if (config.visibleMetrics.includes('conversionRate')) {
         base['Opp Conversion Rate'] = typeof match[oppConversionRateKey] === 'number' ? match[oppConversionRateKey] : 0;
       }
-      if (config.visibleMetrics.includes('shotsFor') && shotsAgainstKey) {
-        base['Opp Shots'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
-      }
-      if (config.visibleMetrics.includes('goalsFor') && goalsAgainstKey) {
-        base['Opp Goals'] = typeof match[goalsAgainstKey] === 'number' ? match[goalsAgainstKey] : 0;
+      if (config.visibleMetrics.includes('attemptsFor') && attemptsAgainstKey) {
+        base['Opp Attempts'] = typeof match[attemptsAgainstKey] === 'number' ? match[attemptsAgainstKey] : 0;
       }
     }
 
@@ -93,31 +93,31 @@ export const ConversionRateChart: React.FC<ConversionRateChartProps> = ({
         </Bar>
       );
     }
-    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
+    if (config.visibleMetrics.includes('insideBoxConvRate') && insideBoxConvRateKey) {
       bars.push(
-        <Bar key="Shots For" dataKey="Shots For" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Shots For" position="top" fill="#666" fontSize={12} />}
+        <Bar key="Inside Box Conv Rate" dataKey="Inside Box Conv Rate" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Inside Box Conv Rate" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
         </Bar>
       );
     }
-    if (config.includeOpponent && config.visibleMetrics.includes('shotsFor') && shotsAgainstKey) {
+    if (config.visibleMetrics.includes('outsideBoxConvRate') && outsideBoxConvRateKey) {
       bars.push(
-        <Bar key="Opp Shots" dataKey="Opp Shots" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Opp Shots" position="top" fill="#666" fontSize={12} />}
+        <Bar key="Outside Box Conv Rate" dataKey="Outside Box Conv Rate" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Outside Box Conv Rate" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
         </Bar>
       );
     }
-    if (config.visibleMetrics.includes('goalsFor') && goalsForKey) {
+    if (config.visibleMetrics.includes('attemptsFor') && attemptsForKey) {
       bars.push(
-        <Bar key="Goals For" dataKey="Goals For" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Goals For" position="top" fill="#666" fontSize={12} />}
+        <Bar key="Attempts For" dataKey="Attempts For" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Attempts For" position="top" fill="#666" fontSize={12} />}
         </Bar>
       );
     }
-    if (config.includeOpponent && config.visibleMetrics.includes('goalsFor') && goalsAgainstKey) {
+    if (config.includeOpponent && config.visibleMetrics.includes('attemptsFor') && attemptsAgainstKey) {
       bars.push(
-        <Bar key="Opp Goals" dataKey="Opp Goals" fill={OPPONENT_COLORS.dark} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Opp Goals" position="top" fill="#666" fontSize={12} />}
+        <Bar key="Opp Attempts" dataKey="Opp Attempts" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Opp Attempts" position="top" fill="#666" fontSize={12} />}
         </Bar>
       );
     }
@@ -126,10 +126,13 @@ export const ConversionRateChart: React.FC<ConversionRateChartProps> = ({
   };
 
   // Available metrics
+  // Removed 'Shots For' and 'Goals For' as requested
+  // Added 'Inside Box Conv Rate', 'Outside Box Conv Rate', and 'Attempts For'
   const availableMetrics = [
     { id: 'conversionRate', label: 'Conversion Rate %', required: false },
-    ...(shotsForKey ? [{ id: 'shotsFor', label: 'Shots For', required: false }] : []),
-    ...(goalsForKey ? [{ id: 'goalsFor', label: 'Goals For', required: false }] : []),
+    ...(insideBoxConvRateKey ? [{ id: 'insideBoxConvRate', label: 'Inside Box Conv Rate %', required: false }] : []),
+    ...(outsideBoxConvRateKey ? [{ id: 'outsideBoxConvRate', label: 'Outside Box Conv Rate %', required: false }] : []),
+    ...(attemptsForKey ? [{ id: 'attemptsFor', label: 'Attempts For', required: false }] : []),
   ];
 
   // Generate dynamic title

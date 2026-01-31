@@ -14,9 +14,9 @@ export interface ChartPreferences {
 }
 
 export const DEFAULT_SHOTS_CONFIG: ChartConfig = {
-  visibleMetrics: ['shotsFor', 'attemptsFor'],
+  visibleMetrics: ['goalsFor', 'shotsFor', 'attemptsFor'],
   includeOpponent: true,
-  isExpanded: false,
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_POSSESSION_CONFIG: ChartConfig = {
@@ -38,13 +38,13 @@ export const DEFAULT_XG_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_CONVERSION_RATE_CONFIG: ChartConfig = {
-  visibleMetrics: ['conversionRate', 'insideBoxConvRate', 'outsideBoxConvRate'],
+  visibleMetrics: ['conversionRate', 'insideBoxConvRate', 'outsideBoxConvRate'], // Inside/Outside Box on by default
   includeOpponent: true,
-  isExpanded: false,
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_TSR_CONFIG: ChartConfig = {
-  visibleMetrics: ['tsr', 'attemptsFor'],
+  visibleMetrics: ['tsr', 'attemptsFor'], // Attempts on by default
   includeOpponent: true,
   isExpanded: false,
 };

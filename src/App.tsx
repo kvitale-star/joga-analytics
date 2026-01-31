@@ -2010,6 +2010,8 @@ function App() {
             getPPMKey={getPPMKey}
             getOppPPMKey={getOppPPMKey}
             getOppPassShareKey={getOppPassShareKey}
+            getInsideBoxConvRateKey={getInsideBoxConvRateKey}
+            getOutsideBoxConvRateKey={getOutsideBoxConvRateKey}
           />
         </div>
       </div>
@@ -2824,7 +2826,7 @@ function App() {
                 return (
                   <>
               {selectedCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey()) && (
-                <div className={expandedCharts['shots'] ? 'lg:col-span-2' : ''}>
+                <div className={expandedCharts['shots'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
                   {selectedTeam === null ? (
                     <EmptyChart showTitle={false} />
                   ) : (
@@ -2899,8 +2901,6 @@ function App() {
                       showLabels={showLabels}
                       goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
                       goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('xg')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />
@@ -2921,6 +2921,8 @@ function App() {
                       showLabels={showLabels}
                       shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
                       shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                      attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                      attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('tsr')}
                     />
                   )}
@@ -2949,7 +2951,7 @@ function App() {
               )}
 
               {selectedCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey())) && (
-                <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : ''}>
+                <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
                   {selectedTeam === null ? (
                     <EmptyChart showTitle={false} />
                   ) : (
@@ -2959,10 +2961,10 @@ function App() {
                       oppConversionRateKey={getOppConversionRateKey()}
                       opponentKey={opponentKey}
                       showLabels={showLabels}
-                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                      goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                      goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                      insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                      outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                      attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                      attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('conversionRate')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />

@@ -78,10 +78,18 @@ export const ShotsChart: React.FC<ShotsChartProps> = ({
   });
 
   // Determine which bars to render based on config
+  // Order: goals, shots, attempts (as requested)
   const renderBars = () => {
     const bars: JSX.Element[] = [];
 
-    // JOGA team bars
+    // JOGA team bars - render in order: goals, shots, attempts
+    if (config.visibleMetrics.includes('goalsFor') && goalsForKey) {
+      bars.push(
+        <Bar key="Goals For" dataKey="Goals For" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Goals For" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
     if (config.visibleMetrics.includes('shotsFor')) {
       bars.push(
         <Bar key="Shots For" dataKey="Shots For" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
@@ -96,16 +104,17 @@ export const ShotsChart: React.FC<ShotsChartProps> = ({
         </Bar>
       );
     }
-    if (config.visibleMetrics.includes('goalsFor') && goalsForKey) {
-      bars.push(
-        <Bar key="Goals For" dataKey="Goals For" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Goals For" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
-    }
 
     // Opponent bars (only when includeOpponent is true)
+    // Order: goals, shots, attempts (matching team order)
     if (config.includeOpponent) {
+      if (config.visibleMetrics.includes('goalsFor') && goalsAgainstKey) {
+        bars.push(
+          <Bar key="Opponent Goals" dataKey="Opponent Goals" fill={OPPONENT_COLORS.dark} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Opponent Goals" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+        );
+      }
       if (config.visibleMetrics.includes('shotsFor') && shotsAgainstKey) {
         bars.push(
           <Bar key="Opponent Shots" dataKey="Opponent Shots" fill={OPPONENT_COLORS.primary} animationDuration={500}>
@@ -117,13 +126,6 @@ export const ShotsChart: React.FC<ShotsChartProps> = ({
         bars.push(
           <Bar key="Opponent Attempts" dataKey="Opponent Attempts" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
             {showLabels && <LabelList dataKey="Opponent Attempts" position="top" fill="#666" fontSize={12} />}
-          </Bar>
-        );
-      }
-      if (config.visibleMetrics.includes('goalsFor') && goalsAgainstKey) {
-        bars.push(
-          <Bar key="Opponent Goals" dataKey="Opponent Goals" fill={OPPONENT_COLORS.dark} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Opponent Goals" position="top" fill="#666" fontSize={12} />}
           </Bar>
         );
       }

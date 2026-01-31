@@ -65,6 +65,8 @@ interface ClubDataViewProps {
   getOppConversionRateKey: () => string;
   getAttemptsKey: () => string;
   getOppAttemptsKey: () => string;
+  getInsideBoxConvRateKey: () => string;
+  getOutsideBoxConvRateKey: () => string;
   getInsideBoxAttemptsPctKey: () => string;
   getOutsideBoxAttemptsPctKey: () => string;
   getOppInsideBoxAttemptsPctKey: () => string;
@@ -126,6 +128,8 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
   getOppConversionRateKey,
   getAttemptsKey,
   getOppAttemptsKey,
+  getInsideBoxConvRateKey,
+  getOutsideBoxConvRateKey,
   getInsideBoxAttemptsPctKey,
   getOutsideBoxAttemptsPctKey,
   getOppInsideBoxAttemptsPctKey,
@@ -397,8 +401,6 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     showLabels={showLabels}
                     goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
                     goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
                     onExpansionChange={handleChartExpansionChange('xg')}
                     globalIncludeOpponents={globalIncludeOpponents}
                   />
@@ -450,10 +452,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                     oppConversionRateKey={getOppConversionRateKey()}
                     opponentKey={opponentKeyForCharts}
                     showLabels={showLabels}
-                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                    insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                    outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                    attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                    attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
                     onExpansionChange={handleChartExpansionChange('conversionRate')}
                     globalIncludeOpponents={globalIncludeOpponents}
                   />
