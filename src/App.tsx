@@ -575,13 +575,7 @@ function App() {
     return findColumnKey(['Outside Box Conv Rate', 'outside box conv rate', 'OutsideBoxConvRate', 'outside_box_conv_rate', 'Outside Box Conv', 'OB Conv Rate']) || 'Outside Box Conv Rate';
   };
 
-  const getOppInsideBoxConvRateKey = (): string => {
-    return findColumnKey(['Opp Inside Box Conv Rate', 'opp inside box conv rate', 'OppInsideBoxConvRate', 'opp_inside_box_conv_rate', 'Opp Inside Box Conv', 'Opp IB Conv Rate', 'Opponent Inside Box Conv Rate']) || 'Opp Inside Box Conv Rate';
-  };
-
-  const getOppOutsideBoxConvRateKey = (): string => {
-    return findColumnKey(['Opp Outside Box Conv Rate', 'opp outside box conv rate', 'OppOutsideBoxConvRate', 'opp_outside_box_conv_rate', 'Opp Outside Box Conv', 'Opp OB Conv Rate', 'Opponent Outside Box Conv Rate']) || 'Opp Outside Box Conv Rate';
-  };
+  // Removed getOppInsideBoxConvRateKey and getOppOutsideBoxConvRateKey - opponent conversion rates not used in PositionalAttemptsChart
 
   const getInsideBoxAttemptsPctKey = (): string => {
     return findColumnKey(['% Attempts Inside Box', '% attempts inside box', 'Inside Box Attempts %', 'inside box attempts %', 'Team % Attempts Inside Box', 'team % attempts inside box', 'IB Attempts %', 'ib attempts %']) || '% Attempts Inside Box';
