@@ -2807,6 +2807,14 @@ function App() {
               )}
             </div>
 
+                  {/* Charts Section - Only show header/divider when Shooting group is selected */}
+                  {selectedChartGroup === 'shooting' && (
+                    <>
+                      <div className="border-t border-gray-300 my-8"></div>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-4">Shooting Charts</h2>
+                    </>
+                  )}
+
                   {/* Special Charts */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {(() => {
