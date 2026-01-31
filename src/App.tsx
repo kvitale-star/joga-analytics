@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { MatchData } from './types';
-import { fetchSheetData, fetchMergedMatchData } from './services/sheetsService';
+import { fetchMergedMatchData } from './services/sheetsService';
 import { invalidateAIContextCache } from './services/aiService';
 import { sheetConfig } from './config';
 import { useURLState } from './hooks/useURLState';
