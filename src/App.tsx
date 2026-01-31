@@ -1902,7 +1902,7 @@ function App() {
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="upload-game-data" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16">
-          <UploadGameDataView matchData={matchData} columnKeys={columnKeys} sheetConfig={sheetConfig} teamSlugMap={teamSlugMap} />
+          <UploadGameDataView matchData={matchData} columnKeys={columnKeys} teamSlugMap={teamSlugMap} />
         </div>
       </div>
     );
