@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { MatchData } from './types';
-import { fetchSheetData } from './services/sheetsService';
+import { fetchSheetData, fetchMergedMatchData } from './services/sheetsService';
 import { invalidateAIContextCache } from './services/aiService';
 import { sheetConfig } from './config';
 import { useURLState } from './hooks/useURLState';
@@ -448,7 +448,8 @@ function App() {
       // This ensures the chatbot rebuilds context with fresh data
       invalidateAIContextCache();
       
-      const raw = await fetchSheetData(sheetConfig);
+      // Use merged data (Google Sheets + PostgreSQL) instead of just Google Sheets
+      const raw = await fetchMergedMatchData({ range: sheetConfig.range });
       const data = Array.isArray(raw) ? raw : [];
       if (!Array.isArray(raw)) {
         console.error('❌ fetchSheetData returned non-array; defaulting matchData to []', raw);

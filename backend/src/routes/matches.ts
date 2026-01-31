@@ -10,6 +10,7 @@ import {
 } from '../services/matchService.js';
 import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
 import { getUserTeamAssignments } from '../services/teamService.js';
+import { computeMatchStats, normalizeFieldNames } from '../services/matchStatsService.js';
 
 const router = express.Router();
 
@@ -106,13 +107,16 @@ router.post('/', canModifyMatch, async (req, res) => {
       matchDate,
       competitionType,
       result,
-      statsJson,
+      isHome,
+      statsJson, // If provided, use as-is (for backward compatibility)
       statsSource,
       statsComputedAt,
       statsManualFields,
       notes,
       venue,
       referee,
+      // Raw stats from form (if statsJson not provided)
+      rawStats,
     } = req.body;
 
     if (!opponentName || !matchDate) {
@@ -123,15 +127,47 @@ router.post('/', canModifyMatch, async (req, res) => {
       return res.status(401).json({ error: 'Not authenticated' });
     }
 
+    let finalStatsJson = statsJson;
+    let finalStatsComputedAt = statsComputedAt;
+
+    // If rawStats provided instead of statsJson, compute derived metrics
+    if (rawStats && !statsJson) {
+      // Normalize field names from form input
+      const normalizedStats = normalizeFieldNames({
+        ...rawStats,
+        teamId,
+        opponentName,
+        matchDate,
+        competitionType,
+        result,
+        venue,
+        referee,
+        notes,
+      });
+
+      // Compute all derived metrics
+      const computedStats = computeMatchStats(normalizedStats);
+
+      // Combine raw + computed into final stats
+      finalStatsJson = {
+        ...normalizedStats,
+        ...computedStats,
+      };
+
+      // Mark as computed
+      finalStatsComputedAt = new Date().toISOString();
+    }
+
     const match = await createMatch({
       teamId,
       opponentName,
       matchDate,
       competitionType,
       result,
-      statsJson,
-      statsSource,
-      statsComputedAt,
+      isHome,
+      statsJson: finalStatsJson,
+      statsSource: statsSource || 'manual',
+      statsComputedAt: finalStatsComputedAt,
       statsManualFields,
       notes,
       venue,
@@ -159,6 +195,7 @@ router.put('/:id', canModifyMatch, async (req, res) => {
       matchDate,
       competitionType,
       result,
+      isHome,
       statsJson,
       statsSource,
       statsComputedAt,
@@ -178,6 +215,7 @@ router.put('/:id', canModifyMatch, async (req, res) => {
       matchDate,
       competitionType,
       result,
+      isHome,
       statsJson,
       statsSource,
       statsComputedAt,

@@ -50,6 +50,44 @@ export async function fetchSheetData(config: SheetConfig): Promise<MatchData[]> 
 }
 
 /**
+ * Fetches merged match data from both Google Sheets and PostgreSQL
+ * This is the recommended way to get match data for charts and views
+ */
+export async function fetchMergedMatchData(options?: {
+  range?: string;
+  teamId?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<MatchData[]> {
+  const params = new URLSearchParams();
+  if (options?.range) params.append('range', options.range);
+  if (options?.teamId) params.append('teamId', options.teamId.toString());
+  if (options?.startDate) params.append('startDate', options.startDate);
+  if (options?.endDate) params.append('endDate', options.endDate);
+
+  const queryString = params.toString();
+  const endpoint = queryString ? `/sheets/merged?${queryString}` : '/sheets/merged';
+
+  try {
+    const data = await apiGet<MatchData[]>(endpoint);
+    return data;
+  } catch (error: any) {
+    console.error('Error fetching merged match data:', error);
+    
+    // Check for authentication errors
+    if (error.message?.includes('401') || 
+        error.message?.includes('Not authenticated') ||
+        error.message?.includes('CSRF token') ||
+        error.message?.includes('Unauthorized')) {
+      throw new Error('Authentication required. Please log in to access match data.');
+    }
+    
+    // Re-throw with original message
+    throw error;
+  }
+}
+
+/**
  * Appends a new row to Google Sheets using the backend API
  * @param config Sheet configuration
  * @param columnKeys Array of column keys in the order they appear in the sheet

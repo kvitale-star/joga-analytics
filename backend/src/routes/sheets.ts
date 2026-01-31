@@ -5,6 +5,8 @@ import {
   fetchColumnMetadata,
   appendRowToSheet,
 } from '../services/sheetsService.js';
+import { getMergedMatchData } from '../services/mergedDataService.js';
+import { getUserTeamAssignments } from '../services/teamService.js';
 
 const router = express.Router();
 
@@ -38,6 +40,52 @@ router.get('/data', async (req, res) => {
                        error.message?.includes('Invalid request') || error.message?.includes('Invalid range') ? 400 :
                        error.message?.includes('Quota exceeded') ? 429 : 500;
     res.status(statusCode).json({ error: error.message || 'Failed to fetch sheet data' });
+  }
+});
+
+/**
+ * GET /api/sheets/merged
+ * Get merged match data from both Google Sheets and PostgreSQL
+ * Query params: 
+ *   - range: Google Sheets range (default: "Match Log!A1:ZZ1000")
+ *   - teamId: Filter by team ID
+ *   - startDate: Filter by start date
+ *   - endDate: Filter by end date
+ */
+router.get('/merged', async (req, res) => {
+  try {
+    const range = (req.query.range as string) || 'Match Log!A1:ZZ1000';
+    const teamId = req.query.teamId ? parseInt(req.query.teamId as string) : undefined;
+    const startDate = req.query.startDate as string | undefined;
+    const endDate = req.query.endDate as string | undefined;
+
+    // Role-based visibility: coaches/viewers can only see their assigned teams
+    let teamIds: number[] | undefined;
+    if (req.userId && req.userRole && req.userRole !== 'admin') {
+      const assignedTeamIds = await getUserTeamAssignments(req.userId);
+      
+      if (teamId && !assignedTeamIds.includes(teamId)) {
+        return res.status(403).json({ error: 'You can only view matches for your assigned teams' });
+      }
+      
+      teamIds = teamId ? [teamId] : assignedTeamIds;
+    } else if (teamId) {
+      teamIds = [teamId];
+    }
+
+    const mergedData = await getMergedMatchData({
+      sheetRange: range,
+      teamId,
+      teamIds,
+      startDate,
+      endDate,
+    });
+
+    console.log('📊 Merged data API - Success, returning', mergedData.length, 'matches');
+    res.json(mergedData);
+  } catch (error: any) {
+    console.error('📊 Merged data API - Error:', error.message);
+    res.status(500).json({ error: error.message || 'Failed to get merged match data' });
   }
 });
 

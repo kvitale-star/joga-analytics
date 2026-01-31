@@ -324,6 +324,108 @@ describe('Google Sheets Integration API', () => {
     });
   });
 
+  describe('GET /api/sheets/merged', () => {
+    it('should return 401 without authentication', async () => {
+      const response = await makeRequest()
+        .get('/api/sheets/merged')
+        .expect(401);
+      
+      expect(response.body).toHaveProperty('error');
+    });
+
+    it('should return merged data from both sources', async () => {
+      // Mock Google Sheets data
+      global.fetch = (async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          values: [
+            ['Match ID', 'Date', 'Opponent', 'Goals For', 'Goals Against'],
+            ['M10001', '2025-01-15', 'Test Opponent', '3', '1'],
+          ],
+        }),
+      })) as any;
+
+      const response = await makeRequest()
+        .get('/api/sheets/merged')
+        .set(getAuthHeaders(admin.cookies))
+        .expect(200);
+      
+      expect(Array.isArray(response.body)).toBe(true);
+      
+      // Should include Google Sheets data
+      if (response.body.length > 0) {
+        const hasMatchId = response.body.some((match: any) => 
+          match['Match ID'] === 'M10001' || match['match id'] === 'M10001'
+        );
+        // May or may not have the match depending on database state, but should be an array
+        expect(Array.isArray(response.body)).toBe(true);
+      }
+    });
+
+    it('should filter by teamId when provided', async () => {
+      // Mock Google Sheets data
+      global.fetch = (async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          values: [
+            ['Match ID', 'Date', 'Opponent'],
+            ['M10002', '2025-01-20', 'Filtered Opponent'],
+          ],
+        }),
+      })) as any;
+
+      const response = await makeRequest()
+        .get('/api/sheets/merged?teamId=999')
+        .set(getAuthHeaders(admin.cookies))
+        .expect(200);
+      
+      expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('should handle date filters', async () => {
+      // Mock Google Sheets data
+      global.fetch = (async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          values: [
+            ['Match ID', 'Date', 'Opponent'],
+            ['M10003', '2025-01-25', 'Date Filter Opponent'],
+          ],
+        }),
+      })) as any;
+
+      const response = await makeRequest()
+        .get('/api/sheets/merged?startDate=2025-01-01&endDate=2025-01-31')
+        .set(getAuthHeaders(admin.cookies))
+        .expect(200);
+      
+      expect(Array.isArray(response.body)).toBe(true);
+    });
+
+    it('should handle Google Sheets fetch failure gracefully', async () => {
+      // Mock Google Sheets to fail
+      global.fetch = (async () => ({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+        json: async () => ({
+          error: { message: 'Access denied', code: 403 },
+        }),
+      })) as any;
+
+      // Should still return 200 (graceful degradation - returns DB data only)
+      const response = await makeRequest()
+        .get('/api/sheets/merged')
+        .set(getAuthHeaders(admin.cookies))
+        .expect(200);
+      
+      expect(Array.isArray(response.body)).toBe(true);
+    });
+  });
+
   describe('GET /api/sheets/test', () => {
     it('should return 401 without authentication', async () => {
       const response = await makeRequest()

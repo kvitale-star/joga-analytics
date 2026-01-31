@@ -21,6 +21,7 @@
     "migrate-slugs": "tsx src/scripts/migrate-slugs-to-new-format.ts",
     "test-email": "tsx src/scripts/test-email.ts --",
     "verify-sendgrid": "tsx src/scripts/verify-sendgrid.ts",
+    "verify-computed-fields": "tsx src/scripts/verify-computed-fields.ts",
     "test": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --watch"
   },

@@ -7,7 +7,7 @@ interface SheetDataResponse {
   values: string[][];
 }
 
-interface MatchData {
+export interface MatchData {
   [key: string]: string | number;
 }
 

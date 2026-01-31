@@ -1,6 +1,21 @@
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import type { Database as AppDatabase } from './schema.js';
+
+// IMPORTANT: This module is imported very early (often before server.ts executes),
+// so it must be able to load env vars for local dev on its own.
+// Railway provides env vars directly, so this is primarily for local runs.
+dotenv.config(); // load from cwd if present
+
+if (!process.env.DATABASE_URL && !process.env.DATABASE_URL_TEST) {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  // backend/.env is at ../../.env from src/db/database.ts
+  dotenv.config({ path: join(__dirname, '..', '..', '.env') });
+}
 
 export const isPostgres = true;
 
