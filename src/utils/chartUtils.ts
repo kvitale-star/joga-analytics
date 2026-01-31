@@ -141,7 +141,7 @@ export function findColumnPairs(columns: string[]): Map<string, string | null> {
     
     if (hasFor) {
       // Extract the base metric name (remove "for" and variations)
-      let baseMetric = lower
+      const baseMetric = lower
         .replace(/\s*(for|f)\s*$/i, '')
         .replace(/^\s*(for|f)\s+/i, '')
         .replace(/\s+(for|f)\s+/i, ' ')
@@ -165,7 +165,7 @@ export function findColumnPairs(columns: string[]): Map<string, string | null> {
         if (!hasAgainst) return false;
         
         // Extract base metric from the "against" column
-        let againstBase = cLower
+        const againstBase = cLower
           .replace(/\s*(against|a)\s*$/i, '')
           .replace(/^\s*(against|a)\s+/i, '')
           .replace(/\s+(against|a)\s+/i, ' ')

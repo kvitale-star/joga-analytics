@@ -520,7 +520,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
       const hasOpp = lower.startsWith('opp ') || lower.startsWith('opponent ');
       
       // Extract base name (remove "For", "Against", "Opp", etc.)
-      let baseName = lower
+      const baseName = lower
         .replace(/\s*(for|against)\s*$/i, '')
         .replace(/^\s*(opp|opponent)\s+/i, '')
         .replace(/\s+(for|against)\s+/i, ' ')

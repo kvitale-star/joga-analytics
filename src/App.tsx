@@ -1352,7 +1352,7 @@ function App() {
     teams.forEach(teamObj => {
       const teamSlug = teamObj.slug; // Use slug for filtering match data
       // Get all matches for this team
-      let teamMatches = matchData.filter(match => {
+      const teamMatches = matchData.filter(match => {
         const matchTeamSlug = (match[teamKeyForClub] as string)?.trim();
         return matchTeamSlug === teamSlug;
       });
