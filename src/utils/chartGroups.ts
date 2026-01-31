@@ -70,7 +70,7 @@ export const CHART_GROUPS: ChartGroup[] = [
 ];
 
 export const CHART_LABELS: Record<ChartType, string> = {
-  shots: 'Shots',
+  shots: 'Goals, Shots, & Attempts',
   goals: 'Goals',
   possession: 'Possession',
   xg: 'Expected Goals (xG)',

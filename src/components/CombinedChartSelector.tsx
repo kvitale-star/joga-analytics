@@ -82,12 +82,16 @@ export const CombinedChartSelector: React.FC<CombinedChartSelectorProps> = ({
     ? `${selectedCharts.length} chart${selectedCharts.length !== 1 ? 's' : ''} selected`
     : 'Select charts...';
 
-  // Get all individual charts (excluding custom charts and auto charts)
+  // Get all individual charts (excluding custom charts, auto charts, and removed charts)
   const individualCharts = availableCharts.filter(chart => {
     if (typeof chart === 'string' && chart.startsWith('custom-chart-')) {
       return false;
     }
     if (chart === 'auto') {
+      return false;
+    }
+    // Remove 'goals' and 'attempts' charts from individual charts section
+    if (chart === 'goals' || chart === 'attempts') {
       return false;
     }
     return true;
