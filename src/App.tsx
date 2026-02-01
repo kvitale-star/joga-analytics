@@ -2427,269 +2427,204 @@ function App() {
               )}
 
               {/* Possession Section */}
-              {selectedChartGroup === 'possession' && (
+              {/* Passing & Possession Section - Combined */}
+              {selectedChartGroup === 'passing-possession' && (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Possession</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Passing & Possession - Team Averages</h2>
+                  <div className="border-t border-gray-300 mb-4"></div>
                   {selectedTeam !== null && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {/* Avg Possession Card - show if at least one column exists */}
-                {(columnKeys.includes(getPossessionKey()) || columnKeys.includes(getOppPossessionKey())) && (() => {
-                  const requiredColumns = [getPossessionKey(), getOppPossessionKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title="Avg Possession"
-                      value={columnKeys.includes(getPossessionKey()) ? `${calculateAverage(getPossessionKey(), filteredData).toFixed(1)}%` : 'N/A'}
-                      value2={columnKeys.includes(getOppPossessionKey()) ? `${calculateAverage(getOppPossessionKey(), filteredData).toFixed(1)}%` : 'N/A'}
-                      label1={teamDisplayName}
-                      label2="Opponent"
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(getPossessionKey()) || !columnKeys.includes(getOppPossessionKey())}
-                      incompleteTooltip={!columnKeys.includes(getPossessionKey()) ? 'Missing: Possession' : !columnKeys.includes(getOppPossessionKey()) ? 'Missing: Opp Possession' : 'Missing: Both columns'}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                    />
-                  );
-                })()}
-              </div>
-              )}
-                </>
-              )}
-
-              {/* Passing Section */}
-              {selectedChartGroup === 'passing' && (
-                <>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Passing</h2>
-              {selectedTeam !== null && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {/* [Team Name] Pass Strings Card */}
-                {(columnKeys.includes(getTeamPassStrings35Key()) || columnKeys.includes(getTeamPassStrings6PlusKey()) || columnKeys.includes(getLPCAvgKey())) && (() => {
-                  const requiredColumns = [
-                    getTeamPassStrings35Key(),
-                    getTeamPassStrings6PlusKey(),
-                    getLPCAvgKey()
-                  ].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title={`${teamDisplayName} Pass Strings`}
-                      values={[
-                        { 
-                          label: '3–5 Passes', 
-                          value: columnKeys.includes(getTeamPassStrings35Key()) 
-                            ? calculateAverage(getTeamPassStrings35Key(), filteredData).toFixed(1) 
-                            : 'N/A',
-                          isIncomplete: !columnKeys.includes(getTeamPassStrings35Key())
-                        },
-                        { 
-                          label: '6+ Passes', 
-                          value: columnKeys.includes(getTeamPassStrings6PlusKey()) 
-                            ? calculateAverage(getTeamPassStrings6PlusKey(), filteredData).toFixed(1) 
-                            : 'N/A',
-                          isIncomplete: !columnKeys.includes(getTeamPassStrings6PlusKey())
-                        },
-                        { 
-                          label: 'LPC', 
-                          value: columnKeys.includes(getLPCAvgKey()) 
-                            ? calculateAverage(getLPCAvgKey(), filteredData).toFixed(1) 
-                            : 'N/A',
-                          isIncomplete: !columnKeys.includes(getLPCAvgKey())
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(getTeamPassStrings35Key()) || 
-                                   !columnKeys.includes(getTeamPassStrings6PlusKey()) || 
-                                   !columnKeys.includes(getLPCAvgKey())}
-                      incompleteTooltip={[
-                        !columnKeys.includes(getTeamPassStrings35Key()) && 'Pass Strings (3–5)',
-                        !columnKeys.includes(getTeamPassStrings6PlusKey()) && 'Pass Strings (6+)',
-                        !columnKeys.includes(getLPCAvgKey()) && 'LPC'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                    />
-                  );
-                })()}
-                {/* Opponent Pass Strings Card */}
-                {(columnKeys.includes(getOppPassStrings35Key()) || columnKeys.includes(getOppPassStrings6PlusKey())) && (() => {
-                  const requiredColumns = [getOppPassStrings35Key(), getOppPassStrings6PlusKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title="Opponent Pass Strings"
-                      value={columnKeys.includes(getOppPassStrings35Key()) ? calculateAverage(getOppPassStrings35Key(), filteredData).toFixed(1) : 'N/A'}
-                      value2={columnKeys.includes(getOppPassStrings6PlusKey()) ? calculateAverage(getOppPassStrings6PlusKey(), filteredData).toFixed(1) : 'N/A'}
-                      label1="3–5 Passes"
-                      label2="6+ Passes"
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(getOppPassStrings35Key()) || !columnKeys.includes(getOppPassStrings6PlusKey())}
-                      incompleteTooltip={!columnKeys.includes(getOppPassStrings35Key()) ? 'Missing: Opp Pass Strings (3–5)' : !columnKeys.includes(getOppPassStrings6PlusKey()) ? 'Missing: Opp Pass Strings (6+)' : 'Missing: Both columns'}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                    />
-                  );
-                })()}
-                {/* Sustained Passing Index Card */}
-                {(() => {
-                  const spiKey = getSPIKey();
-                  const spiWKey = getSPIWKey();
-                  const oppSpiKey = getOppSPIKey();
-                  const oppSpiWKey = getOppSPIWKey();
-                  const hasSPI = columnKeys.includes(spiKey);
-                  const hasSPIW = columnKeys.includes(spiWKey);
-                  const hasOppSPI = columnKeys.includes(oppSpiKey);
-                  const hasOppSPIW = columnKeys.includes(oppSpiWKey);
-                  
-                  return hasSPI || hasSPIW || hasOppSPI || hasOppSPIW;
-                })() && (() => {
-                  const spiKey = getSPIKey();
-                  const spiWKey = getSPIWKey();
-                  const oppSpiKey = getOppSPIKey();
-                  const oppSpiWKey = getOppSPIWKey();
-                  const requiredColumns = [spiKey, spiWKey, oppSpiKey, oppSpiWKey].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title="Sustained Passing Index"
-                      values={[
-                        { 
-                          label: teamDisplayName, 
-                          value: columnKeys.includes(spiKey) 
-                            ? `${calculateAverage(spiKey, filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !columnKeys.includes(spiKey)
-                        },
-                        { 
-                          label: 'SPI(w)', 
-                          value: columnKeys.includes(spiWKey) 
-                            ? calculateAverage(spiWKey, filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !columnKeys.includes(spiWKey)
-                        },
-                        { 
-                          label: 'Opponent', 
-                          value: columnKeys.includes(oppSpiKey) 
-                            ? `${calculateAverage(oppSpiKey, filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !columnKeys.includes(oppSpiKey)
-                        },
-                        { 
-                          label: 'Opp SPI(w)', 
-                          value: columnKeys.includes(oppSpiWKey) 
-                            ? calculateAverage(oppSpiWKey, filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !columnKeys.includes(oppSpiWKey)
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(spiKey) || !columnKeys.includes(spiWKey) || !columnKeys.includes(oppSpiKey) || !columnKeys.includes(oppSpiWKey)}
-                      incompleteTooltip={[
-                        !columnKeys.includes(spiKey) && 'SPI',
-                        !columnKeys.includes(spiWKey) && 'SPI(w)',
-                        !columnKeys.includes(oppSpiKey) && 'Opp SPI',
-                        !columnKeys.includes(oppSpiWKey) && 'Opp SPI(w)'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                      titleSize="lg"
-                    />
-                  );
-                })()}
-                {/* [Team Name] Passing Card */}
-                {(() => {
-                  const hasPPM = columnKeys.includes(getPPMKey());
-                  const hasPPG = columnKeys.includes(getPassesForKey());
-                  const hasPassShare = columnKeys.includes(getPassShareKey());
-                  
-                  if (!hasPPM && !hasPPG && !hasPassShare) return null;
-                  
-                  const requiredColumns = [getPPMKey(), getPassesForKey(), getPassShareKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  
-                  return (
-                    <StatsCard
-                      title={`${teamDisplayName} Passing`}
-                      values={[
-                        { 
-                          label: 'Passes Per Min', 
-                          value: hasPPM 
-                            ? calculateAverage(getPPMKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasPPM
-                        },
-                        { 
-                          label: 'Passes Per Game', 
-                          value: hasPPG 
-                            ? calculateAverage(getPassesForKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasPPG
-                        },
-                        { 
-                          label: 'Pass Share', 
-                          value: hasPassShare 
-                            ? `${calculateAverage(getPassShareKey(), filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !hasPassShare
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!hasPPM || !hasPPG || !hasPassShare}
-                      incompleteTooltip={[
-                        !hasPPM && 'Passes Per Min',
-                        !hasPPG && 'Passes Per Game',
-                        !hasPassShare && 'Pass Share'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                      titleSize="lg"
-                    />
-                  );
-                })()}
-                {/* Opponent Passing Card */}
-                {(() => {
-                  const hasOppPPM = columnKeys.includes(getOppPPMKey());
-                  const hasOppPPG = columnKeys.includes(getOppPassesKey());
-                  const hasOppPassShare = columnKeys.includes(getOppPassShareKey());
-                  
-                  if (!hasOppPPM && !hasOppPPG && !hasOppPassShare) return null;
-                  
-                  const requiredColumns = [getOppPPMKey(), getOppPassesKey(), getOppPassShareKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  
-                  return (
-                    <StatsCard
-                      title="Opponent Passing"
-                      values={[
-                        { 
-                          label: 'Passes Per Min', 
-                          value: hasOppPPM 
-                            ? calculateAverage(getOppPPMKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasOppPPM
-                        },
-                        { 
-                          label: 'Passes Per Game', 
-                          value: hasOppPPG 
-                            ? calculateAverage(getOppPassesKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasOppPPG
-                        },
-                        { 
-                          label: 'Pass Share', 
-                          value: hasOppPassShare 
-                            ? `${calculateAverage(getOppPassShareKey(), filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !hasOppPassShare
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!hasOppPPM || !hasOppPPG || !hasOppPassShare}
-                      incompleteTooltip={[
-                        !hasOppPPM && 'Opp Passes Per Min',
-                        !hasOppPPG && 'Opp Passes Per Game',
-                        !hasOppPassShare && 'Opp Pass Share'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                      titleSize="lg"
-                    />
-                  );
-                })()}
+                      {/* Avg Possession Card - First tile as requested */}
+                      {(columnKeys.includes(getPossessionKey()) || columnKeys.includes(getOppPossessionKey())) && (() => {
+                        const requiredColumns = [getPossessionKey(), getOppPossessionKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Avg Possession"
+                            value={columnKeys.includes(getPossessionKey()) ? `${calculateAverage(getPossessionKey(), filteredData).toFixed(1)}%` : '-'}
+                            value2={columnKeys.includes(getOppPossessionKey()) ? `${calculateAverage(getOppPossessionKey(), filteredData).toFixed(1)}%` : '-'}
+                            label1={teamDisplayName}
+                            label2="Opponent"
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getPossessionKey()) || !columnKeys.includes(getOppPossessionKey())}
+                            incompleteTooltip={!columnKeys.includes(getPossessionKey()) ? 'Missing: Possession' : !columnKeys.includes(getOppPossessionKey()) ? 'Missing: Opp Possession' : 'Missing: Both columns'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            narrowCard={true}
+                          />
+                        );
+                      })()}
+                      {/* [Team Name] Pass Strings Card */}
+                      {(columnKeys.includes(getTeamPassStrings35Key()) || columnKeys.includes(getTeamPassStrings6PlusKey()) || columnKeys.includes(getLPCAvgKey())) && (() => {
+                        const requiredColumns = [
+                          getTeamPassStrings35Key(),
+                          getTeamPassStrings6PlusKey(),
+                          getLPCAvgKey()
+                        ].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Pass Strings`}
+                            values={[
+                              { 
+                                label: '3–5 Passes', 
+                                value: columnKeys.includes(getTeamPassStrings35Key()) 
+                                  ? calculateAverage(getTeamPassStrings35Key(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getTeamPassStrings35Key())
+                              },
+                              { 
+                                label: '6+ Passes', 
+                                value: columnKeys.includes(getTeamPassStrings6PlusKey()) 
+                                  ? calculateAverage(getTeamPassStrings6PlusKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getTeamPassStrings6PlusKey())
+                              },
+                              { 
+                                label: 'LPC', 
+                                value: columnKeys.includes(getLPCAvgKey()) 
+                                  ? calculateAverage(getLPCAvgKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getLPCAvgKey())
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getTeamPassStrings35Key()) || 
+                                         !columnKeys.includes(getTeamPassStrings6PlusKey()) || 
+                                         !columnKeys.includes(getLPCAvgKey())}
+                            incompleteTooltip={[
+                              !columnKeys.includes(getTeamPassStrings35Key()) && 'Pass Strings (3–5)',
+                              !columnKeys.includes(getTeamPassStrings6PlusKey()) && 'Pass Strings (6+)',
+                              !columnKeys.includes(getLPCAvgKey()) && 'LPC'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                          />
+                        );
+                      })()}
+                      {/* Opponent Pass Strings Card */}
+                      {(columnKeys.includes(getOppPassStrings35Key()) || columnKeys.includes(getOppPassStrings6PlusKey())) && (() => {
+                        const requiredColumns = [getOppPassStrings35Key(), getOppPassStrings6PlusKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Opponent Pass Strings"
+                            value={columnKeys.includes(getOppPassStrings35Key()) ? calculateAverage(getOppPassStrings35Key(), filteredData).toFixed(1) : 'N/A'}
+                            value2={columnKeys.includes(getOppPassStrings6PlusKey()) ? calculateAverage(getOppPassStrings6PlusKey(), filteredData).toFixed(1) : 'N/A'}
+                            label1="3–5 Passes"
+                            label2="6+ Passes"
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getOppPassStrings35Key()) || !columnKeys.includes(getOppPassStrings6PlusKey())}
+                            incompleteTooltip={!columnKeys.includes(getOppPassStrings35Key()) ? 'Missing: Opp Pass Strings (3–5)' : !columnKeys.includes(getOppPassStrings6PlusKey()) ? 'Missing: Opp Pass Strings (6+)' : 'Missing: Both columns'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                          />
+                        );
+                      })()}
+                      {/* Removed Sustained Passing Index Card as requested */}
+                      {/* [Team Name] Passing Card */}
+                      {(() => {
+                        const hasPPM = columnKeys.includes(getPPMKey());
+                        const hasPPG = columnKeys.includes(getPassesForKey());
+                        const hasPassShare = columnKeys.includes(getPassShareKey());
+                        
+                        if (!hasPPM && !hasPPG && !hasPassShare) return null;
+                        
+                        const requiredColumns = [getPPMKey(), getPassesForKey(), getPassShareKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Passing`}
+                            values={[
+                              { 
+                                label: 'Passes Per Min', 
+                                value: hasPPM 
+                                  ? calculateAverage(getPPMKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasPPM
+                              },
+                              { 
+                                label: 'Passes Per Game', 
+                                value: hasPPG 
+                                  ? calculateAverage(getPassesForKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasPPG
+                              },
+                              { 
+                                label: 'Pass Share', 
+                                value: hasPassShare 
+                                  ? `${calculateAverage(getPassShareKey(), filteredData).toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasPassShare
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasPPM || !hasPPG || !hasPassShare}
+                            incompleteTooltip={[
+                              !hasPPM && 'Passes Per Min',
+                              !hasPPG && 'Passes Per Game',
+                              !hasPassShare && 'Pass Share'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Opponent Passing Card */}
+                      {(() => {
+                        const hasOppPPM = columnKeys.includes(getOppPPMKey());
+                        const hasOppPPG = columnKeys.includes(getOppPassesKey());
+                        const hasOppPassShare = columnKeys.includes(getOppPassShareKey());
+                        
+                        if (!hasOppPPM && !hasOppPPG && !hasOppPassShare) return null;
+                        
+                        const requiredColumns = [getOppPPMKey(), getOppPassesKey(), getOppPassShareKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        return (
+                          <StatsCard
+                            title="Opponent Passing"
+                            values={[
+                              { 
+                                label: 'Passes Per Min', 
+                                value: hasOppPPM 
+                                  ? calculateAverage(getOppPPMKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasOppPPM
+                              },
+                              { 
+                                label: 'Passes Per Game', 
+                                value: hasOppPPG 
+                                  ? calculateAverage(getOppPassesKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasOppPPG
+                              },
+                              { 
+                                label: 'Pass Share', 
+                                value: hasOppPassShare 
+                                  ? `${calculateAverage(getOppPassShareKey(), filteredData).toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasOppPassShare
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasOppPPM || !hasOppPPG || !hasOppPassShare}
+                            incompleteTooltip={[
+                              !hasOppPPM && 'Opp Passes Per Min',
+                              !hasOppPPG && 'Opp Passes Per Game',
+                              !hasOppPassShare && 'Opp Pass Share'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
                     </div>
+                  )}
+                  {/* Charts Section - Only show header/divider when Passing & Possession group is selected */}
+                  {selectedChartGroup === 'passing-possession' && (
+                    <>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-10">Passing & Possession Charts</h2>
+                      <div className="border-t border-gray-300 mb-4"></div>
+                    </>
                   )}
                 </>
               )}

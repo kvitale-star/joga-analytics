@@ -133,7 +133,7 @@ export const CombinedChartSelector: React.FC<CombinedChartSelectorProps> = ({
           <div className="py-1">
             {(() => {
               // Define the desired order: All Charts > JOGA Metrics > Shooting > Passing & Possession > Defense
-              const groupOrder = ['all', 'performance', 'shooting', 'passing', 'possession', 'defense'];
+              const groupOrder = ['all', 'performance', 'shooting', 'passing-possession', 'defense'];
               
               // Sort groups according to the desired order
               const sortedGroups = [...CHART_GROUPS].sort((a, b) => {

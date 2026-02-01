@@ -44,22 +44,16 @@ export const CHART_GROUPS: ChartGroup[] = [
     charts: [], // Defense charts will be added when specific defensive metrics are implemented
   },
   {
-    id: 'passing',
-    name: 'Passing',
-    description: 'Pass strings and passing metrics',
-    charts: ['passes', 'avgPassLength', 'passStrLength', 'passingSPI', 'passByZone', 'ppm', 'passShare'],
+    id: 'passing-possession',
+    name: 'Passing & Possession',
+    description: 'Passing metrics, pass strings, and possession',
+    charts: ['passes', 'avgPassLength', 'passStrLength', 'passingSPI', 'passByZone', 'ppm', 'passShare', 'possession'],
   },
   {
     id: 'performance',
     name: 'JOGA Metrics',
     description: 'SPI and overall team performance indicators',
-    charts: ['spi', 'possession'], // SPI and Possession metrics
-  },
-  {
-    id: 'possession',
-    name: 'Possession',
-    description: 'Possession and ball control metrics',
-    charts: ['possession'],
+    charts: ['spi'], // SPI only (possession moved to passing-possession)
   },
   {
     id: 'shooting',
