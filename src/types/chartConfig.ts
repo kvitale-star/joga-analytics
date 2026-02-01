@@ -99,7 +99,7 @@ export const DEFAULT_MISC_STATS_CONFIG: ChartConfig = {
 
 export const DEFAULT_POSITIONAL_ATTEMPTS_CONFIG: ChartConfig = {
   visibleMetrics: ['insideBoxConvRate', 'outsideBoxConvRate', 'insideBoxAttempts', 'outsideBoxAttempts'],
-  includeOpponent: true,
+  includeOpponent: false, // Turn off by default as requested
   isExpanded: true, // Full width by default
 };
 
