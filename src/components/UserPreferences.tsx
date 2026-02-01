@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserPreferences, getUserById } from '../services/authService';
 import { getAllSeasons } from '../services/seasonService';
+import { resetAllChartConfigs } from '../services/chartPreferencesService';
 import { JOGA_COLORS } from '../utils/colors';
 import type { Season } from '../types/auth';
 
@@ -12,6 +13,8 @@ export const UserPreferences: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [seasons, setSeasons] = useState<Season[]>([]);
+  const [isResettingCharts, setIsResettingCharts] = useState(false);
+  const [chartResetSuccess, setChartResetSuccess] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -176,6 +179,73 @@ export const UserPreferences: React.FC = () => {
           {isLoading ? 'Saving...' : 'Save Preferences'}
         </button>
       </form>
+
+      {/* Chart Preferences Reset Section */}
+      <div className="mt-8 pt-8 border-t border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Chart Preferences</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Reset all chart configurations to their default settings. This will restore all charts to their original state.
+        </p>
+        
+        {chartResetSuccess && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+            All chart configurations have been reset to defaults!
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={async () => {
+            if (!user) {
+              setError('You must be logged in to reset chart preferences');
+              return;
+            }
+
+            if (!window.confirm('Are you sure you want to reset all chart configurations to their default settings? This action cannot be undone.')) {
+              return;
+            }
+
+            setIsResettingCharts(true);
+            setChartResetSuccess(false);
+            setError('');
+
+            try {
+              await resetAllChartConfigs(user.id);
+              
+              // Refresh user data
+              const updatedUser = await getUserById(user.id);
+              if (updatedUser) {
+                setChartResetSuccess(true);
+                setTimeout(() => {
+                  setChartResetSuccess(false);
+                }, 5000);
+              }
+            } catch (err) {
+              setError(err instanceof Error ? err.message : 'Failed to reset chart preferences');
+            } finally {
+              setIsResettingCharts(false);
+            }
+          }}
+          disabled={isResettingCharts || isLoading}
+          className="font-medium py-2 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
+          style={{
+            backgroundColor: (isResettingCharts || isLoading) ? '#9ca3af' : '#dc2626',
+            border: `2px solid ${(isResettingCharts || isLoading) ? '#9ca3af' : '#dc2626'}`,
+          }}
+          onMouseEnter={(e) => {
+            if (!isResettingCharts && !isLoading) {
+              e.currentTarget.style.backgroundColor = '#b91c1c';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isResettingCharts && !isLoading) {
+              e.currentTarget.style.backgroundColor = '#dc2626';
+            }
+          }}
+        >
+          {isResettingCharts ? 'Resetting...' : 'Reset All Charts'}
+        </button>
+      </div>
     </div>
   );
 };

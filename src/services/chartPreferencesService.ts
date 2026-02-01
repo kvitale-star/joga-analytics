@@ -103,3 +103,36 @@ export async function resetChartConfig(
     await saveChartConfig(userId, chartType, defaultConfig);
   }
 }
+
+/**
+ * Reset all chart configurations to defaults
+ */
+export async function resetAllChartConfigs(
+  userId: number
+): Promise<void> {
+  try {
+    const user = await getUserById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const currentPreferences = user.preferences || {};
+    
+    // Clear all chart preferences
+    const updatedPreferences = {
+      ...currentPreferences,
+      chartPreferences: {},
+    };
+
+    console.log('Resetting all chart configs:', { updatedPreferences });
+    await updateUserPreferences(userId, updatedPreferences);
+    console.log('All chart configs reset successfully');
+  } catch (error) {
+    console.error('Error resetting all chart preferences:', error);
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to reset all chart preferences: Unknown error');
+  }
+}
