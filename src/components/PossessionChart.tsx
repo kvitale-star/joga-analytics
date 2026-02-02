@@ -16,6 +16,7 @@ interface PossessionChartProps {
   timeInPossessionKey?: string;
   oppPossessionKey?: string;
   oppPassShareKey?: string;
+  showLabels?: boolean;
   globalIncludeOpponents?: boolean; // Global override for includeOpponent
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
