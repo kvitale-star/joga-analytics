@@ -2,7 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import { MatchData } from '../types';
 import { JOGA_COLORS } from '../utils/colors';
-import { DEFAULT_PASS_STR_LENGTH_CONFIG, getChartTitle } from '../types/chartConfig';
+import { DEFAULT_PASS_STR_LENGTH_CONFIG } from '../types/chartConfig';
 import { ChartConfigPanel } from './ChartConfigPanel';
 import { ChartExpandButton } from './ChartExpandButton';
 import { useChartConfig } from '../hooks/useChartConfig';
@@ -14,6 +14,9 @@ interface PassStrLengthChartProps {
   lpcKey: string;
   opponentKey: string;
   showLabels?: boolean;
+  // Optional metrics for <4 and 4+ pass strings
+  passStringsLessThan4Key?: string;
+  passStrings4PlusKey?: string;
   globalIncludeOpponents?: boolean; // Global override for includeOpponent (not used for this chart)
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
@@ -25,6 +28,8 @@ export const PassStrLengthChart: React.FC<PassStrLengthChartProps> = ({
   lpcKey,
   opponentKey,
   showLabels = false,
+  passStringsLessThan4Key,
+  passStrings4PlusKey,
   globalIncludeOpponents: _globalIncludeOpponents,
   onExpansionChange,
 }) => {
@@ -42,6 +47,12 @@ export const PassStrLengthChart: React.FC<PassStrLengthChartProps> = ({
     };
 
     // Add JOGA team metrics
+    if (config.visibleMetrics.includes('passStringsLessThan4') && passStringsLessThan4Key) {
+      base['<4 Pass Strings'] = typeof match[passStringsLessThan4Key] === 'number' ? match[passStringsLessThan4Key] : null;
+    }
+    if (config.visibleMetrics.includes('passStrings4Plus') && passStrings4PlusKey) {
+      base['4+ Pass Strings'] = typeof match[passStrings4PlusKey] === 'number' ? match[passStrings4PlusKey] : null;
+    }
     if (config.visibleMetrics.includes('passStrings35')) {
       base['3-5 Pass Strings'] = typeof match[passStrings35Key] === 'number' ? match[passStrings35Key] : null;
     }
@@ -59,6 +70,20 @@ export const PassStrLengthChart: React.FC<PassStrLengthChartProps> = ({
   const renderBars = () => {
     const bars: JSX.Element[] = [];
 
+    if (config.visibleMetrics.includes('passStringsLessThan4') && passStringsLessThan4Key) {
+      bars.push(
+        <Bar key="<4 Pass Strings" dataKey="<4 Pass Strings" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
+          {showLabels && <LabelList dataKey="<4 Pass Strings" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
+    if (config.visibleMetrics.includes('passStrings4Plus') && passStrings4PlusKey) {
+      bars.push(
+        <Bar key="4+ Pass Strings" dataKey="4+ Pass Strings" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="4+ Pass Strings" position="top" fill="#666" fontSize={12} />}
+        </Bar>
+      );
+    }
     if (config.visibleMetrics.includes('passStrings35')) {
       bars.push(
         <Bar key="3-5 Pass Strings" dataKey="3-5 Pass Strings" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
@@ -89,10 +114,12 @@ export const PassStrLengthChart: React.FC<PassStrLengthChartProps> = ({
     { id: 'passStrings35', label: '3-5 Pass Strings', required: false },
     { id: 'passStrings6Plus', label: '6+ Pass Strings', required: false },
     { id: 'lpc', label: 'LPC (Longest Pass Chain)', required: false },
+    ...(passStringsLessThan4Key ? [{ id: 'passStringsLessThan4', label: '<4 Pass Strings', required: false }] : []),
+    ...(passStrings4PlusKey ? [{ id: 'passStrings4Plus', label: '4+ Pass Strings', required: false }] : []),
   ];
 
-  // Generate dynamic title
-  const chartTitle = getChartTitle('passStrLength', config.visibleMetrics);
+  // Fixed title - don't rename based on metrics
+  const chartTitle = 'Pass Strings';
 
   if (isLoading) {
     return (

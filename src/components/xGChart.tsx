@@ -16,8 +16,7 @@ interface xGChartProps {
   // Optional metrics (if available in data)
   goalsForKey?: string;
   goalsAgainstKey?: string;
-  shotsForKey?: string;
-  shotsAgainstKey?: string;
+  // Removed shotsForKey and shotsAgainstKey as requested
   globalIncludeOpponents?: boolean; // Global override for includeOpponent
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
@@ -30,8 +29,6 @@ export const XGChart: React.FC<xGChartProps> = ({
   showLabels = false,
   goalsForKey,
   goalsAgainstKey,
-  shotsForKey,
-  shotsAgainstKey,
   globalIncludeOpponents,
   onExpansionChange,
 }) => {
@@ -63,13 +60,7 @@ export const XGChart: React.FC<xGChartProps> = ({
         base['Goals Against'] = typeof match[goalsAgainstKey] === 'number' ? match[goalsAgainstKey] : 0;
       }
     }
-    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
-      base['Shots For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
-      // Add opponent metric if includeOpponent is true
-      if (config.includeOpponent && shotsAgainstKey) {
-        base['Shots Against'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
-      }
-    }
+    // Removed 'Shots For' as requested
 
     return base;
   });
@@ -107,30 +98,16 @@ export const XGChart: React.FC<xGChartProps> = ({
         );
       }
     }
-    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
-      bars.push(
-        <Bar key="Shots For" dataKey="Shots For" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Shots For" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
-      // Add opponent bar if includeOpponent is true
-      if (config.includeOpponent && shotsAgainstKey) {
-        bars.push(
-          <Bar key="Shots Against" dataKey="Shots Against" fill={OPPONENT_COLORS.dark} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Shots Against" position="top" fill="#666" fontSize={12} />}
-          </Bar>
-        );
-      }
-    }
+    // Removed 'Shots For' bars as requested
 
     return bars;
   };
 
   // Available metrics - only "For" metrics, no "Against" or "Opp"
+  // Removed 'Shots For' as requested
   const availableMetrics = [
     { id: 'xG', label: 'Expected Goals (xG)', required: false },
     ...(goalsForKey ? [{ id: 'goalsFor', label: 'Goals For', required: false }] : []),
-    ...(shotsForKey ? [{ id: 'shotsFor', label: 'Shots For', required: false }] : []),
   ];
 
   // Generate dynamic title

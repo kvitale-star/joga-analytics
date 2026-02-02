@@ -3,7 +3,7 @@
  * Handles saving and loading chart configurations
  */
 
-import { ChartConfig, ChartPreferences, DEFAULT_SHOTS_CONFIG, DEFAULT_POSSESSION_CONFIG, DEFAULT_GOALS_CONFIG, DEFAULT_XG_CONFIG, DEFAULT_CONVERSION_RATE_CONFIG, DEFAULT_TSR_CONFIG } from '../types/chartConfig';
+import { ChartConfig, ChartPreferences, DEFAULT_SHOTS_CONFIG, DEFAULT_POSSESSION_CONFIG, DEFAULT_GOALS_CONFIG, DEFAULT_XG_CONFIG, DEFAULT_CONVERSION_RATE_CONFIG, DEFAULT_TSR_CONFIG, DEFAULT_POSITIONAL_ATTEMPTS_CONFIG, DEFAULT_PASSES_CONFIG, DEFAULT_PASS_STR_LENGTH_CONFIG, DEFAULT_SPI_CONFIG, DEFAULT_PPM_CONFIG } from '../types/chartConfig';
 import { updateUserPreferences } from './authService';
 import { getUserById } from './authService';
 
@@ -14,6 +14,11 @@ const CHART_DEFAULTS: Record<string, ChartConfig> = {
   xg: DEFAULT_XG_CONFIG,
   conversionRate: DEFAULT_CONVERSION_RATE_CONFIG,
   tsr: DEFAULT_TSR_CONFIG,
+  positionalAttempts: DEFAULT_POSITIONAL_ATTEMPTS_CONFIG,
+  passes: DEFAULT_PASSES_CONFIG,
+  passStrLength: DEFAULT_PASS_STR_LENGTH_CONFIG,
+  spi: DEFAULT_SPI_CONFIG,
+  ppm: DEFAULT_PPM_CONFIG,
 };
 
 /**
@@ -101,5 +106,38 @@ export async function resetChartConfig(
   const defaultConfig = CHART_DEFAULTS[chartType];
   if (defaultConfig) {
     await saveChartConfig(userId, chartType, defaultConfig);
+  }
+}
+
+/**
+ * Reset all chart configurations to defaults
+ */
+export async function resetAllChartConfigs(
+  userId: number
+): Promise<void> {
+  try {
+    const user = await getUserById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const currentPreferences = user.preferences || {};
+    
+    // Clear all chart preferences
+    const updatedPreferences = {
+      ...currentPreferences,
+      chartPreferences: {},
+    };
+
+    console.log('Resetting all chart configs:', { updatedPreferences });
+    await updateUserPreferences(userId, updatedPreferences);
+    console.log('All chart configs reset successfully');
+  } catch (error) {
+    console.error('Error resetting all chart preferences:', error);
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to reset all chart preferences: Unknown error');
   }
 }

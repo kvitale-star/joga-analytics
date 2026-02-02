@@ -82,12 +82,16 @@ export const CombinedChartSelector: React.FC<CombinedChartSelectorProps> = ({
     ? `${selectedCharts.length} chart${selectedCharts.length !== 1 ? 's' : ''} selected`
     : 'Select charts...';
 
-  // Get all individual charts (excluding custom charts and auto charts)
+  // Get all individual charts (excluding custom charts, auto charts, and removed charts)
   const individualCharts = availableCharts.filter(chart => {
     if (typeof chart === 'string' && chart.startsWith('custom-chart-')) {
       return false;
     }
     if (chart === 'auto') {
+      return false;
+    }
+    // Remove 'goals', 'attempts', 'passShare', and 'passingSPI' charts from individual charts section
+    if (chart === 'goals' || chart === 'attempts' || chart === 'passShare' || chart === 'passingSPI') {
       return false;
     }
     return true;
@@ -129,7 +133,7 @@ export const CombinedChartSelector: React.FC<CombinedChartSelectorProps> = ({
           <div className="py-1">
             {(() => {
               // Define the desired order: All Charts > JOGA Metrics > Shooting > Passing & Possession > Defense
-              const groupOrder = ['all', 'performance', 'shooting', 'passing', 'possession', 'defense'];
+              const groupOrder = ['all', 'performance', 'shooting', 'passing-possession', 'defense'];
               
               // Sort groups according to the desired order
               const sortedGroups = [...CHART_GROUPS].sort((a, b) => {

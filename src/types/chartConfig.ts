@@ -14,14 +14,14 @@ export interface ChartPreferences {
 }
 
 export const DEFAULT_SHOTS_CONFIG: ChartConfig = {
-  visibleMetrics: ['shotsFor', 'attemptsFor'],
-  includeOpponent: true,
-  isExpanded: false,
+  visibleMetrics: ['goalsFor', 'shotsFor', 'attemptsFor'],
+  includeOpponent: false, // Turn off by default as requested
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_POSSESSION_CONFIG: ChartConfig = {
-  visibleMetrics: ['possession', 'passShare'],
-  includeOpponent: true,
+  visibleMetrics: ['possession', 'passShare'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
@@ -38,20 +38,20 @@ export const DEFAULT_XG_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_CONVERSION_RATE_CONFIG: ChartConfig = {
-  visibleMetrics: ['conversionRate', 'insideBoxConvRate', 'outsideBoxConvRate'],
+  visibleMetrics: ['conversionRate', 'insideBoxConvRate', 'outsideBoxConvRate'], // Inside/Outside Box on by default
   includeOpponent: true,
-  isExpanded: false,
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_TSR_CONFIG: ChartConfig = {
-  visibleMetrics: ['tsr', 'attemptsFor'],
-  includeOpponent: true,
+  visibleMetrics: ['tsr', 'attemptsFor'], // Attempts on by default
+  includeOpponent: false, // Turn off by default as requested
   isExpanded: false,
 };
 
 export const DEFAULT_PASSES_CONFIG: ChartConfig = {
-  visibleMetrics: ['passesFor'],
-  includeOpponent: true,
+  visibleMetrics: ['passesFor'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
@@ -68,20 +68,20 @@ export const DEFAULT_AVG_PASS_LENGTH_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_PPM_CONFIG: ChartConfig = {
-  visibleMetrics: ['ppm'],
-  includeOpponent: true,
+  visibleMetrics: ['ppm'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
 export const DEFAULT_PASS_STR_LENGTH_CONFIG: ChartConfig = {
-  visibleMetrics: ['passStrings35', 'passStrings6Plus', 'lpc'],
-  includeOpponent: false,
-  isExpanded: false,
+  visibleMetrics: ['passStrings35', 'passStrings6Plus', 'lpc'], // All available metrics (excluding optional <4 and 4+)
+  includeOpponent: false, // Turn off opponent by default
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_SPI_CONFIG: ChartConfig = {
-  visibleMetrics: ['spi', 'spiW'],
-  includeOpponent: true,
+  visibleMetrics: ['spi', 'spiW'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
@@ -98,9 +98,9 @@ export const DEFAULT_MISC_STATS_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_POSITIONAL_ATTEMPTS_CONFIG: ChartConfig = {
-  visibleMetrics: ['insideBoxAttempts', 'outsideBoxAttempts'],
-  includeOpponent: true,
-  isExpanded: false,
+  visibleMetrics: ['insideBoxConvRate', 'outsideBoxConvRate', 'insideBoxAttempts', 'outsideBoxAttempts'],
+  includeOpponent: false, // Turn off by default as requested
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_PASS_BY_ZONE_CONFIG: ChartConfig = {
@@ -141,14 +141,14 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       goalsFor: 'Goals',
     },
     conversionRate: {
-      conversionRate: 'Conversion Rate',
+      conversionRate: 'Conversion Rates',
+      insideBoxConvRate: 'Inside Box Conv Rate',
+      outsideBoxConvRate: 'Outside Box Conv Rate',
       attemptsFor: 'Attempts',
-      shotsFor: 'Shots',
-      goalsFor: 'Goals',
     },
     tsr: {
-      tsr: 'TSR',
-      shotsFor: 'Shots',
+      tsr: 'Total Shots Ratio',
+      attemptsFor: 'Attempts',
     },
     passes: {
       passesFor: 'Passes',
@@ -182,8 +182,10 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       freeKickFor: 'Free Kicks',
     },
     positionalAttempts: {
-      insideBoxAttempts: 'Inside Box',
-      outsideBoxAttempts: 'Outside Box',
+      insideBoxConvRate: 'Inside Box Conv Rate %',
+      insideBoxAttempts: '% Attempts Inside Box',
+      outsideBoxConvRate: 'Outside Box Conv Rate %',
+      outsideBoxAttempts: '% Attempts Outside Box',
     },
     passByZone: {
       // Dynamic - zones will be added based on available data
@@ -207,7 +209,7 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       possession: 'Possession',
       goals: 'Goals',
       xg: 'Expected Goals (xG)',
-      conversionRate: 'Conversion Rate',
+      conversionRate: 'Conversion Rates',
       tsr: 'Total Shots Ratio',
       passes: 'Passes',
       passShare: 'Pass Share',
@@ -217,7 +219,7 @@ export function getChartTitle(chartType: ChartType, visibleMetrics: string[]): s
       spi: 'Sustained Passing Index',
       attempts: 'Attempts',
       miscStats: 'Corners & Free Kicks',
-      positionalAttempts: 'Attempts by Position',
+      positionalAttempts: 'Conversion Rates & Attempts by Field Position',
       passByZone: 'Pass % by Zone',
       auto: 'Chart',
     };

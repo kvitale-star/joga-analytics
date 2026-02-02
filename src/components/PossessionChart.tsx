@@ -1,8 +1,8 @@
 import React from 'react';
-import { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import { MatchData } from '../types';
 import { JOGA_COLORS, OPPONENT_COLORS } from '../utils/colors';
-import { DEFAULT_POSSESSION_CONFIG, getChartTitle } from '../types/chartConfig';
+import { DEFAULT_POSSESSION_CONFIG } from '../types/chartConfig';
 import { ChartConfigPanel } from './ChartConfigPanel';
 import { ChartExpandButton } from './ChartExpandButton';
 import { useChartConfig } from '../hooks/useChartConfig';
@@ -16,6 +16,7 @@ interface PossessionChartProps {
   timeInPossessionKey?: string;
   oppPossessionKey?: string;
   oppPassShareKey?: string;
+  showLabels?: boolean;
   globalIncludeOpponents?: boolean; // Global override for includeOpponent
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
@@ -28,6 +29,7 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
   timeInPossessionKey,
   oppPossessionKey,
   oppPassShareKey,
+  showLabels = false,
   globalIncludeOpponents,
   onExpansionChange,
 }) => {
@@ -65,67 +67,47 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
     return base;
   });
 
-  // Determine which elements to render based on config
-  const renderChartElements = () => {
-    const elements: JSX.Element[] = [];
+  // Determine which bars to render based on config
+  const renderBars = () => {
+    const bars: JSX.Element[] = [];
 
     if (config.visibleMetrics.includes('possession')) {
-      elements.push(
-        <Line
-          key="Possession"
-          yAxisId="left"
-          type="monotone"
-          dataKey="Possession"
-          stroke={JOGA_COLORS.voltYellow}
-          strokeWidth={2}
-        />
+      bars.push(
+        <Bar key="Possession" dataKey="Possession" fill={JOGA_COLORS.voltYellow} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Possession" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        </Bar>
       );
       if (config.includeOpponent && oppPossessionKey) {
-        elements.push(
-          <Line
-            key="Opponent Possession"
-            yAxisId="left"
-            type="monotone"
-            dataKey="Opponent Possession"
-            stroke={OPPONENT_COLORS.primary}
-            strokeWidth={2}
-            strokeDasharray="5 5"
-          />
+        bars.push(
+          <Bar key="Opponent Possession" dataKey="Opponent Possession" fill={OPPONENT_COLORS.primary} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opponent Possession" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+          </Bar>
         );
       }
     }
     if (config.visibleMetrics.includes('passShare')) {
-      elements.push(
-        <Bar
-          key="Pass Share"
-          yAxisId="right"
-          dataKey="Pass Share"
-          fill={JOGA_COLORS.valorBlue}
-        />
+      bars.push(
+        <Bar key="Pass Share" dataKey="Pass Share" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Pass Share" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+        </Bar>
       );
       if (config.includeOpponent && oppPassShareKey) {
-        elements.push(
-          <Bar
-            key="Opponent Pass Share"
-            yAxisId="right"
-            dataKey="Opponent Pass Share"
-            fill={OPPONENT_COLORS.secondary}
-          />
+        bars.push(
+          <Bar key="Opponent Pass Share" dataKey="Opponent Pass Share" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Opponent Pass Share" position="top" fill="#666" fontSize={12} formatter={(value: number) => `${value.toFixed(1)}%`} />}
+          </Bar>
         );
       }
     }
     if (config.visibleMetrics.includes('timeInPossession') && timeInPossessionKey) {
-      elements.push(
-        <Bar
-          key="Time in Possession"
-          yAxisId="right"
-          dataKey="Time in Possession"
-          fill={JOGA_COLORS.pinkFoam}
-        />
+      bars.push(
+        <Bar key="Time in Possession" dataKey="Time in Possession" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
+          {showLabels && <LabelList dataKey="Time in Possession" position="top" fill="#666" fontSize={12} />}
+        </Bar>
       );
     }
 
-    return elements;
+    return bars;
   };
 
   const availableMetrics = [
@@ -134,8 +116,8 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
     ...(timeInPossessionKey ? [{ id: 'timeInPossession', label: 'Time in Possession', required: false }] : []),
   ];
 
-  // Generate dynamic title
-  const chartTitle = getChartTitle('possession', config.visibleMetrics);
+  // Fixed title - don't rename based on metrics
+  const chartTitle = 'Possession & Pass Share';
 
   if (isLoading) {
     return (
@@ -165,17 +147,16 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
         </div>
       </div>
       <ResponsiveContainer width="100%" height={400}>
-        <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 30, bottom: 10 }}>
+        <BarChart data={chartData} margin={{ top: 5, right: 30, left: 30, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <Legend 
             verticalAlign="top" 
             align="center" 
-            wrapperStyle={{ paddingBottom: '5px', color: '#1f2937' }}
+            wrapperStyle={{ paddingBottom: '15px', color: '#1f2937' }}
             formatter={(value: string) => value.trim()}
           />
           <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-          <YAxis yAxisId="left" domain={[0, 100]} />
-          <YAxis yAxisId="right" orientation="right" domain={[0, 100]} />
+          <YAxis domain={[0, 100]} />
           <Tooltip 
             contentStyle={{
               backgroundColor: '#111827',
@@ -185,8 +166,8 @@ export const PossessionChart: React.FC<PossessionChartProps> = ({
               padding: '12px'
             }}
           />
-          {renderChartElements()}
-        </ComposedChart>
+          {renderBars()}
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );

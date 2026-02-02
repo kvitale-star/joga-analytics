@@ -14,8 +14,10 @@ interface TSRChartProps {
   opponentKey: string;
   showLabels?: boolean;
   // Optional metrics (if available in data)
-  shotsForKey?: string;
-  shotsAgainstKey?: string;
+  shotsForKey?: string; // Used for attempts fallback
+  shotsAgainstKey?: string; // Used for opponent attempts fallback
+  attemptsForKey?: string; // Proper attempts key
+  attemptsAgainstKey?: string; // Proper opponent attempts key
   globalIncludeOpponents?: boolean; // Global override for includeOpponent
   onExpansionChange?: (isExpanded: boolean) => void; // Callback when expansion state changes
 }
@@ -28,6 +30,8 @@ export const TSRChart: React.FC<TSRChartProps> = ({
   showLabels = false,
   shotsForKey,
   shotsAgainstKey,
+  attemptsForKey,
+  attemptsAgainstKey,
   globalIncludeOpponents,
   onExpansionChange,
 }) => {
@@ -61,11 +65,18 @@ export const TSRChart: React.FC<TSRChartProps> = ({
         base['Opp Shots'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
       }
     }
-    if (config.visibleMetrics.includes('attemptsFor') && shotsForKey) {
-      base['Attempts For'] = typeof match[shotsForKey] === 'number' ? match[shotsForKey] : 0;
-      // Add opponent metric if includeOpponent is true
-      if (config.includeOpponent && shotsAgainstKey) {
-        base['Opp Attempts'] = typeof match[shotsAgainstKey] === 'number' ? match[shotsAgainstKey] : 0;
+    if (config.visibleMetrics.includes('attemptsFor')) {
+      // Use attemptsForKey if available, otherwise fallback to shotsForKey
+      const attemptsKey = attemptsForKey || shotsForKey;
+      if (attemptsKey) {
+        base['Attempts For'] = typeof match[attemptsKey] === 'number' ? match[attemptsKey] : 0;
+        // Add opponent metric if includeOpponent is true
+        if (config.includeOpponent) {
+          const oppAttemptsKey = attemptsAgainstKey || shotsAgainstKey;
+          if (oppAttemptsKey) {
+            base['Opp Attempts'] = typeof match[oppAttemptsKey] === 'number' ? match[oppAttemptsKey] : 0;
+          }
+        }
       }
     }
 
@@ -90,34 +101,26 @@ export const TSRChart: React.FC<TSRChartProps> = ({
         </Bar>
       );
     }
-    if (config.visibleMetrics.includes('shotsFor') && shotsForKey) {
-      bars.push(
-        <Bar key="Shots For" dataKey="Shots For" fill={JOGA_COLORS.valorBlue} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Shots For" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
-      // Add opponent bar if includeOpponent is true
-      if (config.includeOpponent && shotsAgainstKey) {
+    // Removed 'Shots For' bars as requested
+    if (config.visibleMetrics.includes('attemptsFor')) {
+      const attemptsKey = attemptsForKey || shotsForKey;
+      if (attemptsKey) {
         bars.push(
-          <Bar key="Opp Shots" dataKey="Opp Shots" fill={OPPONENT_COLORS.secondary} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Opp Shots" position="top" fill="#666" fontSize={12} />}
+          <Bar key="Attempts For" dataKey="Attempts For" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
+            {showLabels && <LabelList dataKey="Attempts For" position="top" fill="#666" fontSize={12} />}
           </Bar>
         );
-      }
-    }
-    if (config.visibleMetrics.includes('attemptsFor') && shotsForKey) {
-      bars.push(
-        <Bar key="Attempts For" dataKey="Attempts For" fill={JOGA_COLORS.pinkFoam} animationDuration={500}>
-          {showLabels && <LabelList dataKey="Attempts For" position="top" fill="#666" fontSize={12} />}
-        </Bar>
-      );
-      // Add opponent bar if includeOpponent is true
-      if (config.includeOpponent && shotsAgainstKey) {
-        bars.push(
-          <Bar key="Opp Attempts" dataKey="Opp Attempts" fill={OPPONENT_COLORS.dark} animationDuration={500}>
-            {showLabels && <LabelList dataKey="Opp Attempts" position="top" fill="#666" fontSize={12} />}
-          </Bar>
-        );
+        // Add opponent bar if includeOpponent is true
+        if (config.includeOpponent) {
+          const oppAttemptsKey = attemptsAgainstKey || shotsAgainstKey;
+          if (oppAttemptsKey) {
+            bars.push(
+              <Bar key="Opp Attempts" dataKey="Opp Attempts" fill={OPPONENT_COLORS.dark} animationDuration={500}>
+                {showLabels && <LabelList dataKey="Opp Attempts" position="top" fill="#666" fontSize={12} />}
+              </Bar>
+            );
+          }
+        }
       }
     }
 
@@ -125,10 +128,11 @@ export const TSRChart: React.FC<TSRChartProps> = ({
   };
 
   // Available metrics - only "For" metrics, no "Against" or "Opp"
+  // Removed 'Shots For' as requested, keeping only TSR and Attempts
+  const attemptsKey = attemptsForKey || shotsForKey;
   const availableMetrics = [
     ...(tsrKey ? [{ id: 'tsr', label: 'Total Shots Ratio %', required: false }] : []),
-    ...(shotsForKey ? [{ id: 'shotsFor', label: 'Shots For', required: false }] : []),
-    ...(shotsForKey ? [{ id: 'attemptsFor', label: 'Attempts', required: false }] : []),
+    ...(attemptsKey ? [{ id: 'attemptsFor', label: 'Attempts', required: false }] : []),
   ];
 
   // Generate dynamic title

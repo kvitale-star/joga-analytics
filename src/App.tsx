@@ -12,17 +12,13 @@ import { ShotsChart } from './components/ShotsChart';
 import { PossessionChart } from './components/PossessionChart';
 import { XGChart } from './components/xGChart';
 import { ConversionRateChart } from './components/ConversionRateChart';
-import { GoalsChart } from './components/GoalsChart';
 import { SPIChart } from './components/SPIChart';
-import { AttemptsChart } from './components/AttemptsChart';
 import { PositionalAttemptsChart } from './components/PositionalAttemptsChart';
-import { MiscStatsChart } from './components/MiscStatsChart';
 import { PassesChart } from './components/PassesChart';
 import { AvgPassLengthChart } from './components/AvgPassLengthChart';
 import { PassStrLengthChart } from './components/PassStrLengthChart';
 import { PassByZoneChart } from './components/PassByZoneChart';
 import { PPMChart } from './components/PPMChart';
-import { PassShareChart } from './components/PassShareChart';
 import { TSRChart } from './components/TSRChart';
 import { AutoChart } from './components/AutoChart';
 import { ChatFirstView } from './components/ChatFirstView';
@@ -578,6 +574,8 @@ function App() {
     return findColumnKey(['Outside Box Conv Rate', 'outside box conv rate', 'OutsideBoxConvRate', 'outside_box_conv_rate', 'Outside Box Conv', 'OB Conv Rate']) || 'Outside Box Conv Rate';
   };
 
+  // Removed getOppInsideBoxConvRateKey and getOppOutsideBoxConvRateKey - opponent conversion rates not used in PositionalAttemptsChart
+
   const getInsideBoxAttemptsPctKey = (): string => {
     return findColumnKey(['% Attempts Inside Box', '% attempts inside box', 'Inside Box Attempts %', 'inside box attempts %', 'Team % Attempts Inside Box', 'team % attempts inside box', 'IB Attempts %', 'ib attempts %']) || '% Attempts Inside Box';
   };
@@ -644,6 +642,14 @@ function App() {
 
   const getLPCAvgKey = (): string => {
     return findColumnKey(['LPC', 'lpc', 'LPCAvg', 'lpc_avg']) || 'LPC';
+  };
+
+  const getPassStringsLessThan4Key = (): string => {
+    return findColumnKey(['Pass Strings <4', 'pass strings <4', 'Pass Strings Less Than 4', 'pass strings less than 4', 'PassStringsLessThan4', 'pass_strings_less_than_4']) || 'Pass Strings <4';
+  };
+
+  const getPassStrings4PlusKey = (): string => {
+    return findColumnKey(['Pass Strings 4+', 'pass strings 4+', 'Pass Strings 4 Plus', 'pass strings 4 plus', 'PassStrings4Plus', 'pass_strings_4_plus']) || 'Pass Strings 4+';
   };
 
   const getPassesForKey = (): string => {
@@ -2010,6 +2016,8 @@ function App() {
             getPPMKey={getPPMKey}
             getOppPPMKey={getOppPPMKey}
             getOppPassShareKey={getOppPassShareKey}
+            getInsideBoxConvRateKey={getInsideBoxConvRateKey}
+            getOutsideBoxConvRateKey={getOutsideBoxConvRateKey}
           />
         </div>
       </div>
@@ -2193,7 +2201,8 @@ function App() {
               {/* Shooting Section */}
               {selectedChartGroup === 'shooting' && (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Shooting</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Shooting - Team Averages</h2>
+                  <div className="border-t border-gray-300 mb-4"></div>
                   {selectedTeam !== null && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                       {/* [Team Name] Shooting Card */}
@@ -2425,269 +2434,204 @@ function App() {
               )}
 
               {/* Possession Section */}
-              {selectedChartGroup === 'possession' && (
+              {/* Passing & Possession Section - Combined */}
+              {selectedChartGroup === 'passing-possession' && (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-800 mb-4">Possession</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Passing & Possession - Team Averages</h2>
+                  <div className="border-t border-gray-300 mb-4"></div>
                   {selectedTeam !== null && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {/* Avg Possession Card - show if at least one column exists */}
-                {(columnKeys.includes(getPossessionKey()) || columnKeys.includes(getOppPossessionKey())) && (() => {
-                  const requiredColumns = [getPossessionKey(), getOppPossessionKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title="Avg Possession"
-                      value={columnKeys.includes(getPossessionKey()) ? `${calculateAverage(getPossessionKey(), filteredData).toFixed(1)}%` : 'N/A'}
-                      value2={columnKeys.includes(getOppPossessionKey()) ? `${calculateAverage(getOppPossessionKey(), filteredData).toFixed(1)}%` : 'N/A'}
-                      label1={teamDisplayName}
-                      label2="Opponent"
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(getPossessionKey()) || !columnKeys.includes(getOppPossessionKey())}
-                      incompleteTooltip={!columnKeys.includes(getPossessionKey()) ? 'Missing: Possession' : !columnKeys.includes(getOppPossessionKey()) ? 'Missing: Opp Possession' : 'Missing: Both columns'}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                    />
-                  );
-                })()}
-              </div>
-              )}
-                </>
-              )}
-
-              {/* Passing Section */}
-              {selectedChartGroup === 'passing' && (
-                <>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Passing</h2>
-              {selectedTeam !== null && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                {/* [Team Name] Pass Strings Card */}
-                {(columnKeys.includes(getTeamPassStrings35Key()) || columnKeys.includes(getTeamPassStrings6PlusKey()) || columnKeys.includes(getLPCAvgKey())) && (() => {
-                  const requiredColumns = [
-                    getTeamPassStrings35Key(),
-                    getTeamPassStrings6PlusKey(),
-                    getLPCAvgKey()
-                  ].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title={`${teamDisplayName} Pass Strings`}
-                      values={[
-                        { 
-                          label: '3–5 Passes', 
-                          value: columnKeys.includes(getTeamPassStrings35Key()) 
-                            ? calculateAverage(getTeamPassStrings35Key(), filteredData).toFixed(1) 
-                            : 'N/A',
-                          isIncomplete: !columnKeys.includes(getTeamPassStrings35Key())
-                        },
-                        { 
-                          label: '6+ Passes', 
-                          value: columnKeys.includes(getTeamPassStrings6PlusKey()) 
-                            ? calculateAverage(getTeamPassStrings6PlusKey(), filteredData).toFixed(1) 
-                            : 'N/A',
-                          isIncomplete: !columnKeys.includes(getTeamPassStrings6PlusKey())
-                        },
-                        { 
-                          label: 'LPC', 
-                          value: columnKeys.includes(getLPCAvgKey()) 
-                            ? calculateAverage(getLPCAvgKey(), filteredData).toFixed(1) 
-                            : 'N/A',
-                          isIncomplete: !columnKeys.includes(getLPCAvgKey())
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(getTeamPassStrings35Key()) || 
-                                   !columnKeys.includes(getTeamPassStrings6PlusKey()) || 
-                                   !columnKeys.includes(getLPCAvgKey())}
-                      incompleteTooltip={[
-                        !columnKeys.includes(getTeamPassStrings35Key()) && 'Pass Strings (3–5)',
-                        !columnKeys.includes(getTeamPassStrings6PlusKey()) && 'Pass Strings (6+)',
-                        !columnKeys.includes(getLPCAvgKey()) && 'LPC'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                    />
-                  );
-                })()}
-                {/* Opponent Pass Strings Card */}
-                {(columnKeys.includes(getOppPassStrings35Key()) || columnKeys.includes(getOppPassStrings6PlusKey())) && (() => {
-                  const requiredColumns = [getOppPassStrings35Key(), getOppPassStrings6PlusKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title="Opponent Pass Strings"
-                      value={columnKeys.includes(getOppPassStrings35Key()) ? calculateAverage(getOppPassStrings35Key(), filteredData).toFixed(1) : 'N/A'}
-                      value2={columnKeys.includes(getOppPassStrings6PlusKey()) ? calculateAverage(getOppPassStrings6PlusKey(), filteredData).toFixed(1) : 'N/A'}
-                      label1="3–5 Passes"
-                      label2="6+ Passes"
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(getOppPassStrings35Key()) || !columnKeys.includes(getOppPassStrings6PlusKey())}
-                      incompleteTooltip={!columnKeys.includes(getOppPassStrings35Key()) ? 'Missing: Opp Pass Strings (3–5)' : !columnKeys.includes(getOppPassStrings6PlusKey()) ? 'Missing: Opp Pass Strings (6+)' : 'Missing: Both columns'}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                    />
-                  );
-                })()}
-                {/* Sustained Passing Index Card */}
-                {(() => {
-                  const spiKey = getSPIKey();
-                  const spiWKey = getSPIWKey();
-                  const oppSpiKey = getOppSPIKey();
-                  const oppSpiWKey = getOppSPIWKey();
-                  const hasSPI = columnKeys.includes(spiKey);
-                  const hasSPIW = columnKeys.includes(spiWKey);
-                  const hasOppSPI = columnKeys.includes(oppSpiKey);
-                  const hasOppSPIW = columnKeys.includes(oppSpiWKey);
-                  
-                  return hasSPI || hasSPIW || hasOppSPI || hasOppSPIW;
-                })() && (() => {
-                  const spiKey = getSPIKey();
-                  const spiWKey = getSPIWKey();
-                  const oppSpiKey = getOppSPIKey();
-                  const oppSpiWKey = getOppSPIWKey();
-                  const requiredColumns = [spiKey, spiWKey, oppSpiKey, oppSpiWKey].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  return (
-                    <StatsCard
-                      title="Sustained Passing Index"
-                      values={[
-                        { 
-                          label: teamDisplayName, 
-                          value: columnKeys.includes(spiKey) 
-                            ? `${calculateAverage(spiKey, filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !columnKeys.includes(spiKey)
-                        },
-                        { 
-                          label: 'SPI(w)', 
-                          value: columnKeys.includes(spiWKey) 
-                            ? calculateAverage(spiWKey, filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !columnKeys.includes(spiWKey)
-                        },
-                        { 
-                          label: 'Opponent', 
-                          value: columnKeys.includes(oppSpiKey) 
-                            ? `${calculateAverage(oppSpiKey, filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !columnKeys.includes(oppSpiKey)
-                        },
-                        { 
-                          label: 'Opp SPI(w)', 
-                          value: columnKeys.includes(oppSpiWKey) 
-                            ? calculateAverage(oppSpiWKey, filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !columnKeys.includes(oppSpiWKey)
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!columnKeys.includes(spiKey) || !columnKeys.includes(spiWKey) || !columnKeys.includes(oppSpiKey) || !columnKeys.includes(oppSpiWKey)}
-                      incompleteTooltip={[
-                        !columnKeys.includes(spiKey) && 'SPI',
-                        !columnKeys.includes(spiWKey) && 'SPI(w)',
-                        !columnKeys.includes(oppSpiKey) && 'Opp SPI',
-                        !columnKeys.includes(oppSpiWKey) && 'Opp SPI(w)'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                      titleSize="lg"
-                    />
-                  );
-                })()}
-                {/* [Team Name] Passing Card */}
-                {(() => {
-                  const hasPPM = columnKeys.includes(getPPMKey());
-                  const hasPPG = columnKeys.includes(getPassesForKey());
-                  const hasPassShare = columnKeys.includes(getPassShareKey());
-                  
-                  if (!hasPPM && !hasPPG && !hasPassShare) return null;
-                  
-                  const requiredColumns = [getPPMKey(), getPassesForKey(), getPassShareKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  
-                  return (
-                    <StatsCard
-                      title={`${teamDisplayName} Passing`}
-                      values={[
-                        { 
-                          label: 'Passes Per Min', 
-                          value: hasPPM 
-                            ? calculateAverage(getPPMKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasPPM
-                        },
-                        { 
-                          label: 'Passes Per Game', 
-                          value: hasPPG 
-                            ? calculateAverage(getPassesForKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasPPG
-                        },
-                        { 
-                          label: 'Pass Share', 
-                          value: hasPassShare 
-                            ? `${calculateAverage(getPassShareKey(), filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !hasPassShare
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!hasPPM || !hasPPG || !hasPassShare}
-                      incompleteTooltip={[
-                        !hasPPM && 'Passes Per Min',
-                        !hasPPG && 'Passes Per Game',
-                        !hasPassShare && 'Pass Share'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                      titleSize="lg"
-                    />
-                  );
-                })()}
-                {/* Opponent Passing Card */}
-                {(() => {
-                  const hasOppPPM = columnKeys.includes(getOppPPMKey());
-                  const hasOppPPG = columnKeys.includes(getOppPassesKey());
-                  const hasOppPassShare = columnKeys.includes(getOppPassShareKey());
-                  
-                  if (!hasOppPPM && !hasOppPPG && !hasOppPassShare) return null;
-                  
-                  const requiredColumns = [getOppPPMKey(), getOppPassesKey(), getOppPassShareKey()].filter(col => columnKeys.includes(col));
-                  const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
-                  
-                  return (
-                    <StatsCard
-                      title="Opponent Passing"
-                      values={[
-                        { 
-                          label: 'Passes Per Min', 
-                          value: hasOppPPM 
-                            ? calculateAverage(getOppPPMKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasOppPPM
-                        },
-                        { 
-                          label: 'Passes Per Game', 
-                          value: hasOppPPG 
-                            ? calculateAverage(getOppPassesKey(), filteredData).toFixed(1)
-                            : '-',
-                          isIncomplete: !hasOppPPG
-                        },
-                        { 
-                          label: 'Pass Share', 
-                          value: hasOppPassShare 
-                            ? `${calculateAverage(getOppPassShareKey(), filteredData).toFixed(1)}%`
-                            : '-',
-                          isIncomplete: !hasOppPassShare
-                        }
-                      ]}
-                      color="joga-yellow"
-                      isIncomplete={!hasOppPPM || !hasOppPPG || !hasOppPassShare}
-                      incompleteTooltip={[
-                        !hasOppPPM && 'Opp Passes Per Min',
-                        !hasOppPPG && 'Opp Passes Per Game',
-                        !hasOppPassShare && 'Opp Pass Share'
-                      ].filter(Boolean).join(', ')}
-                      missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
-                      titleSize="lg"
-                    />
-                  );
-                })()}
+                      {/* Avg Possession Card - First tile as requested */}
+                      {(columnKeys.includes(getPossessionKey()) || columnKeys.includes(getOppPossessionKey())) && (() => {
+                        const requiredColumns = [getPossessionKey(), getOppPossessionKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Avg Possession"
+                            value={columnKeys.includes(getPossessionKey()) ? `${calculateAverage(getPossessionKey(), filteredData).toFixed(1)}%` : '-'}
+                            value2={columnKeys.includes(getOppPossessionKey()) ? `${calculateAverage(getOppPossessionKey(), filteredData).toFixed(1)}%` : '-'}
+                            label1={teamDisplayName}
+                            label2="Opponent"
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getPossessionKey()) || !columnKeys.includes(getOppPossessionKey())}
+                            incompleteTooltip={!columnKeys.includes(getPossessionKey()) ? 'Missing: Possession' : !columnKeys.includes(getOppPossessionKey()) ? 'Missing: Opp Possession' : 'Missing: Both columns'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            narrowCard={true}
+                          />
+                        );
+                      })()}
+                      {/* [Team Name] Pass Strings Card */}
+                      {(columnKeys.includes(getTeamPassStrings35Key()) || columnKeys.includes(getTeamPassStrings6PlusKey()) || columnKeys.includes(getLPCAvgKey())) && (() => {
+                        const requiredColumns = [
+                          getTeamPassStrings35Key(),
+                          getTeamPassStrings6PlusKey(),
+                          getLPCAvgKey()
+                        ].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Pass Strings`}
+                            values={[
+                              { 
+                                label: '3–5 Passes', 
+                                value: columnKeys.includes(getTeamPassStrings35Key()) 
+                                  ? calculateAverage(getTeamPassStrings35Key(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getTeamPassStrings35Key())
+                              },
+                              { 
+                                label: '6+ Passes', 
+                                value: columnKeys.includes(getTeamPassStrings6PlusKey()) 
+                                  ? calculateAverage(getTeamPassStrings6PlusKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getTeamPassStrings6PlusKey())
+                              },
+                              { 
+                                label: 'LPC', 
+                                value: columnKeys.includes(getLPCAvgKey()) 
+                                  ? calculateAverage(getLPCAvgKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getLPCAvgKey())
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getTeamPassStrings35Key()) || 
+                                         !columnKeys.includes(getTeamPassStrings6PlusKey()) || 
+                                         !columnKeys.includes(getLPCAvgKey())}
+                            incompleteTooltip={[
+                              !columnKeys.includes(getTeamPassStrings35Key()) && 'Pass Strings (3–5)',
+                              !columnKeys.includes(getTeamPassStrings6PlusKey()) && 'Pass Strings (6+)',
+                              !columnKeys.includes(getLPCAvgKey()) && 'LPC'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                          />
+                        );
+                      })()}
+                      {/* Opponent Pass Strings Card */}
+                      {(columnKeys.includes(getOppPassStrings35Key()) || columnKeys.includes(getOppPassStrings6PlusKey())) && (() => {
+                        const requiredColumns = [getOppPassStrings35Key(), getOppPassStrings6PlusKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Opponent Pass Strings"
+                            value={columnKeys.includes(getOppPassStrings35Key()) ? calculateAverage(getOppPassStrings35Key(), filteredData).toFixed(1) : 'N/A'}
+                            value2={columnKeys.includes(getOppPassStrings6PlusKey()) ? calculateAverage(getOppPassStrings6PlusKey(), filteredData).toFixed(1) : 'N/A'}
+                            label1="3–5 Passes"
+                            label2="6+ Passes"
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getOppPassStrings35Key()) || !columnKeys.includes(getOppPassStrings6PlusKey())}
+                            incompleteTooltip={!columnKeys.includes(getOppPassStrings35Key()) ? 'Missing: Opp Pass Strings (3–5)' : !columnKeys.includes(getOppPassStrings6PlusKey()) ? 'Missing: Opp Pass Strings (6+)' : 'Missing: Both columns'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                          />
+                        );
+                      })()}
+                      {/* Removed Sustained Passing Index Card as requested */}
+                      {/* [Team Name] Passing Card */}
+                      {(() => {
+                        const hasPPM = columnKeys.includes(getPPMKey());
+                        const hasPPG = columnKeys.includes(getPassesForKey());
+                        const hasPassShare = columnKeys.includes(getPassShareKey());
+                        
+                        if (!hasPPM && !hasPPG && !hasPassShare) return null;
+                        
+                        const requiredColumns = [getPPMKey(), getPassesForKey(), getPassShareKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Passing`}
+                            values={[
+                              { 
+                                label: 'Passes Per Min', 
+                                value: hasPPM 
+                                  ? calculateAverage(getPPMKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasPPM
+                              },
+                              { 
+                                label: 'Passes Per Game', 
+                                value: hasPPG 
+                                  ? calculateAverage(getPassesForKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasPPG
+                              },
+                              { 
+                                label: 'Pass Share', 
+                                value: hasPassShare 
+                                  ? `${calculateAverage(getPassShareKey(), filteredData).toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasPassShare
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasPPM || !hasPPG || !hasPassShare}
+                            incompleteTooltip={[
+                              !hasPPM && 'Passes Per Min',
+                              !hasPPG && 'Passes Per Game',
+                              !hasPassShare && 'Pass Share'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Opponent Passing Card */}
+                      {(() => {
+                        const hasOppPPM = columnKeys.includes(getOppPPMKey());
+                        const hasOppPPG = columnKeys.includes(getOppPassesKey());
+                        const hasOppPassShare = columnKeys.includes(getOppPassShareKey());
+                        
+                        if (!hasOppPPM && !hasOppPPG && !hasOppPassShare) return null;
+                        
+                        const requiredColumns = [getOppPPMKey(), getOppPassesKey(), getOppPassShareKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        return (
+                          <StatsCard
+                            title="Opponent Passing"
+                            values={[
+                              { 
+                                label: 'Passes Per Min', 
+                                value: hasOppPPM 
+                                  ? calculateAverage(getOppPPMKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasOppPPM
+                              },
+                              { 
+                                label: 'Passes Per Game', 
+                                value: hasOppPPG 
+                                  ? calculateAverage(getOppPassesKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasOppPPG
+                              },
+                              { 
+                                label: 'Pass Share', 
+                                value: hasOppPassShare 
+                                  ? `${calculateAverage(getOppPassShareKey(), filteredData).toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasOppPassShare
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasOppPPM || !hasOppPPG || !hasOppPassShare}
+                            incompleteTooltip={[
+                              !hasOppPPM && 'Opp Passes Per Min',
+                              !hasOppPPG && 'Opp Passes Per Game',
+                              !hasOppPassShare && 'Opp Pass Share'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
                     </div>
+                  )}
+                  {/* Charts Section - Only show header/divider when Passing & Possession group is selected */}
+                  {selectedChartGroup === 'passing-possession' && (
+                    <>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-10">Passing & Possession Charts</h2>
+                      <div className="border-t border-gray-300 mb-4"></div>
+                    </>
                   )}
                 </>
               )}
@@ -2807,6 +2751,14 @@ function App() {
               )}
             </div>
 
+                  {/* Charts Section - Only show header/divider when Shooting group is selected */}
+                  {selectedChartGroup === 'shooting' && (
+                    <>
+                      <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-10">Shooting Charts</h2>
+                      <div className="border-t border-gray-300 mb-4"></div>
+                    </>
+                  )}
+
                   {/* Special Charts */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {(() => {
@@ -2815,7 +2767,7 @@ function App() {
                 return (
                   <>
               {selectedCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey()) && (
-                <div className={expandedCharts['shots'] ? 'lg:col-span-2' : ''}>
+                <div className={expandedCharts['shots'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
                   {selectedTeam === null ? (
                     <EmptyChart showTitle={false} />
                   ) : (
@@ -2837,26 +2789,7 @@ function App() {
                 </div>
               )}
 
-              {selectedCharts.includes('goals') && columnKeys.includes(getGoalsForKey()) && columnKeys.includes(getGoalsAgainstKey()) && (
-                <div className={expandedCharts['goals'] ? 'lg:col-span-2' : ''}>
-                  {selectedTeam === null ? (
-                    <EmptyChart showTitle={false} />
-                  ) : (
-                    <GoalsChart
-                      data={dataToDisplay}
-                      goalsForKey={getGoalsForKey()}
-                      goalsAgainstKey={getGoalsAgainstKey()}
-                      opponentKey={opponentKey}
-                      showLabels={showLabels}
-                      xGKey={columnKeys.includes(getxGKey()) ? getxGKey() : undefined}
-                      xGAKey={columnKeys.includes(getxGAKey()) ? getxGAKey() : undefined}
-                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                      onExpansionChange={handleChartExpansionChange('goals')}
-                    />
-                  )}
-                </div>
-              )}
+              {/* Removed Goals chart as requested */}
 
               {selectedCharts.includes('possession') && columnKeys.includes(getPossessionKey()) && (
                 <div className={expandedCharts['possession'] ? 'lg:col-span-2' : ''}>
@@ -2870,6 +2803,7 @@ function App() {
                       opponentKey={opponentKey}
                       oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
                       oppPassShareKey={columnKeys.includes(getOppPassShareKey()) ? getOppPassShareKey() : undefined}
+                      showLabels={showLabels}
                       onExpansionChange={handleChartExpansionChange('possession')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />
@@ -2890,8 +2824,6 @@ function App() {
                       showLabels={showLabels}
                       goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
                       goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('xg')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />
@@ -2912,6 +2844,8 @@ function App() {
                       showLabels={showLabels}
                       shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
                       shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                      attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                      attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('tsr')}
                     />
                   )}
@@ -2922,25 +2856,27 @@ function App() {
                 columnKeys.includes(getSPIWKey()) || 
                 columnKeys.includes(getOppSPIKey()) || 
                 columnKeys.includes(getOppSPIWKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <SPIChart
-                    data={dataToDisplay}
-                    spiKey={getSPIKey()}
-                    spiWKey={getSPIWKey()}
-                    oppSpiKey={getOppSPIKey()}
-                    oppSpiWKey={getOppSPIWKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('spi')}
-                  />
-                )
+                <div className={expandedCharts['spi'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <SPIChart
+                      data={dataToDisplay}
+                      spiKey={getSPIKey()}
+                      spiWKey={getSPIWKey()}
+                      oppSpiKey={getOppSPIKey()}
+                      oppSpiWKey={getOppSPIWKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('spi')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey())) && (
-                <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : ''}>
+                <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
                   {selectedTeam === null ? (
                     <EmptyChart showTitle={false} />
                   ) : (
@@ -2950,10 +2886,10 @@ function App() {
                       oppConversionRateKey={getOppConversionRateKey()}
                       opponentKey={opponentKey}
                       showLabels={showLabels}
-                      shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                      shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                      goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                      goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                      insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                      outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                      attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                      attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
                       onExpansionChange={handleChartExpansionChange('conversionRate')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />
@@ -2964,80 +2900,73 @@ function App() {
                 );
               })()}
 
-              {selectedCharts.includes('attempts') && columnKeys.includes(getAttemptsKey()) && columnKeys.includes(getOppAttemptsKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <AttemptsChart
-                    data={dataToDisplay}
-                    attemptsKey={getAttemptsKey()}
-                    oppAttemptsKey={getOppAttemptsKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
-                    shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
-                    goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
-                    goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('attempts')}
-                  />
-                )
-              )}
+              {/* Removed Attempts chart as requested */}
 
               {selectedCharts.includes('positionalAttempts') && 
-               (columnKeys.includes(getInsideBoxAttemptsPctKey()) || columnKeys.includes(getOutsideBoxAttemptsPctKey())) &&
-               (columnKeys.includes(getOppInsideBoxAttemptsPctKey()) || columnKeys.includes(getOppOutsideBoxAttemptsPctKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PositionalAttemptsChart
-                    data={dataToDisplay}
-                    insideBoxAttemptsPctKey={getInsideBoxAttemptsPctKey()}
-                    outsideBoxAttemptsPctKey={getOutsideBoxAttemptsPctKey()}
-                    oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
-                    oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('positionalAttempts')}
-                  />
-                )
+               (columnKeys.includes(getInsideBoxAttemptsPctKey()) || columnKeys.includes(getOutsideBoxAttemptsPctKey()) ||
+                columnKeys.includes(getInsideBoxConvRateKey()) || columnKeys.includes(getOutsideBoxConvRateKey())) && (
+                <div className={expandedCharts['positionalAttempts'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PositionalAttemptsChart
+                      data={dataToDisplay}
+                      insideBoxAttemptsPctKey={getInsideBoxAttemptsPctKey()}
+                      outsideBoxAttemptsPctKey={getOutsideBoxAttemptsPctKey()}
+                      oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
+                      oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                      outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('positionalAttempts')}
+                    />
+                  )}
+                </div>
               )}
 
-              {selectedCharts.includes('miscStats') && 
-               (columnKeys.includes(getCornersForKey()) || columnKeys.includes(getCornersAgainstKey())) &&
-               (columnKeys.includes(getFreeKickForKey()) || columnKeys.includes(getFreeKickAgainstKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <MiscStatsChart
-                    data={dataToDisplay}
-                    cornersForKey={getCornersForKey()}
-                    cornersAgainstKey={getCornersAgainstKey()}
-                    freeKickForKey={getFreeKickForKey()}
-                    freeKickAgainstKey={getFreeKickAgainstKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('miscStats')}
-                  />
-                )
+              {/* Removed Corner & Free Kicks chart as requested */}
+
+              {selectedCharts.includes('passStrLength') && 
+               columnKeys.includes(getTeamPassStrings35Key()) && 
+               columnKeys.includes(getTeamPassStrings6PlusKey()) && 
+               columnKeys.includes(getLPCAvgKey()) && (
+                <div className={expandedCharts['passStrLength'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PassStrLengthChart
+                      data={dataToDisplay}
+                      passStrings35Key={getTeamPassStrings35Key()}
+                      passStrings6PlusKey={getTeamPassStrings6PlusKey()}
+                      lpcKey={getLPCAvgKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      passStringsLessThan4Key={columnKeys.includes(getPassStringsLessThan4Key()) ? getPassStringsLessThan4Key() : undefined}
+                      passStrings4PlusKey={columnKeys.includes(getPassStrings4PlusKey()) ? getPassStrings4PlusKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('passStrLength')}
+                    />
+                  )}
+                </div>
               )}
 
-              {selectedCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && columnKeys.includes(getOppPassesKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PassesChart
-                    data={dataToDisplay}
-                    passesForKey={getPassesForKey()}
-                    oppPassesKey={getOppPassesKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('passes')}
-                  />
-                )
+              {selectedCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && (
+                <div className={expandedCharts['passes'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PassesChart
+                      data={dataToDisplay}
+                      passesForKey={getPassesForKey()}
+                      oppPassesKey={getOppPassesKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('passes')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('avgPassLength') && columnKeys.includes(getAvgPassLengthKey()) && columnKeys.includes(getOppAvgPassLengthKey()) && (
@@ -3052,25 +2981,6 @@ function App() {
                     showLabels={showLabels}
                     globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
                     onExpansionChange={handleChartExpansionChange('avgPassLength')}
-                  />
-                )
-              )}
-
-              {selectedCharts.includes('passStrLength') && 
-               columnKeys.includes(getTeamPassStrings35Key()) && 
-               columnKeys.includes(getTeamPassStrings6PlusKey()) && 
-               columnKeys.includes(getLPCAvgKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PassStrLengthChart
-                    data={dataToDisplay}
-                    passStrings35Key={getTeamPassStrings35Key()}
-                    passStrings6PlusKey={getTeamPassStrings6PlusKey()}
-                    lpcKey={getLPCAvgKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    onExpansionChange={handleChartExpansionChange('passStrLength')}
                   />
                 )
               )}
@@ -3113,38 +3023,23 @@ function App() {
               )}
 
               {selectedCharts.includes('ppm') && columnKeys.includes(getPPMKey()) && columnKeys.includes(getOppPPMKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PPMChart
-                    data={dataToDisplay}
-                    ppmKey={getPPMKey()}
-                    oppPPMKey={getOppPPMKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('ppm')}
-                  />
-                )
+                <div className={expandedCharts['ppm'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PPMChart
+                      data={dataToDisplay}
+                      ppmKey={getPPMKey()}
+                      oppPPMKey={getOppPPMKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('ppm')}
+                    />
+                  )}
+                </div>
               )}
 
-              {selectedCharts.includes('passShare') && (columnKeys.includes(getPassShareKey()) || columnKeys.includes(getOppPassShareKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PassShareChart
-                    data={dataToDisplay}
-                    passShareKey={getPassShareKey()}
-                    oppPassShareKey={getOppPassShareKey()}
-                    opponentKey={opponentKey}
-                    possessionKey={columnKeys.includes(getPossessionKey()) ? getPossessionKey() : undefined}
-                    oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('passShare')}
-                  />
-                )
-              )}
                   </div>
 
                         {/* User-Created Custom Charts - Individual charts */}

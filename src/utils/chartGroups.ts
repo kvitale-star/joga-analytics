@@ -35,7 +35,7 @@ export const CHART_GROUPS: ChartGroup[] = [
     id: 'all',
     name: 'All Charts',
     description: 'Show all available charts',
-    charts: ['shots', 'goals', 'possession', 'xg', 'spi', 'conversionRate', 'attempts', 'positionalAttempts', 'miscStats'],
+    charts: ['shots', 'possession', 'xg', 'spi', 'conversionRate', 'positionalAttempts'],
   },
   {
     id: 'defense',
@@ -44,44 +44,38 @@ export const CHART_GROUPS: ChartGroup[] = [
     charts: [], // Defense charts will be added when specific defensive metrics are implemented
   },
   {
-    id: 'passing',
-    name: 'Passing',
-    description: 'Pass strings and passing metrics',
-    charts: ['passes', 'avgPassLength', 'passStrLength', 'passingSPI', 'passByZone', 'ppm', 'passShare'],
+    id: 'passing-possession',
+    name: 'Passing & Possession',
+    description: 'Passing metrics, pass strings, and possession',
+    charts: ['possession', 'passStrLength', 'spi', 'passes', 'ppm'],
   },
   {
     id: 'performance',
     name: 'JOGA Metrics',
     description: 'SPI and overall team performance indicators',
-    charts: ['spi', 'possession'], // SPI and Possession metrics
-  },
-  {
-    id: 'possession',
-    name: 'Possession',
-    description: 'Possession and ball control metrics',
-    charts: ['possession'],
+    charts: [], // SPI moved to passing-possession group
   },
   {
     id: 'shooting',
     name: 'Shooting',
     description: 'Shots, goals, xG, and conversion rates',
-    charts: ['shots', 'goals', 'xg', 'tsr', 'conversionRate', 'attempts', 'positionalAttempts', 'miscStats'],
+    charts: ['shots', 'xg', 'tsr', 'conversionRate', 'positionalAttempts'],
   },
 ];
 
 export const CHART_LABELS: Record<ChartType, string> = {
-  shots: 'Shots',
+  shots: 'Goals, Shots, & Attempts',
   goals: 'Goals',
-  possession: 'Possession',
+  possession: 'Possession & Pass Share',
   xg: 'Expected Goals (xG)',
   spi: 'Sustained Passing Index',
-  conversionRate: 'Conversion Rate',
+  conversionRate: 'Conversion Rates',
   attempts: 'Attempts',
-  positionalAttempts: 'Attempts by Field Position',
+  positionalAttempts: 'Conversion Rates & Attempts by Field Position',
   miscStats: 'Corners & Free Kicks',
-  passes: 'Passes per Game',
+  passes: 'Passes Per Game',
   avgPassLength: 'Average Pass Length',
-  passStrLength: 'Pass Strings Overview',
+  passStrLength: 'Pass Strings',
   passingSPI: 'Passing SPI',
   passByZone: 'Pass % by Zone',
   ppm: 'Passes Per Minute',
