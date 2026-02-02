@@ -53,7 +53,7 @@ export const CHART_GROUPS: ChartGroup[] = [
     id: 'performance',
     name: 'JOGA Metrics',
     description: 'SPI and overall team performance indicators',
-    charts: ['spi'], // SPI only (possession moved to passing-possession)
+    charts: [], // SPI moved to passing-possession group
   },
   {
     id: 'shooting',
