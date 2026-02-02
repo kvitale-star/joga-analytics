@@ -76,7 +76,7 @@ export const DEFAULT_PPM_CONFIG: ChartConfig = {
 export const DEFAULT_PASS_STR_LENGTH_CONFIG: ChartConfig = {
   visibleMetrics: ['passStrings35', 'passStrings6Plus', 'lpc'], // All available metrics (excluding optional <4 and 4+)
   includeOpponent: false, // Turn off opponent by default
-  isExpanded: false,
+  isExpanded: true, // Full width by default
 };
 
 export const DEFAULT_SPI_CONFIG: ChartConfig = {
