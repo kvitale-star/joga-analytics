@@ -1608,6 +1608,19 @@ function App() {
     }
   }, [selectedChartGroup, availableCharts.length]);
 
+  // Set dashboard as default when a team is selected
+  useEffect(() => {
+    // Skip if charts came from URL
+    if (chartsFromURLRef.current) {
+      return;
+    }
+    
+    // If a team is selected and no chart group is selected, default to dashboard
+    if (selectedTeam !== null && !selectedChartGroup) {
+      setSelectedChartGroup('dashboard');
+    }
+  }, [selectedTeam, selectedChartGroup, setSelectedChartGroup]);
+
   // Initialize charts when chart group is set but charts are empty and availableCharts becomes available
   useEffect(() => {
     // Skip if charts came from URL
@@ -1616,7 +1629,8 @@ function App() {
     }
     
     // If we have a chart group selected but no charts (or charts don't match the group), and availableCharts is ready, initialize
-    if (selectedChartGroup && availableCharts.length > 0) {
+    // Skip for dashboard group as it doesn't show charts
+    if (selectedChartGroup && selectedChartGroup !== 'dashboard' && availableCharts.length > 0) {
       const group = CHART_GROUPS.find(g => g.id === selectedChartGroup);
       if (group) {
         // Filter to only include charts that are available
@@ -2198,6 +2212,447 @@ function App() {
                 <>
                   {/* Summary Stats */}
                   <div className="mb-8">
+              {/* Dashboard Section - Shows all tiles from all chart groups */}
+              {selectedChartGroup === 'dashboard' && (
+                <>
+                  {/* Shooting Section Tiles */}
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2">Shooting - Team Averages</h2>
+                  <div className="border-t border-gray-300 mb-4"></div>
+                  {selectedTeam !== null && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      {/* [Team Name] Shooting Card */}
+                      {(() => {
+                        const hasAttempts = columnKeys.includes(getAttemptsKey());
+                        const hasGoals = columnKeys.includes(getGoalsForKey());
+                        const hasXG = columnKeys.includes(getxGKey());
+                        
+                        if (!hasAttempts && !hasGoals && !hasXG) return null;
+                        
+                        // Calculate xG data completeness
+                        const xGKey = getxGKey();
+                        const hasXGColumn = columnKeys.includes(xGKey);
+                        let xGTooltip: string | undefined;
+                        let isXGIncomplete = false;
+                        
+                        if (hasXGColumn) {
+                          const gamesWithXG = filteredData.filter(match => {
+                            const xgValue = match[xGKey];
+                            return xgValue !== null && xgValue !== undefined && xgValue !== '';
+                          }).length;
+                          const totalGames = filteredData.length;
+                          const xGComplete = gamesWithXG === totalGames;
+                          
+                          if (!xGComplete) {
+                            isXGIncomplete = true;
+                            if (gamesWithXG === 0) {
+                              xGTooltip = `No xG data exists within the last ${lastNGames || 'N'} games.`;
+                            } else {
+                              xGTooltip = `xG data exists for ${gamesWithXG}/${totalGames} games.`;
+                            }
+                          }
+                        }
+                        
+                        const requiredColumns = [getAttemptsKey(), getGoalsForKey(), getxGKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        // Check if any data is missing for the top-right asterisk
+                        const hasAnyMissingData = !hasAttempts || !hasGoals || isXGIncomplete;
+                        
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Shooting`}
+                            values={[
+                              { 
+                                label: 'Attempts', 
+                                value: hasAttempts 
+                                  ? calculateAverage(getAttemptsKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasAttempts
+                              },
+                              { 
+                                label: 'Goals', 
+                                value: hasGoals 
+                                  ? calculateAverage(getGoalsForKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasGoals
+                              },
+                              { 
+                                label: 'xG', 
+                                value: hasXG 
+                                  ? calculateAverage(getxGKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: false,
+                                tooltip: xGTooltip
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={hasAnyMissingData}
+                            incompleteTooltip={!hasAttempts ? 'Missing: Attempts' : !hasGoals ? 'Missing: Goals' : 'Missing: xG data'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Opponent Shooting Card */}
+                      {(() => {
+                        const hasOppAttempts = columnKeys.includes(getOppAttemptsKey());
+                        const hasOppGoals = columnKeys.includes(getGoalsAgainstKey());
+                        const hasOppXG = columnKeys.includes(getxGAKey());
+                        
+                        if (!hasOppAttempts && !hasOppGoals && !hasOppXG) return null;
+                        
+                        // Calculate opponent xG data completeness
+                        const xGAKey = getxGAKey();
+                        const gamesWithXGA = filteredData.filter(match => {
+                          const xgaValue = match[xGAKey];
+                          return xgaValue !== null && xgaValue !== undefined && xgaValue !== '';
+                        }).length;
+                        const totalGames = filteredData.length;
+                        const hasXGAColumn = columnKeys.includes(xGAKey);
+                        const hasMissingXGA = hasXGAColumn && gamesWithXGA > 0 && gamesWithXGA < totalGames;
+                        const hasNoXGA = hasXGAColumn && gamesWithXGA === 0;
+                        const xGAComplete = hasXGAColumn && gamesWithXGA === totalGames;
+                        
+                        // Only check xG (Opp) data for the top-right asterisk
+                        const missingInfo = columnKeys.includes(xGAKey) 
+                          ? getMissingDataInfo(filteredData, [xGAKey], opponentKey)
+                          : { affectedMatches: 0, completenessPercentage: 0, missingColumns: [], affectedOpponents: [] };
+                        
+                        // Check if xG (Opp) data is missing for the top-right asterisk
+                        const hasAnyMissingData = (hasNoXGA || hasMissingXGA) && !xGAComplete;
+                        
+                        return (
+                          <StatsCard
+                            title="Opponent Shooting"
+                            values={[
+                              { 
+                                label: 'Attempts', 
+                                value: hasOppAttempts 
+                                  ? calculateAverage(getOppAttemptsKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: false
+                              },
+                              { 
+                                label: 'Goals', 
+                                value: hasOppGoals 
+                                  ? calculateAverage(getGoalsAgainstKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: false
+                              },
+                              { 
+                                label: 'xG', 
+                                value: hasOppXG 
+                                  ? calculateAverage(getxGAKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: false
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={hasAnyMissingData}
+                            incompleteTooltip={hasNoXGA ? 'No xG (Opp) data exists' : hasMissingXGA ? `xG (Opp) data exists for ${gamesWithXGA}/${totalGames} games` : 'Missing: xG (Opp) data'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Team Field Pos. & Conversion Rate Card */}
+                      {(() => {
+                        const hasInsideBoxAttempts = columnKeys.includes(getInsideBoxAttemptsPctKey());
+                        const hasOutsideBoxAttempts = columnKeys.includes(getOutsideBoxAttemptsPctKey());
+                        const hasInsideBoxConv = columnKeys.includes(getInsideBoxConvRateKey());
+                        const hasOutsideBoxConv = columnKeys.includes(getOutsideBoxConvRateKey());
+                        
+                        if (!hasInsideBoxAttempts && !hasOutsideBoxAttempts && !hasInsideBoxConv && !hasOutsideBoxConv) return null;
+                        
+                        const requiredColumns = [
+                          getInsideBoxAttemptsPctKey(),
+                          getOutsideBoxAttemptsPctKey(),
+                          getInsideBoxConvRateKey(),
+                          getOutsideBoxConvRateKey()
+                        ].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        const insideBoxAttempts = hasInsideBoxAttempts ? calculateAverage(getInsideBoxAttemptsPctKey(), filteredData) : 0;
+                        const insideBoxConv = hasInsideBoxConv ? calculateAverage(getInsideBoxConvRateKey(), filteredData) : 0;
+                        const outsideBoxAttempts = hasOutsideBoxAttempts ? calculateAverage(getOutsideBoxAttemptsPctKey(), filteredData) : 0;
+                        const outsideBoxConv = hasOutsideBoxConv ? calculateAverage(getOutsideBoxConvRateKey(), filteredData) : 0;
+                        
+                        return (
+                          <StatsCard
+                            title="Team Field Pos. & Conversion Rate"
+                            values={[
+                              { 
+                                label: 'Inside Box', 
+                                value: hasInsideBoxAttempts 
+                                  ? `${insideBoxAttempts.toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasInsideBoxAttempts
+                              },
+                              { 
+                                label: 'In Conv Rate', 
+                                value: hasInsideBoxConv 
+                                  ? `${insideBoxConv.toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasInsideBoxConv
+                              },
+                              { 
+                                label: 'Outside Box', 
+                                value: hasOutsideBoxAttempts 
+                                  ? `${outsideBoxAttempts.toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasOutsideBoxAttempts
+                              },
+                              { 
+                                label: 'Out Conv Rate', 
+                                value: hasOutsideBoxConv 
+                                  ? `${outsideBoxConv.toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasOutsideBoxConv
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasInsideBoxAttempts || !hasOutsideBoxAttempts || !hasInsideBoxConv || !hasOutsideBoxConv}
+                            incompleteTooltip={[
+                              !hasInsideBoxAttempts && 'Inside Box Attempts',
+                              !hasInsideBoxConv && 'Inside Box Conv Rate',
+                              !hasOutsideBoxAttempts && 'Outside Box Attempts',
+                              !hasOutsideBoxConv && 'Outside Box Conv Rate'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Opp Attempts by Field Pos. Card */}
+                      {(columnKeys.includes(getOppInsideBoxAttemptsPctKey()) || columnKeys.includes(getOppOutsideBoxAttemptsPctKey())) && (() => {
+                        const requiredColumns = [getOppInsideBoxAttemptsPctKey(), getOppOutsideBoxAttemptsPctKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Opp Attempts by Field Pos."
+                            value={columnKeys.includes(getOppInsideBoxAttemptsPctKey()) ? `${calculateAverage(getOppInsideBoxAttemptsPctKey(), filteredData).toFixed(1)}%` : '-'}
+                            value2={columnKeys.includes(getOppOutsideBoxAttemptsPctKey()) ? `${calculateAverage(getOppOutsideBoxAttemptsPctKey(), filteredData).toFixed(1)}%` : '-'}
+                            label1="Inside Box"
+                            label2="Outside Box"
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getOppInsideBoxAttemptsPctKey()) || !columnKeys.includes(getOppOutsideBoxAttemptsPctKey())}
+                            incompleteTooltip={!columnKeys.includes(getOppInsideBoxAttemptsPctKey()) ? 'Missing: Opp Inside Box Attempts %' : !columnKeys.includes(getOppOutsideBoxAttemptsPctKey()) ? 'Missing: Opp Outside Box Attempts %' : 'Missing: Both columns'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                            narrowCard={true}
+                          />
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Passing & Possession Section Tiles */}
+                  <h2 className="text-xl font-semibold text-gray-800 mb-2 mt-10">Passing & Possession - Team Averages</h2>
+                  <div className="border-t border-gray-300 mb-4"></div>
+                  {selectedTeam !== null && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                      {/* Avg Possession Card */}
+                      {(columnKeys.includes(getPossessionKey()) || columnKeys.includes(getOppPossessionKey())) && (() => {
+                        const requiredColumns = [getPossessionKey(), getOppPossessionKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Avg Possession"
+                            value={columnKeys.includes(getPossessionKey()) ? `${calculateAverage(getPossessionKey(), filteredData).toFixed(1)}%` : '-'}
+                            value2={columnKeys.includes(getOppPossessionKey()) ? `${calculateAverage(getOppPossessionKey(), filteredData).toFixed(1)}%` : '-'}
+                            label1={teamDisplayName}
+                            label2="Opponent"
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getPossessionKey()) || !columnKeys.includes(getOppPossessionKey())}
+                            incompleteTooltip={!columnKeys.includes(getPossessionKey()) ? 'Missing: Possession' : !columnKeys.includes(getOppPossessionKey()) ? 'Missing: Opp Possession' : 'Missing: Both columns'}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            narrowCard={true}
+                          />
+                        );
+                      })()}
+                      {/* [Team Name] Pass Strings Card */}
+                      {(columnKeys.includes(getTeamPassStrings35Key()) || columnKeys.includes(getTeamPassStrings6PlusKey()) || columnKeys.includes(getLPCAvgKey())) && (() => {
+                        const requiredColumns = [
+                          getTeamPassStrings35Key(),
+                          getTeamPassStrings6PlusKey(),
+                          getLPCAvgKey()
+                        ].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Pass Strings`}
+                            values={[
+                              { 
+                                label: '3–5 Passes', 
+                                value: columnKeys.includes(getTeamPassStrings35Key()) 
+                                  ? calculateAverage(getTeamPassStrings35Key(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getTeamPassStrings35Key())
+                              },
+                              { 
+                                label: '6+ Passes', 
+                                value: columnKeys.includes(getTeamPassStrings6PlusKey()) 
+                                  ? calculateAverage(getTeamPassStrings6PlusKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getTeamPassStrings6PlusKey())
+                              },
+                              { 
+                                label: 'LPC', 
+                                value: columnKeys.includes(getLPCAvgKey()) 
+                                  ? calculateAverage(getLPCAvgKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getLPCAvgKey())
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getTeamPassStrings35Key()) || !columnKeys.includes(getTeamPassStrings6PlusKey()) || !columnKeys.includes(getLPCAvgKey())}
+                            incompleteTooltip={[
+                              !columnKeys.includes(getTeamPassStrings35Key()) && '3-5 Pass Strings',
+                              !columnKeys.includes(getTeamPassStrings6PlusKey()) && '6+ Pass Strings',
+                              !columnKeys.includes(getLPCAvgKey()) && 'LPC'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Opponent Pass Strings Card */}
+                      {(columnKeys.includes(getOppPassStrings35Key()) || columnKeys.includes(getOppPassStrings6PlusKey())) && (() => {
+                        const requiredColumns = [getOppPassStrings35Key(), getOppPassStrings6PlusKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        return (
+                          <StatsCard
+                            title="Opponent Pass Strings"
+                            values={[
+                              { 
+                                label: '3–5 Passes', 
+                                value: columnKeys.includes(getOppPassStrings35Key()) 
+                                  ? calculateAverage(getOppPassStrings35Key(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getOppPassStrings35Key())
+                              },
+                              { 
+                                label: '6+ Passes', 
+                                value: columnKeys.includes(getOppPassStrings6PlusKey()) 
+                                  ? calculateAverage(getOppPassStrings6PlusKey(), filteredData).toFixed(1) 
+                                  : 'N/A',
+                                isIncomplete: !columnKeys.includes(getOppPassStrings6PlusKey())
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!columnKeys.includes(getOppPassStrings35Key()) || !columnKeys.includes(getOppPassStrings6PlusKey())}
+                            incompleteTooltip={[
+                              !columnKeys.includes(getOppPassStrings35Key()) && 'Opp 3-5 Pass Strings',
+                              !columnKeys.includes(getOppPassStrings6PlusKey()) && 'Opp 6+ Pass Strings'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* [Team Name] Passing Card */}
+                      {(() => {
+                        const hasPPM = columnKeys.includes(getPPMKey());
+                        const hasPPG = columnKeys.includes(getPassesForKey());
+                        const hasPassShare = columnKeys.includes(getPassShareKey());
+                        
+                        if (!hasPPM && !hasPPG && !hasPassShare) return null;
+                        
+                        const requiredColumns = [getPPMKey(), getPassesForKey(), getPassShareKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        return (
+                          <StatsCard
+                            title={`${teamDisplayName} Passing`}
+                            values={[
+                              { 
+                                label: 'Passes Per Min', 
+                                value: hasPPM 
+                                  ? calculateAverage(getPPMKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasPPM
+                              },
+                              { 
+                                label: 'Passes Per Game', 
+                                value: hasPPG 
+                                  ? calculateAverage(getPassesForKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasPPG
+                              },
+                              { 
+                                label: 'Pass Share', 
+                                value: hasPassShare 
+                                  ? `${calculateAverage(getPassShareKey(), filteredData).toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasPassShare
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasPPM || !hasPPG || !hasPassShare}
+                            incompleteTooltip={[
+                              !hasPPM && 'Passes Per Min',
+                              !hasPPG && 'Passes Per Game',
+                              !hasPassShare && 'Pass Share'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                      {/* Opponent Passing Card */}
+                      {(() => {
+                        const hasOppPPM = columnKeys.includes(getOppPPMKey());
+                        const hasOppPPG = columnKeys.includes(getOppPassesKey());
+                        const hasOppPassShare = columnKeys.includes(getOppPassShareKey());
+                        
+                        if (!hasOppPPM && !hasOppPPG && !hasOppPassShare) return null;
+                        
+                        const requiredColumns = [getOppPPMKey(), getOppPassesKey(), getOppPassShareKey()].filter(col => columnKeys.includes(col));
+                        const missingInfo = getMissingDataInfo(filteredData, requiredColumns, opponentKey);
+                        
+                        return (
+                          <StatsCard
+                            title="Opponent Passing"
+                            values={[
+                              { 
+                                label: 'Passes Per Min', 
+                                value: hasOppPPM 
+                                  ? calculateAverage(getOppPPMKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasOppPPM
+                              },
+                              { 
+                                label: 'Passes Per Game', 
+                                value: hasOppPPG 
+                                  ? calculateAverage(getOppPassesKey(), filteredData).toFixed(1)
+                                  : '-',
+                                isIncomplete: !hasOppPPG
+                              },
+                              { 
+                                label: 'Pass Share', 
+                                value: hasOppPassShare 
+                                  ? `${calculateAverage(getOppPassShareKey(), filteredData).toFixed(1)}%`
+                                  : '-',
+                                isIncomplete: !hasOppPassShare
+                              }
+                            ]}
+                            color="joga-yellow"
+                            isIncomplete={!hasOppPPM || !hasOppPPG || !hasOppPassShare}
+                            incompleteTooltip={[
+                              !hasOppPPM && 'Opp Passes Per Min',
+                              !hasOppPPG && 'Opp Passes Per Game',
+                              !hasOppPassShare && 'Opp Pass Share'
+                            ].filter(Boolean).join(', ')}
+                            missingDataInfo={missingInfo.affectedMatches > 0 ? missingInfo : undefined}
+                            titleSize="lg"
+                          />
+                        );
+                      })()}
+                    </div>
+                  )}
+                </>
+              )}
+
               {/* Shooting Section */}
               {selectedChartGroup === 'shooting' && (
                 <>
@@ -2760,12 +3215,290 @@ function App() {
                   )}
 
                   {/* Special Charts */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {(() => {
-                const showLabels = dashboardOptions.includes('showChartLabels');
-                const globalIncludeOpponents = dashboardOptions.includes('includeOpponents');
-                return (
-                  <>
+                  {(() => {
+                    const showLabels = dashboardOptions.includes('showChartLabels');
+                    const globalIncludeOpponents = dashboardOptions.includes('includeOpponents');
+                    
+                    // Helper function to get chart group for a chart type
+                    const getChartGroupForChart = (chartType: ChartType): string | null => {
+                      for (const group of CHART_GROUPS) {
+                        if (group.charts.includes(chartType)) {
+                          return group.id;
+                        }
+                      }
+                      return null;
+                    };
+                    
+                    // When "All Charts" is selected, group charts by their chart groups
+                    if (selectedChartGroup === 'all') {
+                      // Get all available chart groups that have charts (excluding 'all' and 'dashboard')
+                      const groupsWithCharts = CHART_GROUPS.filter(
+                        group => group.id !== 'all' && group.id !== 'dashboard' && group.charts.length > 0
+                      );
+                      
+                      // Get all charts from all groups that are available
+                      const allChartsFromGroups = new Set<ChartType>();
+                      groupsWithCharts.forEach(group => {
+                        group.charts.forEach(chart => {
+                          if (availableCharts.includes(chart)) {
+                            allChartsFromGroups.add(chart);
+                          }
+                        });
+                      });
+                      
+                      // Group charts by their chart group
+                      const chartsByGroup = new Map<string, ChartType[]>();
+                      allChartsFromGroups.forEach(chartType => {
+                        const groupId = getChartGroupForChart(chartType);
+                        if (groupId) {
+                          if (!chartsByGroup.has(groupId)) {
+                            chartsByGroup.set(groupId, []);
+                          }
+                          chartsByGroup.get(groupId)!.push(chartType);
+                        }
+                      });
+                      
+                      return (
+                        <>
+                          {groupsWithCharts.map(group => {
+                            const groupCharts = chartsByGroup.get(group.id) || [];
+                            // Only show group if it has charts that are available
+                            if (groupCharts.length === 0) return null;
+                            
+                            // Get group display name
+                            const groupName = group.id === 'shooting' ? 'Shooting Charts' :
+                                            group.id === 'passing-possession' ? 'Passing & Possession Charts' :
+                                            group.id === 'performance' ? 'JOGA Metrics Charts' :
+                                            group.id === 'defense' ? 'Defense Charts' :
+                                            `${group.name} Charts`;
+                            
+                            return (
+                              <div key={group.id} className="mb-8">
+                                <h2 className="text-xl font-semibold text-gray-800 mb-2">{groupName}</h2>
+                                <div className="border-t border-gray-300 mb-4"></div>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                                  {groupCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey()) && (
+                                    <div className={expandedCharts['shots'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <div data-tour="first-chart">
+                                          <ShotsChart
+                                            data={dataToDisplay}
+                                            shotsForKey={getShotsForKey()}
+                                            shotsAgainstKey={getShotsAgainstKey()}
+                                            opponentKey={opponentKey}
+                                            showLabels={showLabels}
+                                            attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                                            attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                                            goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                                            goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                                            onExpansionChange={handleChartExpansionChange('shots')}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('possession') && columnKeys.includes(getPossessionKey()) && (
+                                    <div className={expandedCharts['possession'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <PossessionChart
+                                          data={dataToDisplay}
+                                          possessionKey={getPossessionKey()}
+                                          passShareKey={getPassShareKey()}
+                                          opponentKey={opponentKey}
+                                          oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
+                                          oppPassShareKey={columnKeys.includes(getOppPassShareKey()) ? getOppPassShareKey() : undefined}
+                                          showLabels={showLabels}
+                                          onExpansionChange={handleChartExpansionChange('possession')}
+                                          globalIncludeOpponents={globalIncludeOpponents}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('xg') && columnKeys.includes(getxGKey()) && columnKeys.includes(getxGAKey()) && (
+                                    <div className={expandedCharts['xg'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <XGChart
+                                          data={dataToDisplay}
+                                          xGKey={getxGKey()}
+                                          xGAKey={getxGAKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          goalsForKey={columnKeys.includes(getGoalsForKey()) ? getGoalsForKey() : undefined}
+                                          goalsAgainstKey={columnKeys.includes(getGoalsAgainstKey()) ? getGoalsAgainstKey() : undefined}
+                                          onExpansionChange={handleChartExpansionChange('xg')}
+                                          globalIncludeOpponents={globalIncludeOpponents}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('tsr') && (columnKeys.includes(getTSRKey()) || columnKeys.includes(getOppTSRKey())) && (
+                                    <div className={expandedCharts['tsr'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <TSRChart
+                                          data={dataToDisplay}
+                                          tsrKey={columnKeys.includes(getTSRKey()) ? getTSRKey() : undefined}
+                                          oppTSRKey={columnKeys.includes(getOppTSRKey()) ? getOppTSRKey() : undefined}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          shotsForKey={columnKeys.includes(getShotsForKey()) ? getShotsForKey() : undefined}
+                                          shotsAgainstKey={columnKeys.includes(getShotsAgainstKey()) ? getShotsAgainstKey() : undefined}
+                                          attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                                          attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                                          onExpansionChange={handleChartExpansionChange('tsr')}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('spi') && (columnKeys.includes(getSPIKey()) || 
+                                    columnKeys.includes(getSPIWKey()) || 
+                                    columnKeys.includes(getOppSPIKey()) || 
+                                    columnKeys.includes(getOppSPIWKey())) && (
+                                    <div className={expandedCharts['spi'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <SPIChart
+                                          data={dataToDisplay}
+                                          spiKey={getSPIKey()}
+                                          spiWKey={getSPIWKey()}
+                                          oppSpiKey={getOppSPIKey()}
+                                          oppSpiWKey={getOppSPIWKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                                          onExpansionChange={handleChartExpansionChange('spi')}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey())) && (
+                                    <div className={expandedCharts['conversionRate'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <ConversionRateChart
+                                          data={dataToDisplay}
+                                          conversionRateKey={getConversionRateKey()}
+                                          oppConversionRateKey={getOppConversionRateKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                                          outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                                          attemptsForKey={columnKeys.includes(getAttemptsKey()) ? getAttemptsKey() : undefined}
+                                          attemptsAgainstKey={columnKeys.includes(getOppAttemptsKey()) ? getOppAttemptsKey() : undefined}
+                                          onExpansionChange={handleChartExpansionChange('conversionRate')}
+                                          globalIncludeOpponents={globalIncludeOpponents}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('positionalAttempts') && 
+                                   (columnKeys.includes(getInsideBoxAttemptsPctKey()) || columnKeys.includes(getOutsideBoxAttemptsPctKey()) ||
+                                    columnKeys.includes(getInsideBoxConvRateKey()) || columnKeys.includes(getOutsideBoxConvRateKey())) && (
+                                    <div className={expandedCharts['positionalAttempts'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <PositionalAttemptsChart
+                                          data={dataToDisplay}
+                                          insideBoxAttemptsPctKey={getInsideBoxAttemptsPctKey()}
+                                          outsideBoxAttemptsPctKey={getOutsideBoxAttemptsPctKey()}
+                                          oppInsideBoxAttemptsPctKey={getOppInsideBoxAttemptsPctKey()}
+                                          oppOutsideBoxAttemptsPctKey={getOppOutsideBoxAttemptsPctKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          insideBoxConvRateKey={columnKeys.includes(getInsideBoxConvRateKey()) ? getInsideBoxConvRateKey() : undefined}
+                                          outsideBoxConvRateKey={columnKeys.includes(getOutsideBoxConvRateKey()) ? getOutsideBoxConvRateKey() : undefined}
+                                          globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                                          onExpansionChange={handleChartExpansionChange('positionalAttempts')}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('passStrLength') && 
+                                   columnKeys.includes(getTeamPassStrings35Key()) && 
+                                   columnKeys.includes(getTeamPassStrings6PlusKey()) && 
+                                   columnKeys.includes(getLPCAvgKey()) && (
+                                    <div className={expandedCharts['passStrLength'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <PassStrLengthChart
+                                          data={dataToDisplay}
+                                          passStrings35Key={getTeamPassStrings35Key()}
+                                          passStrings6PlusKey={getTeamPassStrings6PlusKey()}
+                                          lpcKey={getLPCAvgKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          passStringsLessThan4Key={columnKeys.includes(getPassStringsLessThan4Key()) ? getPassStringsLessThan4Key() : undefined}
+                                          passStrings4PlusKey={columnKeys.includes(getPassStrings4PlusKey()) ? getPassStrings4PlusKey() : undefined}
+                                          onExpansionChange={handleChartExpansionChange('passStrLength')}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && (
+                                    <div className={expandedCharts['passes'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <PassesChart
+                                          data={dataToDisplay}
+                                          passesForKey={getPassesForKey()}
+                                          oppPassesKey={getOppPassesKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                                          onExpansionChange={handleChartExpansionChange('passes')}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                  
+                                  {groupCharts.includes('ppm') && columnKeys.includes(getPPMKey()) && columnKeys.includes(getOppPPMKey()) && (
+                                    <div className={expandedCharts['ppm'] ? 'lg:col-span-2' : ''}>
+                                      {selectedTeam === null ? (
+                                        <EmptyChart showTitle={false} />
+                                      ) : (
+                                        <PPMChart
+                                          data={dataToDisplay}
+                                          ppmKey={getPPMKey()}
+                                          oppPPMKey={getOppPPMKey()}
+                                          opponentKey={opponentKey}
+                                          showLabels={showLabels}
+                                          globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                                          onExpansionChange={handleChartExpansionChange('ppm')}
+                                        />
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
+                      );
+                    }
+                    
+                    // Default rendering for other chart groups
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {selectedCharts.includes('shots') && columnKeys.includes(getShotsForKey()) && columnKeys.includes(getShotsAgainstKey()) && (
                 <div className={expandedCharts['shots'] ? 'lg:col-span-2' : 'lg:col-span-2'}>
                   {selectedTeam === null ? (
@@ -2896,9 +3629,6 @@ function App() {
                   )}
                 </div>
               )}
-                  </>
-                );
-              })()}
 
               {/* Removed Attempts chart as requested */}
 
@@ -3041,6 +3771,8 @@ function App() {
               )}
 
                   </div>
+                );
+              })()}
 
                         {/* User-Created Custom Charts - Individual charts */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

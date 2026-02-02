@@ -83,11 +83,36 @@ function normalizeKey(key: string): string {
 
 /**
  * Create a unique match identifier for deduplication
+ * Uses Match ID if available, otherwise falls back to date + opponent
  */
-function getMatchKey(matchData: MatchData): string {
+function getMatchKey(matchData: MatchData): string | null {
+  // First, try to use Match ID if available (most reliable)
+  const matchId = matchData['Match ID'] || matchData['match id'] || matchData['MatchId'] || matchData['matchId'];
+  if (matchId) {
+    return `id:${String(matchId).toLowerCase()}`;
+  }
+  
+  // Fall back to date + opponent
   const date = matchData['Date'] || matchData['date'] || '';
   const opponent = matchData['Opponent'] || matchData['opponent'] || matchData['Opponent Name'] || '';
-  return `${date}|${opponent}`.toLowerCase();
+  
+  // If we have both date and opponent, use them
+  if (date && opponent) {
+    return `date:${date}|opponent:${opponent}`.toLowerCase();
+  }
+  
+  // If we only have date, use it (less reliable but better than nothing)
+  if (date) {
+    return `date:${date}`.toLowerCase();
+  }
+  
+  // If we only have opponent, use it (less reliable but better than nothing)
+  if (opponent) {
+    return `opponent:${opponent}`.toLowerCase();
+  }
+  
+  // If we have nothing, return null (will be skipped)
+  return null;
 }
 
 /**
@@ -137,21 +162,50 @@ export async function getMergedMatchData(options?: {
   const sheetMatchIds = new Map<string, string>(); // Track Match IDs from Google Sheets
 
   // First, add Google Sheets data and track their Match IDs
+  // Use Match ID as primary key if available, otherwise use date+opponent
   sheetMatches.forEach(match => {
-    const key = getMatchKey(match);
-    if (key && !matchMap.has(key)) {
-      matchMap.set(key, match);
-      // Store the Match ID from Google Sheets for this match
-      const matchId = match['Match ID'] || match['match id'] || match['MatchId'] || match['matchId'];
-      if (matchId) {
-        sheetMatchIds.set(key, String(matchId));
+    const matchId = match['Match ID'] || match['match id'] || match['MatchId'] || match['matchId'];
+    let key: string | null = null;
+    
+    // Prefer Match ID as the key
+    if (matchId) {
+      key = `id:${String(matchId).toLowerCase()}`;
+    } else {
+      // Fall back to date+opponent
+      key = getMatchKey(match);
+    }
+    
+    if (key) {
+      // Only add if we don't already have this match (by key)
+      if (!matchMap.has(key)) {
+        matchMap.set(key, match);
+        // Store the Match ID from Google Sheets for this match
+        if (matchId) {
+          sheetMatchIds.set(key, String(matchId));
+        }
+      } else {
+        // If we already have this match, log it for debugging
+        console.log(`⚠️ Duplicate match skipped (Sheet): ${key} (Match ID: ${matchId || 'none'})`);
       }
+    } else {
+      // Log matches that couldn't be keyed (missing date and opponent)
+      console.warn(`⚠️ Match skipped (no date/opponent/Match ID): ${matchId || 'unknown'}`);
     }
   });
 
   // Then, add/override with PostgreSQL data (prefer DB over Sheet)
   convertedDbMatches.forEach(match => {
-    const key = getMatchKey(match);
+    const matchId = match['Match ID'] || match['match id'] || match['MatchId'] || match['matchId'];
+    let key: string | null = null;
+    
+    // Prefer Match ID as the key
+    if (matchId) {
+      key = `id:${String(matchId).toLowerCase()}`;
+    } else {
+      // Fall back to date+opponent
+      key = getMatchKey(match);
+    }
+    
     if (key) {
       // Preserve Match ID from Google Sheets if available (for display/lookup purposes)
       const sheetMatchId = sheetMatchIds.get(key);
@@ -161,6 +215,9 @@ export async function getMergedMatchData(options?: {
       }
       // Override if exists, or add if new
       matchMap.set(key, match);
+    } else {
+      // Log matches that couldn't be keyed
+      console.warn(`⚠️ DB match skipped (no date/opponent/Match ID): ${matchId || 'unknown'}`);
     }
   });
 

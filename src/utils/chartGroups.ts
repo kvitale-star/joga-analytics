@@ -32,6 +32,12 @@ export interface ChartGroup {
 
 export const CHART_GROUPS: ChartGroup[] = [
   {
+    id: 'dashboard',
+    name: 'Dashboard',
+    description: 'Overview of all team averages and metrics',
+    charts: [], // Dashboard only shows tiles, no charts
+  },
+  {
     id: 'all',
     name: 'All Charts',
     description: 'Show all available charts',
