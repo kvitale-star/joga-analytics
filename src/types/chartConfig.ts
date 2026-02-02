@@ -20,8 +20,8 @@ export const DEFAULT_SHOTS_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_POSSESSION_CONFIG: ChartConfig = {
-  visibleMetrics: ['possession', 'passShare'],
-  includeOpponent: true,
+  visibleMetrics: ['possession', 'passShare'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
@@ -50,8 +50,8 @@ export const DEFAULT_TSR_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_PASSES_CONFIG: ChartConfig = {
-  visibleMetrics: ['passesFor'],
-  includeOpponent: true, // Enable opponent by default as requested
+  visibleMetrics: ['passesFor'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
@@ -68,20 +68,20 @@ export const DEFAULT_AVG_PASS_LENGTH_CONFIG: ChartConfig = {
 };
 
 export const DEFAULT_PPM_CONFIG: ChartConfig = {
-  visibleMetrics: ['ppm'],
-  includeOpponent: true,
+  visibleMetrics: ['ppm'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
 export const DEFAULT_PASS_STR_LENGTH_CONFIG: ChartConfig = {
-  visibleMetrics: ['passStrings35', 'passStrings6Plus', 'lpc'],
-  includeOpponent: false,
+  visibleMetrics: ['passStrings35', 'passStrings6Plus', 'lpc'], // All available metrics (excluding optional <4 and 4+)
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
 export const DEFAULT_SPI_CONFIG: ChartConfig = {
-  visibleMetrics: ['spi', 'spiW'],
-  includeOpponent: true,
+  visibleMetrics: ['spi', 'spiW'], // All available metrics
+  includeOpponent: false, // Turn off opponent by default
   isExpanded: false,
 };
 
