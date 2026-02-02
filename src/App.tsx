@@ -2856,21 +2856,23 @@ function App() {
                 columnKeys.includes(getSPIWKey()) || 
                 columnKeys.includes(getOppSPIKey()) || 
                 columnKeys.includes(getOppSPIWKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <SPIChart
-                    data={dataToDisplay}
-                    spiKey={getSPIKey()}
-                    spiWKey={getSPIWKey()}
-                    oppSpiKey={getOppSPIKey()}
-                    oppSpiWKey={getOppSPIWKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('spi')}
-                  />
-                )
+                <div className={expandedCharts['spi'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <SPIChart
+                      data={dataToDisplay}
+                      spiKey={getSPIKey()}
+                      spiWKey={getSPIWKey()}
+                      oppSpiKey={getOppSPIKey()}
+                      oppSpiWKey={getOppSPIWKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('spi')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('conversionRate') && (columnKeys.includes(getConversionRateKey()) || columnKeys.includes(getOppConversionRateKey())) && (
@@ -3021,19 +3023,21 @@ function App() {
               )}
 
               {selectedCharts.includes('ppm') && columnKeys.includes(getPPMKey()) && columnKeys.includes(getOppPPMKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PPMChart
-                    data={dataToDisplay}
-                    ppmKey={getPPMKey()}
-                    oppPPMKey={getOppPPMKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('ppm')}
-                  />
-                )
+                <div className={expandedCharts['ppm'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PPMChart
+                      data={dataToDisplay}
+                      ppmKey={getPPMKey()}
+                      oppPPMKey={getOppPPMKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('ppm')}
+                    />
+                  )}
+                </div>
               )}
 
                   </div>

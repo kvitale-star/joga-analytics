@@ -90,8 +90,8 @@ export const CombinedChartSelector: React.FC<CombinedChartSelectorProps> = ({
     if (chart === 'auto') {
       return false;
     }
-    // Remove 'goals' and 'attempts' charts from individual charts section
-    if (chart === 'goals' || chart === 'attempts') {
+    // Remove 'goals', 'attempts', 'passShare', and 'passingSPI' charts from individual charts section
+    if (chart === 'goals' || chart === 'attempts' || chart === 'passShare' || chart === 'passingSPI') {
       return false;
     }
     return true;
