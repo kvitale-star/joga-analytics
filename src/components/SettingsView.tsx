@@ -13,8 +13,7 @@ import { Modal } from './Modal';
 import { CustomChartBuilder } from './CustomChartBuilder';
 import { JOGA_COLORS } from '../utils/colors';
 import type { CustomChart } from '../types/customCharts';
-import { sheetConfig } from '../config';
-import { fetchSheetData } from '../services/sheetsService';
+import { fetchMergedMatchData } from '../services/sheetsService';
 import { getAllTeams } from '../services/teamService';
 import { createTeamSlugMap } from '../utils/teamMapping';
 import type { MatchData } from '../types';
@@ -38,7 +37,7 @@ export const SettingsView: React.FC = () => {
       const loadData = async () => {
         try {
           setDataLoading(true);
-          const data = await fetchSheetData(sheetConfig);
+          const data = await fetchMergedMatchData();
           if (Array.isArray(data) && data.length > 0) {
             setMatchData(data);
             setColumnKeys(Object.keys(data[0]));
@@ -68,8 +67,8 @@ export const SettingsView: React.FC = () => {
           const loadedTeams = await getAllTeams();
           setTeams(loadedTeams);
           
-          // Load match data
-          const data = await fetchSheetData(sheetConfig);
+          // Load match data (merged from Sheets and PostgreSQL)
+          const data = await fetchMergedMatchData();
           if (Array.isArray(data) && data.length > 0) {
             setMatchData(data);
             setColumnKeys(Object.keys(data[0]));
@@ -339,7 +338,7 @@ export const SettingsView: React.FC = () => {
         ) : (
           <CustomChartBuilder
             chart={editingChart}
-            sheetConfig={sheetConfig}
+            sheetConfig={{ range: '' }}
             columnKeys={columnKeys}
             matchData={matchData}
             onClose={() => {
