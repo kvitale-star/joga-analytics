@@ -47,7 +47,7 @@ export const CHART_GROUPS: ChartGroup[] = [
     id: 'passing-possession',
     name: 'Passing & Possession',
     description: 'Passing metrics, pass strings, and possession',
-    charts: ['possession', 'spi', 'passStrLength', 'passes', 'ppm'],
+    charts: ['possession', 'passStrLength', 'spi', 'passes', 'ppm'],
   },
   {
     id: 'performance',
