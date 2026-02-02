@@ -2,7 +2,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList } from 'recharts';
 import { MatchData } from '../types';
 import { JOGA_COLORS, OPPONENT_COLORS } from '../utils/colors';
-import { DEFAULT_PASSES_CONFIG, getChartTitle } from '../types/chartConfig';
+import { DEFAULT_PASSES_CONFIG } from '../types/chartConfig';
 import { ChartConfigPanel } from './ChartConfigPanel';
 import { ChartExpandButton } from './ChartExpandButton';
 import { useChartConfig } from '../hooks/useChartConfig';
@@ -81,8 +81,8 @@ export const PassesChart: React.FC<PassesChartProps> = ({
     { id: 'passesFor', label: 'Passes', required: false },
   ];
 
-  // Generate dynamic title
-  const chartTitle = getChartTitle('passes', config.visibleMetrics);
+  // Fixed title - don't rename based on metrics
+  const chartTitle = 'Passes Per Game';
 
   if (isLoading) {
     return (

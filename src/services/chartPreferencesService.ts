@@ -3,7 +3,7 @@
  * Handles saving and loading chart configurations
  */
 
-import { ChartConfig, ChartPreferences, DEFAULT_SHOTS_CONFIG, DEFAULT_POSSESSION_CONFIG, DEFAULT_GOALS_CONFIG, DEFAULT_XG_CONFIG, DEFAULT_CONVERSION_RATE_CONFIG, DEFAULT_TSR_CONFIG, DEFAULT_POSITIONAL_ATTEMPTS_CONFIG } from '../types/chartConfig';
+import { ChartConfig, ChartPreferences, DEFAULT_SHOTS_CONFIG, DEFAULT_POSSESSION_CONFIG, DEFAULT_GOALS_CONFIG, DEFAULT_XG_CONFIG, DEFAULT_CONVERSION_RATE_CONFIG, DEFAULT_TSR_CONFIG, DEFAULT_POSITIONAL_ATTEMPTS_CONFIG, DEFAULT_PASSES_CONFIG, DEFAULT_PASS_STR_LENGTH_CONFIG } from '../types/chartConfig';
 import { updateUserPreferences } from './authService';
 import { getUserById } from './authService';
 
@@ -15,6 +15,8 @@ const CHART_DEFAULTS: Record<string, ChartConfig> = {
   conversionRate: DEFAULT_CONVERSION_RATE_CONFIG,
   tsr: DEFAULT_TSR_CONFIG,
   positionalAttempts: DEFAULT_POSITIONAL_ATTEMPTS_CONFIG,
+  passes: DEFAULT_PASSES_CONFIG,
+  passStrLength: DEFAULT_PASS_STR_LENGTH_CONFIG,
 };
 
 /**

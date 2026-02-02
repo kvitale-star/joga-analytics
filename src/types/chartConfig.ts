@@ -51,7 +51,7 @@ export const DEFAULT_TSR_CONFIG: ChartConfig = {
 
 export const DEFAULT_PASSES_CONFIG: ChartConfig = {
   visibleMetrics: ['passesFor'],
-  includeOpponent: true,
+  includeOpponent: true, // Enable opponent by default as requested
   isExpanded: false,
 };
 

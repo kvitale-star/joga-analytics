@@ -19,7 +19,6 @@ import { AvgPassLengthChart } from './components/AvgPassLengthChart';
 import { PassStrLengthChart } from './components/PassStrLengthChart';
 import { PassByZoneChart } from './components/PassByZoneChart';
 import { PPMChart } from './components/PPMChart';
-import { PassShareChart } from './components/PassShareChart';
 import { TSRChart } from './components/TSRChart';
 import { AutoChart } from './components/AutoChart';
 import { ChatFirstView } from './components/ChatFirstView';
@@ -643,6 +642,14 @@ function App() {
 
   const getLPCAvgKey = (): string => {
     return findColumnKey(['LPC', 'lpc', 'LPCAvg', 'lpc_avg']) || 'LPC';
+  };
+
+  const getPassStringsLessThan4Key = (): string => {
+    return findColumnKey(['Pass Strings <4', 'pass strings <4', 'Pass Strings Less Than 4', 'pass strings less than 4', 'PassStringsLessThan4', 'pass_strings_less_than_4']) || 'Pass Strings <4';
+  };
+
+  const getPassStrings4PlusKey = (): string => {
+    return findColumnKey(['Pass Strings 4+', 'pass strings 4+', 'Pass Strings 4 Plus', 'pass strings 4 plus', 'PassStrings4Plus', 'pass_strings_4_plus']) || 'Pass Strings 4+';
   };
 
   const getPassesForKey = (): string => {
@@ -2796,6 +2803,7 @@ function App() {
                       opponentKey={opponentKey}
                       oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
                       oppPassShareKey={columnKeys.includes(getOppPassShareKey()) ? getOppPassShareKey() : undefined}
+                      showLabels={showLabels}
                       onExpansionChange={handleChartExpansionChange('possession')}
                       globalIncludeOpponents={globalIncludeOpponents}
                     />
@@ -2918,20 +2926,22 @@ function App() {
 
               {/* Removed Corner & Free Kicks chart as requested */}
 
-              {selectedCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && columnKeys.includes(getOppPassesKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PassesChart
-                    data={dataToDisplay}
-                    passesForKey={getPassesForKey()}
-                    oppPassesKey={getOppPassesKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('passes')}
-                  />
-                )
+              {selectedCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && (
+                <div className={expandedCharts['passes'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PassesChart
+                      data={dataToDisplay}
+                      passesForKey={getPassesForKey()}
+                      oppPassesKey={getOppPassesKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
+                      onExpansionChange={handleChartExpansionChange('passes')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('avgPassLength') && columnKeys.includes(getAvgPassLengthKey()) && columnKeys.includes(getOppAvgPassLengthKey()) && (
@@ -2954,19 +2964,23 @@ function App() {
                columnKeys.includes(getTeamPassStrings35Key()) && 
                columnKeys.includes(getTeamPassStrings6PlusKey()) && 
                columnKeys.includes(getLPCAvgKey()) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PassStrLengthChart
-                    data={dataToDisplay}
-                    passStrings35Key={getTeamPassStrings35Key()}
-                    passStrings6PlusKey={getTeamPassStrings6PlusKey()}
-                    lpcKey={getLPCAvgKey()}
-                    opponentKey={opponentKey}
-                    showLabels={showLabels}
-                    onExpansionChange={handleChartExpansionChange('passStrLength')}
-                  />
-                )
+                <div className={expandedCharts['passStrLength'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PassStrLengthChart
+                      data={dataToDisplay}
+                      passStrings35Key={getTeamPassStrings35Key()}
+                      passStrings6PlusKey={getTeamPassStrings6PlusKey()}
+                      lpcKey={getLPCAvgKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      passStringsLessThan4Key={columnKeys.includes(getPassStringsLessThan4Key()) ? getPassStringsLessThan4Key() : undefined}
+                      passStrings4PlusKey={columnKeys.includes(getPassStrings4PlusKey()) ? getPassStrings4PlusKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('passStrLength')}
+                    />
+                  )}
+                </div>
               )}
 
               {selectedCharts.includes('passingSPI') && (columnKeys.includes(getSPIKey()) || 
@@ -3022,23 +3036,6 @@ function App() {
                 )
               )}
 
-              {selectedCharts.includes('passShare') && (columnKeys.includes(getPassShareKey()) || columnKeys.includes(getOppPassShareKey())) && (
-                selectedTeam === null ? (
-                  <EmptyChart showTitle={false} />
-                ) : (
-                  <PassShareChart
-                    data={dataToDisplay}
-                    passShareKey={getPassShareKey()}
-                    oppPassShareKey={getOppPassShareKey()}
-                    opponentKey={opponentKey}
-                    possessionKey={columnKeys.includes(getPossessionKey()) ? getPossessionKey() : undefined}
-                    oppPossessionKey={columnKeys.includes(getOppPossessionKey()) ? getOppPossessionKey() : undefined}
-                    showLabels={showLabels}
-                    globalIncludeOpponents={dashboardOptions.includes('includeOpponents')}
-                    onExpansionChange={handleChartExpansionChange('passShare')}
-                  />
-                )
-              )}
                   </div>
 
                         {/* User-Created Custom Charts - Individual charts */}
