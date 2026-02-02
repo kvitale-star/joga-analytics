@@ -2928,6 +2928,29 @@ function App() {
 
               {/* Removed Corner & Free Kicks chart as requested */}
 
+              {selectedCharts.includes('passStrLength') && 
+               columnKeys.includes(getTeamPassStrings35Key()) && 
+               columnKeys.includes(getTeamPassStrings6PlusKey()) && 
+               columnKeys.includes(getLPCAvgKey()) && (
+                <div className={expandedCharts['passStrLength'] ? 'lg:col-span-2' : ''}>
+                  {selectedTeam === null ? (
+                    <EmptyChart showTitle={false} />
+                  ) : (
+                    <PassStrLengthChart
+                      data={dataToDisplay}
+                      passStrings35Key={getTeamPassStrings35Key()}
+                      passStrings6PlusKey={getTeamPassStrings6PlusKey()}
+                      lpcKey={getLPCAvgKey()}
+                      opponentKey={opponentKey}
+                      showLabels={showLabels}
+                      passStringsLessThan4Key={columnKeys.includes(getPassStringsLessThan4Key()) ? getPassStringsLessThan4Key() : undefined}
+                      passStrings4PlusKey={columnKeys.includes(getPassStrings4PlusKey()) ? getPassStrings4PlusKey() : undefined}
+                      onExpansionChange={handleChartExpansionChange('passStrLength')}
+                    />
+                  )}
+                </div>
+              )}
+
               {selectedCharts.includes('passes') && columnKeys.includes(getPassesForKey()) && (
                 <div className={expandedCharts['passes'] ? 'lg:col-span-2' : ''}>
                   {selectedTeam === null ? (
@@ -2960,29 +2983,6 @@ function App() {
                     onExpansionChange={handleChartExpansionChange('avgPassLength')}
                   />
                 )
-              )}
-
-              {selectedCharts.includes('passStrLength') && 
-               columnKeys.includes(getTeamPassStrings35Key()) && 
-               columnKeys.includes(getTeamPassStrings6PlusKey()) && 
-               columnKeys.includes(getLPCAvgKey()) && (
-                <div className={expandedCharts['passStrLength'] ? 'lg:col-span-2' : ''}>
-                  {selectedTeam === null ? (
-                    <EmptyChart showTitle={false} />
-                  ) : (
-                    <PassStrLengthChart
-                      data={dataToDisplay}
-                      passStrings35Key={getTeamPassStrings35Key()}
-                      passStrings6PlusKey={getTeamPassStrings6PlusKey()}
-                      lpcKey={getLPCAvgKey()}
-                      opponentKey={opponentKey}
-                      showLabels={showLabels}
-                      passStringsLessThan4Key={columnKeys.includes(getPassStringsLessThan4Key()) ? getPassStringsLessThan4Key() : undefined}
-                      passStrings4PlusKey={columnKeys.includes(getPassStrings4PlusKey()) ? getPassStrings4PlusKey() : undefined}
-                      onExpansionChange={handleChartExpansionChange('passStrLength')}
-                    />
-                  )}
-                </div>
               )}
 
               {selectedCharts.includes('passingSPI') && (columnKeys.includes(getSPIKey()) || 
