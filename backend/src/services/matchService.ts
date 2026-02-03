@@ -14,31 +14,54 @@ export async function getMatches(filters?: {
 }) {
   let query = db
     .selectFrom('matches')
-    .selectAll()
-    .orderBy('match_date', 'desc')
-    .orderBy('id', 'desc');
+    .leftJoin('teams', 'matches.team_id', 'teams.id')
+    .select([
+      'matches.id',
+      'matches.team_id',
+      'matches.opponent_name',
+      'matches.match_date',
+      'matches.competition_type',
+      'matches.result',
+      'matches.is_home',
+      'matches.match_id_external',
+      'matches.stats_json',
+      'matches.stats_source',
+      'matches.stats_computed_at',
+      'matches.stats_manual_fields',
+      'matches.notes',
+      'matches.venue',
+      'matches.referee',
+      'matches.created_by',
+      'matches.created_at',
+      'matches.updated_at',
+      'matches.last_modified_by',
+      'teams.slug as team_slug',
+      'teams.display_name as team_display_name',
+    ])
+    .orderBy('matches.match_date', 'desc')
+    .orderBy('matches.id', 'desc');
 
   if (filters?.teamId) {
-    query = query.where('team_id', '=', filters.teamId);
+    query = query.where('matches.team_id', '=', filters.teamId);
   }
   if (filters?.teamIds && filters.teamIds.length > 0) {
-    query = query.where('team_id', 'in', filters.teamIds);
+    query = query.where('matches.team_id', 'in', filters.teamIds);
   }
 
   if (filters?.opponentName) {
-    query = query.where('opponent_name', 'like', `%${filters.opponentName}%`);
+    query = query.where('matches.opponent_name', 'like', `%${filters.opponentName}%`);
   }
 
   if (filters?.startDate) {
-    query = query.where('match_date', '>=', filters.startDate);
+    query = query.where('matches.match_date', '>=', filters.startDate);
   }
 
   if (filters?.endDate) {
-    query = query.where('match_date', '<=', filters.endDate);
+    query = query.where('matches.match_date', '<=', filters.endDate);
   }
 
   if (filters?.competitionType) {
-    query = query.where('competition_type', '=', filters.competitionType);
+    query = query.where('matches.competition_type', '=', filters.competitionType);
   }
 
   const matches = await query.execute();
@@ -46,11 +69,14 @@ export async function getMatches(filters?: {
   return matches.map(match => ({
     id: match.id,
     teamId: match.team_id,
+    teamSlug: match.team_slug || null,
+    teamDisplayName: match.team_display_name || null,
     opponentName: match.opponent_name,
     matchDate: match.match_date,
     competitionType: match.competition_type,
     result: match.result,
     isHome: match.is_home !== null ? Boolean(match.is_home) : null,
+    matchIdExternal: match.match_id_external || null,
     statsJson: match.stats_json ? JSON.parse(match.stats_json) : null,
     statsSource: match.stats_source,
     statsComputedAt: match.stats_computed_at ? new Date(match.stats_computed_at) : null,
@@ -77,14 +103,32 @@ export async function getMatchById(matchId: number) {
 
   if (!match) return null;
 
+  // Get team info if team_id exists
+  let teamSlug: string | null = null;
+  let teamDisplayName: string | null = null;
+  if (match.team_id) {
+    const team = await db
+      .selectFrom('teams')
+      .select(['slug', 'display_name'])
+      .where('id', '=', match.team_id)
+      .executeTakeFirst();
+    if (team) {
+      teamSlug = team.slug;
+      teamDisplayName = team.display_name;
+    }
+  }
+
   return {
     id: match.id,
     teamId: match.team_id,
+    teamSlug,
+    teamDisplayName,
     opponentName: match.opponent_name,
     matchDate: match.match_date,
     competitionType: match.competition_type,
     result: match.result,
     isHome: match.is_home !== null ? Boolean(match.is_home) : null,
+    matchIdExternal: match.match_id_external || null,
     statsJson: match.stats_json ? JSON.parse(match.stats_json) : null,
     statsSource: match.stats_source,
     statsComputedAt: match.stats_computed_at ? new Date(match.stats_computed_at) : null,
@@ -110,6 +154,7 @@ export async function createMatch(
     competitionType?: string | null;
     result?: string | null;
     isHome?: boolean | null;
+    matchIdExternal?: string | null;
     statsJson?: any;
     statsSource?: string | null;
     statsComputedAt?: string | null;
@@ -131,6 +176,7 @@ export async function createMatch(
       competition_type: matchData.competitionType || null,
       result: matchData.result || null,
       is_home: matchData.isHome !== undefined && matchData.isHome !== null ? Boolean(matchData.isHome) : null,
+      match_id_external: matchData.matchIdExternal || null,
       stats_json: matchData.statsJson ? JSON.stringify(matchData.statsJson) : null,
       stats_source: matchData.statsSource || null,
       stats_computed_at: matchData.statsComputedAt || null,
@@ -161,6 +207,7 @@ export async function updateMatch(
     competitionType?: string | null;
     result?: string | null;
     isHome?: boolean | null;
+    matchIdExternal?: string | null;
     statsJson?: any;
     statsSource?: string | null;
     statsComputedAt?: string | null;
@@ -181,6 +228,7 @@ export async function updateMatch(
   if (updates.competitionType !== undefined) updateData.competition_type = updates.competitionType;
   if (updates.result !== undefined) updateData.result = updates.result;
   if (updates.isHome !== undefined) updateData.is_home = updates.isHome !== null ? Boolean(updates.isHome) : null;
+  if (updates.matchIdExternal !== undefined) updateData.match_id_external = updates.matchIdExternal || null;
   if (updates.statsJson !== undefined) updateData.stats_json = updates.statsJson ? JSON.stringify(updates.statsJson) : null;
   if (updates.statsSource !== undefined) updateData.stats_source = updates.statsSource;
   if (updates.statsComputedAt !== undefined) updateData.stats_computed_at = updates.statsComputedAt;

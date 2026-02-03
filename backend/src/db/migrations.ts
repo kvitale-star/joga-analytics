@@ -333,5 +333,25 @@ async function runPostgresMigrations(): Promise<void> {
     console.log('✓ Migration 007 (Postgres) completed successfully');
   }
 
+  if (version < 8) {
+    console.log('Running migration 008 (Postgres): Add match_id_external field to matches table...');
+    await sql`
+      ALTER TABLE matches
+      ADD COLUMN IF NOT EXISTS match_id_external TEXT
+    `.execute(db);
+    await sql`
+      CREATE INDEX IF NOT EXISTS idx_matches_match_id_external ON matches(match_id_external)
+    `.execute(db);
+    await db
+      .insertInto('schema_migrations')
+      .values({
+        version: 8,
+        description: 'Add match_id_external field to matches table for external Match IDs (e.g., Google Sheets)',
+        applied_at: new Date().toISOString(),
+      })
+      .execute();
+    console.log('✓ Migration 008 (Postgres) completed successfully');
+  }
+
   console.log('All migrations completed!');
 }

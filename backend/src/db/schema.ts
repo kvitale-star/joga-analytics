@@ -110,6 +110,7 @@ export interface MatchesTable {
   competition_type: string | null;
   result: string | null;
   is_home: boolean | null;
+  match_id_external: string | null; // External Match ID (e.g., from Google Sheets: "M10001")
   stats_json: string | null; // JSON stored as string
   stats_source: string | null;
   stats_computed_at: string | null;

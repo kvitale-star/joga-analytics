@@ -16,9 +16,11 @@ function convertMatchToMatchData(match: any): MatchData {
     // Core match info
     // Note: Match ID will be set from stats_json if available, otherwise use database ID
     // The merge logic will preserve Google Sheets Match IDs when overriding
-    'Match ID': match.id, // Default to database ID, may be overridden
+    'Match ID': match.matchIdExternal || match.id, // Prefer external ID, fall back to database ID
+    'Team': match.teamSlug || match.teamDisplayName || '', // Use team slug/name for frontend (required for dropdowns)
     'Opponent': match.opponentName,
     'Date': match.matchDate,
+    'Match Date': match.matchDate, // Add both formats for compatibility
     'Competition Type': match.competitionType || '',
     'Result': match.result || '',
     'Home/Away': match.isHome === true ? 'Home' : match.isHome === false ? 'Away' : '',
