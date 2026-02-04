@@ -451,10 +451,30 @@ function App() {
         console.error('❌ fetchSheetData returned non-array; defaulting matchData to []', raw);
       }
 
-      // Extract column keys from first match
-      const keys = data.length > 0 ? Object.keys(data[0]) : [];
-      if (keys.length > 0) {
-        setColumnKeys(keys);
+      // Deduplicate match data to remove duplicate field names
+      let finalData = data;
+      let finalKeys: string[] = [];
+      
+      try {
+        const { deduplicateColumnKeys, deduplicateMatchDataArray } = await import('./utils/fieldDeduplication');
+        const deduplicatedData = deduplicateMatchDataArray(data);
+        const keys = deduplicateColumnKeys(deduplicatedData);
+        
+        if (keys.length > 0) {
+          finalKeys = keys;
+          finalData = deduplicatedData as MatchData[];
+        } else if (data.length > 0) {
+          // Fallback: use original data if deduplication fails
+          finalKeys = Object.keys(data[0]);
+          finalData = data;
+        }
+      } catch (dedupError) {
+        console.error('Error during deduplication, using original data:', dedupError);
+        // Fallback: use original data if deduplication fails
+        if (data.length > 0) {
+          finalKeys = Object.keys(data[0]);
+          finalData = data;
+        }
       }
 
       // Apply preferred season filter (multi-year) when available.
@@ -463,18 +483,21 @@ function App() {
         ? user?.preferences?.preferredSeasons
         : [];
 
-      const seasonKey = keys.find(k => k.toLowerCase() === 'season' || k.toLowerCase().includes('season'));
+      const seasonKey = finalKeys.find(k => k.toLowerCase() === 'season' || k.toLowerCase().includes('season'));
       const filtered = (preferredSeasons.length > 0 && seasonKey)
-        ? data.filter((row) => {
+        ? finalData.filter((row) => {
           const raw = row[seasonKey];
           const year =
             typeof raw === 'number' ? raw :
             typeof raw === 'string' ? Number(raw.trim()) :
             NaN;
-          return preferredSeasons.includes(year);
+          // Include matches that don't have a season value (NaN) - don't exclude unknown seasons
+          // Only exclude if the season is explicitly set and doesn't match preferred seasons
+          return isNaN(year) || preferredSeasons.includes(year);
         })
-        : data;
+        : finalData;
 
+      setColumnKeys(finalKeys);
       setMatchData(Array.isArray(filtered) ? filtered : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
@@ -1922,7 +1945,12 @@ function App() {
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="upload-game-data" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16">
-          <UploadGameDataView matchData={matchData} columnKeys={columnKeys} teamSlugMap={teamSlugMap} />
+          <UploadGameDataView 
+            matchData={matchData} 
+            columnKeys={columnKeys} 
+            teamSlugMap={teamSlugMap}
+            onDataSubmitted={loadData}
+          />
         </div>
       </div>
     );

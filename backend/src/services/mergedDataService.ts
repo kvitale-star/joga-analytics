@@ -12,6 +12,44 @@ import { getMatches } from './matchService.js';
  * Convert a PostgreSQL match to MatchData format (for charts)
  */
 function convertMatchToMatchData(match: any): MatchData {
+  // Convert matchDate to MM/DD/YYYY format to match Google Sheets format
+  // Handle various formats: Date object, ISO string (YYYY-MM-DD), or already formatted string
+  const matchDateValue: any = match.matchDate;
+  let dateString: string = '';
+  
+  // First, convert to a Date object if needed
+  let dateObj: Date | null = null;
+  if (matchDateValue instanceof Date) {
+    dateObj = matchDateValue;
+  } else if (typeof matchDateValue === 'string') {
+    if (matchDateValue.includes('T')) {
+      // ISO string - parse it
+      dateObj = new Date(matchDateValue);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(matchDateValue)) {
+      // YYYY-MM-DD format - parse it
+      dateObj = new Date(matchDateValue);
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(matchDateValue)) {
+      // Already MM/DD/YYYY format - use as-is
+      dateString = matchDateValue;
+    } else {
+      // Try to parse as date
+      dateObj = new Date(matchDateValue);
+    }
+  } else if (matchDateValue && typeof matchDateValue === 'object' && 'toISOString' in matchDateValue) {
+    // Handle Date-like objects
+    dateObj = new Date(matchDateValue.toISOString());
+  }
+  
+  // Convert Date object to MM/DD/YYYY format
+  if (dateObj && !isNaN(dateObj.getTime()) && !dateString) {
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    dateString = `${month}/${day}/${year}`;
+  } else if (!dateString) {
+    dateString = String(matchDateValue || '');
+  }
+  
   const matchData: MatchData = {
     // Core match info
     // Note: Match ID will be set from stats_json if available, otherwise use database ID
@@ -19,11 +57,10 @@ function convertMatchToMatchData(match: any): MatchData {
     'Match ID': match.matchIdExternal || match.id, // Prefer external ID, fall back to database ID
     'Team': match.teamSlug || match.teamDisplayName || '', // Use team slug/name for frontend (required for dropdowns)
     'Opponent': match.opponentName,
-    'Date': match.matchDate,
-    'Match Date': match.matchDate, // Add both formats for compatibility
+    'Date': dateString, // Use "Date" as primary - ensure it's a string in YYYY-MM-DD format
     'Competition Type': match.competitionType || '',
     'Result': match.result || '',
-    'Home/Away': match.isHome === true ? 'Home' : match.isHome === false ? 'Away' : '',
+    'Home/Away': match.isHome === true ? 'Home' : match.isHome === false ? 'Away' : 'Tournament',
     'Venue': match.venue || '',
     'Referee': match.referee || '',
     'Notes': match.notes || '',
@@ -31,21 +68,22 @@ function convertMatchToMatchData(match: any): MatchData {
 
   // Flatten stats_json into matchData
   // stats_json contains both raw stats and computed stats
+  // Use normalized keys only to avoid duplicates
   if (match.statsJson) {
     Object.entries(match.statsJson).forEach(([key, value]) => {
-      // Convert key to match Google Sheets format (capitalize, add spaces)
-      // Keep original key as well for flexibility
-      matchData[key] = value as string | number;
+      // Normalize key to canonical format (Title Case with spaces)
+      const normalizedKey = normalizeKey(key);
+      
+      // Only add if we don't already have this normalized key, or if the new value is non-empty
+      if (!matchData[normalizedKey] || 
+          (matchData[normalizedKey] === '' || matchData[normalizedKey] === null || matchData[normalizedKey] === 0) &&
+          (value !== '' && value !== null && value !== 0)) {
+        matchData[normalizedKey] = value as string | number;
+      }
       
       // If stats_json contains a Match ID, use it (this would be from form input)
       if (key.toLowerCase() === 'match id' || key.toLowerCase() === 'matchid') {
         matchData['Match ID'] = value as string | number;
-      }
-      
-      // Also add normalized version for compatibility
-      const normalizedKey = normalizeKey(key);
-      if (normalizedKey !== key) {
-        matchData[normalizedKey] = value as string | number;
       }
     });
   }
@@ -217,14 +255,59 @@ export async function getMergedMatchData(options?: {
       }
       // Override if exists, or add if new
       matchMap.set(key, match);
+      console.log(`✅ Added DB match to merged data: ID=${matchId}, Date=${match['Date']}, Opponent=${match['Opponent']}, Key=${key}`);
     } else {
-      // Log matches that couldn't be keyed
-      console.warn(`⚠️ DB match skipped (no date/opponent/Match ID): ${matchId || 'unknown'}`);
+      // Log matches that couldn't be keyed with more details
+      console.warn(`⚠️ DB match skipped (no date/opponent/Match ID):`, {
+        matchId: matchId || 'none',
+        date: match['Date'] || match['date'] || 'none',
+        opponent: match['Opponent'] || match['opponent'] || 'none',
+        team: match['Team'] || 'none',
+        fullMatch: match
+      });
     }
   });
 
   // Convert map to array and sort by date
   const merged = Array.from(matchMap.values());
+  
+  // Ensure all dates are in MM/DD/YYYY format to match Google Sheets format
+  // This ensures consistency across all matches
+  merged.forEach(match => {
+    if (match['Date']) {
+      const dateValue: any = match['Date'];
+      let dateStr: string = '';
+      
+      // Convert to Date object if needed
+      let dateObj: Date | null = null;
+      if (dateValue instanceof Date) {
+        dateObj = dateValue;
+      } else if (typeof dateValue === 'string') {
+        if (dateValue.includes('T')) {
+          dateObj = new Date(dateValue);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+          // YYYY-MM-DD format - convert to MM/DD/YYYY
+          dateObj = new Date(dateValue);
+        } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateValue)) {
+          // Already MM/DD/YYYY - keep as-is
+          dateStr = dateValue;
+        } else {
+          dateObj = new Date(dateValue);
+        }
+      }
+      
+      // Convert Date object to MM/DD/YYYY
+      if (dateObj && !isNaN(dateObj.getTime()) && !dateStr) {
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const year = dateObj.getFullYear();
+        dateStr = `${month}/${day}/${year}`;
+        match['Date'] = dateStr;
+      } else if (!dateStr) {
+        match['Date'] = String(dateValue || '');
+      }
+    }
+  });
   
   // Sort by date (most recent first)
   merged.sort((a, b) => {

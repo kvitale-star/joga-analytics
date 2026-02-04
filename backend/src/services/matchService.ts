@@ -66,29 +66,51 @@ export async function getMatches(filters?: {
 
   const matches = await query.execute();
 
-  return matches.map(match => ({
-    id: match.id,
-    teamId: match.team_id,
-    teamSlug: match.team_slug || null,
-    teamDisplayName: match.team_display_name || null,
-    opponentName: match.opponent_name,
-    matchDate: match.match_date,
-    competitionType: match.competition_type,
-    result: match.result,
-    isHome: match.is_home !== null ? Boolean(match.is_home) : null,
-    matchIdExternal: match.match_id_external || null,
-    statsJson: match.stats_json ? JSON.parse(match.stats_json) : null,
-    statsSource: match.stats_source,
-    statsComputedAt: match.stats_computed_at ? new Date(match.stats_computed_at) : null,
-    statsManualFields: match.stats_manual_fields ? JSON.parse(match.stats_manual_fields) : null,
-    notes: match.notes,
-    venue: match.venue,
-    referee: match.referee,
-    createdBy: match.created_by,
-    createdAt: new Date(match.created_at),
-    updatedAt: new Date(match.updated_at),
-    lastModifiedBy: match.last_modified_by,
-  }));
+  return matches.map(match => {
+    // Convert match_date to string format (YYYY-MM-DD) if it's a Date object
+    // PostgreSQL may return dates as Date objects even though schema says string
+    const matchDateValue: any = match.match_date;
+    let matchDateString: string;
+    if (matchDateValue instanceof Date) {
+      matchDateString = matchDateValue.toISOString().split('T')[0];
+    } else if (typeof matchDateValue === 'string') {
+      if (matchDateValue.includes('T')) {
+        // If it's an ISO string, extract just the date part
+        matchDateString = matchDateValue.split('T')[0];
+      } else {
+        matchDateString = matchDateValue;
+      }
+    } else if (matchDateValue && typeof matchDateValue === 'object' && 'toISOString' in matchDateValue) {
+      // Handle Date-like objects
+      matchDateString = matchDateValue.toISOString().split('T')[0];
+    } else {
+      matchDateString = String(matchDateValue || '');
+    }
+    
+    return {
+      id: match.id,
+      teamId: match.team_id,
+      teamSlug: match.team_slug || null,
+      teamDisplayName: match.team_display_name || null,
+      opponentName: match.opponent_name,
+      matchDate: matchDateString,
+      competitionType: match.competition_type,
+      result: match.result,
+      isHome: match.is_home !== null ? Boolean(match.is_home) : null,
+      matchIdExternal: match.match_id_external || null,
+      statsJson: match.stats_json ? JSON.parse(match.stats_json) : null,
+      statsSource: match.stats_source,
+      statsComputedAt: match.stats_computed_at ? new Date(match.stats_computed_at) : null,
+      statsManualFields: match.stats_manual_fields ? JSON.parse(match.stats_manual_fields) : null,
+      notes: match.notes,
+      venue: match.venue,
+      referee: match.referee,
+      createdBy: match.created_by,
+      createdAt: new Date(match.created_at),
+      updatedAt: new Date(match.updated_at),
+      lastModifiedBy: match.last_modified_by,
+    };
+  });
 }
 
 /**
@@ -118,13 +140,33 @@ export async function getMatchById(matchId: number) {
     }
   }
 
+  // Convert match_date to string format (YYYY-MM-DD) if it's a Date object
+  // PostgreSQL may return dates as Date objects even though schema says string
+  const matchDateValue: any = match.match_date;
+  let matchDateString: string;
+  if (matchDateValue instanceof Date) {
+    matchDateString = matchDateValue.toISOString().split('T')[0];
+  } else if (typeof matchDateValue === 'string') {
+    if (matchDateValue.includes('T')) {
+      // If it's an ISO string, extract just the date part
+      matchDateString = matchDateValue.split('T')[0];
+    } else {
+      matchDateString = matchDateValue;
+    }
+  } else if (matchDateValue && typeof matchDateValue === 'object' && 'toISOString' in matchDateValue) {
+    // Handle Date-like objects
+    matchDateString = matchDateValue.toISOString().split('T')[0];
+  } else {
+    matchDateString = String(matchDateValue || '');
+  }
+  
   return {
     id: match.id,
     teamId: match.team_id,
     teamSlug,
     teamDisplayName,
     opponentName: match.opponent_name,
-    matchDate: match.match_date,
+    matchDate: matchDateString,
     competitionType: match.competition_type,
     result: match.result,
     isHome: match.is_home !== null ? Boolean(match.is_home) : null,

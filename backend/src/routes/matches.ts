@@ -95,6 +95,73 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
+ * POST /api/matches/preview
+ * Preview computed stats without saving
+ * Requires: Authentication
+ */
+router.post('/preview', async (req, res) => {
+  try {
+    const {
+      teamId,
+      opponentName,
+      matchDate,
+      competitionType,
+      result,
+      isHome,
+      venue,
+      referee,
+      notes,
+      rawStats,
+    } = req.body;
+
+    if (!opponentName || !matchDate) {
+      return res.status(400).json({ error: 'Opponent name and match date are required' });
+    }
+
+    // Normalize field names from form input
+    const normalizedStats = normalizeFieldNames({
+      ...rawStats,
+      teamId,
+      opponentName,
+      matchDate,
+      competitionType,
+      result,
+      venue,
+      referee,
+      notes,
+    });
+
+    // Compute all derived metrics
+    const computedStats = computeMatchStats(normalizedStats);
+
+    // Combine raw + computed for preview
+    const previewStats = {
+      ...normalizedStats,
+      ...computedStats,
+    };
+
+    res.json({
+      gameInfo: {
+        teamId,
+        opponentName,
+        matchDate,
+        competitionType,
+        result,
+        isHome,
+        venue,
+        referee,
+        notes,
+      },
+      rawStats: normalizedStats,
+      computedStats,
+      allStats: previewStats,
+    });
+  } catch (error: any) {
+    res.status(400).json({ error: error.message || 'Failed to preview match stats' });
+  }
+});
+
+/**
  * POST /api/matches
  * Create a new match
  * Requires: Admin (any team) or Coach (assigned teams only)

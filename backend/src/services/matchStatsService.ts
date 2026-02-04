@@ -25,6 +25,10 @@ export interface RawMatchStats {
   attemptsAgainst1stHalf?: number;
   passesFor1stHalf?: number;
   passesAgainst1stHalf?: number;
+  cornersFor1stHalf?: number;
+  cornersAgainst1stHalf?: number;
+  freeKicksFor1stHalf?: number;
+  freeKicksAgainst1stHalf?: number;
   
   // 2nd Half Stats
   goalsFor2ndHalf?: number;
@@ -35,6 +39,10 @@ export interface RawMatchStats {
   attemptsAgainst2ndHalf?: number;
   passesFor2ndHalf?: number;
   passesAgainst2ndHalf?: number;
+  cornersFor2ndHalf?: number;
+  cornersAgainst2ndHalf?: number;
+  freeKicksFor2ndHalf?: number;
+  freeKicksAgainst2ndHalf?: number;
   
   // Full Game Stats (computed from halves or entered directly)
   shotsFor?: number;
@@ -361,6 +369,28 @@ export function computeMatchStats(raw: RawMatchStats): ComputedMatchStats {
   const passesAgainstSum = passesAgainst1st + passesAgainst2nd;
   const passesAgainst = (passesAgainst1st > 0 || passesAgainst2nd > 0) ? passesAgainstSum : (raw.passesAgainst ?? undefined);
   
+  // Sum 1st and 2nd half corners to get full game corners
+  const cornersFor1st = raw.cornersFor1stHalf ?? 0;
+  const cornersFor2nd = raw.cornersFor2ndHalf ?? 0;
+  const cornersForSum = cornersFor1st + cornersFor2nd;
+  const cornersFor = (cornersFor1st > 0 || cornersFor2nd > 0) ? cornersForSum : (raw.cornersFor ?? undefined);
+  
+  const cornersAgainst1st = raw.cornersAgainst1stHalf ?? 0;
+  const cornersAgainst2nd = raw.cornersAgainst2ndHalf ?? 0;
+  const cornersAgainstSum = cornersAgainst1st + cornersAgainst2nd;
+  const cornersAgainst = (cornersAgainst1st > 0 || cornersAgainst2nd > 0) ? cornersAgainstSum : (raw.cornersAgainst ?? undefined);
+  
+  // Sum 1st and 2nd half free kicks to get full game free kicks
+  const freeKicksFor1st = raw.freeKicksFor1stHalf ?? 0;
+  const freeKicksFor2nd = raw.freeKicksFor2ndHalf ?? 0;
+  const freeKicksForSum = freeKicksFor1st + freeKicksFor2nd;
+  const freeKicksFor = (freeKicksFor1st > 0 || freeKicksFor2nd > 0) ? freeKicksForSum : (raw.freeKicksFor ?? undefined);
+  
+  const freeKicksAgainst1st = raw.freeKicksAgainst1stHalf ?? 0;
+  const freeKicksAgainst2nd = raw.freeKicksAgainst2ndHalf ?? 0;
+  const freeKicksAgainstSum = freeKicksAgainst1st + freeKicksAgainst2nd;
+  const freeKicksAgainst = (freeKicksAgainst1st > 0 || freeKicksAgainst2nd > 0) ? freeKicksAgainstSum : (raw.freeKicksAgainst ?? undefined);
+  
   // Pass Share - using full game stats
   if (passesFor !== undefined && passesAgainst !== undefined) {
     const totalPasses = passesFor + passesAgainst;
@@ -475,6 +505,18 @@ export function computeMatchStats(raw: RawMatchStats): ComputedMatchStats {
   if (passesAgainst !== undefined) {
     (computed as any).passesAgainst = passesAgainst;
   }
+  if (cornersFor !== undefined) {
+    (computed as any).cornersFor = cornersFor;
+  }
+  if (cornersAgainst !== undefined) {
+    (computed as any).cornersAgainst = cornersAgainst;
+  }
+  if (freeKicksFor !== undefined) {
+    (computed as any).freeKicksFor = freeKicksFor;
+  }
+  if (freeKicksAgainst !== undefined) {
+    (computed as any).freeKicksAgainst = freeKicksAgainst;
+  }
   
   // Total Attempts (Veo-specific: attempts = shots + goals)
   if (totalAttemptsFor1st > 0 || totalAttemptsFor2nd > 0) {
@@ -486,6 +528,17 @@ export function computeMatchStats(raw: RawMatchStats): ComputedMatchStats {
     (computed as any)['opp total attempts (1st half)'] = totalAttemptsAgainst1st;
     (computed as any)['opp total attempts (2nd half)'] = totalAttemptsAgainst2nd;
     (computed as any)['opp total attempts'] = totalAttemptsAgainst;
+  }
+  
+  // Compute Result from goals (Win/Loss/Draw)
+  if (goalsFor !== undefined && goalsAgainst !== undefined) {
+    if (goalsFor > goalsAgainst) {
+      (computed as any).result = 'Win';
+    } else if (goalsFor < goalsAgainst) {
+      (computed as any).result = 'Loss';
+    } else {
+      (computed as any).result = 'Draw';
+    }
   }
   
   return computed;
@@ -634,8 +687,7 @@ export function normalizeFieldNames(formData: Record<string, any>): RawMatchStat
       let matched = false;
       
       // Check for 1st half patterns
-      if ((lowerKey.includes('1st half') || lowerKey.includes('first half') || lowerKey.includes('(1st') || lowerKey.includes('(first')) &&
-          (lowerKey.includes('goal') || lowerKey.includes('shot') || lowerKey.includes('attempt'))) {
+      if (lowerKey.includes('1st half') || lowerKey.includes('first half') || lowerKey.includes('(1st') || lowerKey.includes('(first') || lowerKey.includes('1st')) {
         if (lowerKey.includes('goal') && lowerKey.includes('for')) {
           normalized.goalsFor1stHalf = value;
           matched = true;
@@ -654,12 +706,23 @@ export function normalizeFieldNames(formData: Record<string, any>): RawMatchStat
         } else if (lowerKey.includes('attempt') && lowerKey.includes('against')) {
           normalized.attemptsAgainst1stHalf = value;
           matched = true;
+        } else if ((lowerKey.includes('corner') || lowerKey.includes('corners')) && lowerKey.includes('for')) {
+          normalized.cornersFor1stHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('corner') || lowerKey.includes('corners')) && lowerKey.includes('against')) {
+          normalized.cornersAgainst1stHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('free kick') || lowerKey.includes('free kicks') || lowerKey.includes('freekick') || lowerKey.includes('freekicks')) && lowerKey.includes('for')) {
+          normalized.freeKicksFor1stHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('free kick') || lowerKey.includes('free kicks') || lowerKey.includes('freekick') || lowerKey.includes('freekicks')) && lowerKey.includes('against')) {
+          normalized.freeKicksAgainst1stHalf = value;
+          matched = true;
         }
       }
       
       // Check for 2nd half patterns
-      if (!matched && (lowerKey.includes('2nd half') || lowerKey.includes('second half') || lowerKey.includes('(2nd') || lowerKey.includes('(second')) &&
-          (lowerKey.includes('goal') || lowerKey.includes('shot') || lowerKey.includes('attempt'))) {
+      if (!matched && (lowerKey.includes('2nd half') || lowerKey.includes('second half') || lowerKey.includes('(2nd') || lowerKey.includes('(second') || lowerKey.includes('2nd'))) {
         if (lowerKey.includes('goal') && lowerKey.includes('for')) {
           normalized.goalsFor2ndHalf = value;
           matched = true;
@@ -677,6 +740,18 @@ export function normalizeFieldNames(formData: Record<string, any>): RawMatchStat
           matched = true;
         } else if (lowerKey.includes('attempt') && lowerKey.includes('against')) {
           normalized.attemptsAgainst2ndHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('corner') || lowerKey.includes('corners')) && lowerKey.includes('for')) {
+          normalized.cornersFor2ndHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('corner') || lowerKey.includes('corners')) && lowerKey.includes('against')) {
+          normalized.cornersAgainst2ndHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('free kick') || lowerKey.includes('free kicks') || lowerKey.includes('freekick') || lowerKey.includes('freekicks')) && lowerKey.includes('for')) {
+          normalized.freeKicksFor2ndHalf = value;
+          matched = true;
+        } else if ((lowerKey.includes('free kick') || lowerKey.includes('free kicks') || lowerKey.includes('freekick') || lowerKey.includes('freekicks')) && lowerKey.includes('against')) {
+          normalized.freeKicksAgainst2ndHalf = value;
           matched = true;
         }
       }

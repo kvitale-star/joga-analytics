@@ -152,3 +152,38 @@ export async function updateMatch(matchId: number, data: UpdateMatchData): Promi
 export async function deleteMatch(matchId: number): Promise<void> {
   await apiDelete(`/matches/${matchId}`);
 }
+
+export interface PreviewMatchStatsResponse {
+  gameInfo: {
+    teamId?: number | null;
+    opponentName: string;
+    matchDate: string;
+    competitionType?: string | null;
+    result?: string | null;
+    isHome?: boolean | null;
+    venue?: string | null;
+    referee?: string | null;
+    notes?: string | null;
+  };
+  rawStats: Record<string, any>;
+  computedStats: Record<string, any>;
+  allStats: Record<string, any>;
+}
+
+/**
+ * Preview computed stats without saving
+ */
+export async function previewMatchStats(data: CreateMatchData): Promise<PreviewMatchStatsResponse> {
+  return await apiPost<PreviewMatchStatsResponse>('/matches/preview', {
+    teamId: data.teamId,
+    opponentName: data.opponentName,
+    matchDate: data.matchDate,
+    competitionType: data.competitionType,
+    result: data.result,
+    isHome: data.isHome,
+    rawStats: data.rawStats,
+    notes: data.notes,
+    venue: data.venue,
+    referee: data.referee,
+  });
+}
