@@ -58,6 +58,18 @@ export function normalizeFieldName(fieldName: string): string {
   normalized = normalized.replace(/\bopp\s+passed\s+comp\b/gi, 'Opp Passes Comp');
   normalized = normalized.replace(/\bopp\s+passed\s+completed\b/gi, 'Opp Passes Completed');
   
+  // Normalize "Opponent Conversion Rate" or "Opp Conversion Rate" to "Opp Conv Rate" (shorter, consistent format)
+  // Handle various forms: "Opponent Conversion Rate", "Opp Conversion Rate", "Opponent Conv Rate", etc.
+  // Must check longer forms first to avoid partial replacements
+  // Use word boundaries and be flexible with spacing
+  normalized = normalized.replace(/\bopp\s+conversion\s+rate\b/gi, 'Opp Conv Rate');
+  normalized = normalized.replace(/\bopponent\s+conversion\s+rate\b/gi, 'Opp Conv Rate');
+  normalized = normalized.replace(/\bopponent\s+conv\s+rate\b/gi, 'Opp Conv Rate');
+  
+  // Also handle if it's already partially normalized but inconsistent (e.g., "Opp Conv Rate" vs "Opp Conv. Rate")
+  // This ensures consistency even if some fields are already partially normalized
+  normalized = normalized.replace(/\bopp\s+conv\.?\s+rate\b/gi, 'Opp Conv Rate');
+  
   // If already in Title Case with spaces and proper parentheses, normalize spaces and return
   if (/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*(\s*\([^)]+\))?$/.test(normalized)) {
     // Normalize multiple spaces to single spaces before returning

@@ -30,8 +30,7 @@
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",
     "serve": "^14.2.1",
-    "sql.js": "^1.13.0",
-    "tesseract.js": "^5.1.1"
+    "sql.js": "^1.13.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

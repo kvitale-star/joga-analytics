@@ -70,7 +70,10 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+// Increase JSON body size limit to handle base64-encoded images
+// Base64 encoding increases size by ~33%, and Gemini can handle up to 20 MB images
+// Setting limit to 25 MB to provide buffer for base64 encoding overhead
+app.use(express.json({ limit: '25mb' }));
 
 // CSRF protection (after cookie parser, before routes)
 app.use(setCsrfTokenCookie); // Set CSRF token cookie for authenticated requests

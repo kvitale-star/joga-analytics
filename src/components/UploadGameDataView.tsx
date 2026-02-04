@@ -7,7 +7,7 @@ import { PageLayout } from './PageLayout';
 import { getAllSeasons } from '../services/seasonService';
 import { normalizeFieldName } from '../utils/fieldDeduplication';
 import { MatchConfirmationModal } from './MatchConfirmationModal';
-import { extractStatsFromImage, parseStatsWithTeamSeparation } from '../services/ocrService';
+import { extractStatsFromImage } from '../services/ocrService';
 
 interface UploadGameDataViewProps {
   columnKeys: string[];
@@ -338,6 +338,93 @@ const sortPassStringsFields = (fields: Array<{ name: string; category: string }>
   });
 };
 
+// Sort fields within Shots Map category
+// Team fields order: Conversion Rate > Inside Box Conv Rate > Outside Box Conv Rate > % Attempts Inside Box > % Attempts Outside Box
+const sortShotsMapFields = (teamFields: Array<{ name: string; category: string }>, opponentFields: Array<{ name: string; category: string }>): {
+  teamFields: Array<{ name: string; category: string }>;
+  opponentFields: Array<{ name: string; category: string }>;
+} => {
+  // Define order for team fields
+  const teamOrder = [
+    'conversion rate',
+    'inside box conv rate',
+    'outside box conv rate',
+    '% attempts inside box',
+    'attempts inside box %',
+    '% attempts outside box',
+    'attempts outside box %'
+  ];
+  
+  // Sort team fields
+  const sortedTeamFields = [...teamFields].sort((a, b) => {
+    const aLower = a.name.toLowerCase().replace(/\s+/g, ' ').trim();
+    const bLower = b.name.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    let aIndex = -1;
+    let bIndex = -1;
+    
+    for (let i = 0; i < teamOrder.length; i++) {
+      if (aLower.includes(teamOrder[i])) {
+        aIndex = i;
+        break;
+      }
+    }
+    
+    for (let i = 0; i < teamOrder.length; i++) {
+      if (bLower.includes(teamOrder[i])) {
+        bIndex = i;
+        break;
+      }
+    }
+    
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    
+    // For fields not in order, sort alphabetically
+    return a.name.localeCompare(b.name);
+  });
+  
+  // Sort opponent fields - Opp Conv Rate first, then alphabetically
+  const opponentOrder = [
+    'opp conv rate'
+  ];
+  
+  const sortedOpponentFields = [...opponentFields].sort((a, b) => {
+    const aLower = a.name.toLowerCase().replace(/\s+/g, ' ').trim();
+    const bLower = b.name.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    let aIndex = -1;
+    let bIndex = -1;
+    
+    for (let i = 0; i < opponentOrder.length; i++) {
+      if (aLower.includes(opponentOrder[i])) {
+        aIndex = i;
+        break;
+      }
+    }
+    
+    for (let i = 0; i < opponentOrder.length; i++) {
+      if (bLower.includes(opponentOrder[i])) {
+        bIndex = i;
+        break;
+      }
+    }
+    
+    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+    if (aIndex !== -1) return -1;
+    if (bIndex !== -1) return 1;
+    
+    // For fields not in order, sort alphabetically
+    return a.name.localeCompare(b.name);
+  });
+  
+  return {
+    teamFields: sortedTeamFields,
+    opponentFields: sortedOpponentFields
+  };
+};
+
 const sortBasicStatsFields = (fields: Array<{ name: string; category: string }>): Array<{ name: string; category: string }> => {
   return fields.sort((a, b) => {
     // Normalize whitespace (handle double spaces, etc.)
@@ -419,7 +506,14 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
   const [previewData, setPreviewData] = useState<PreviewMatchStatsResponse | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [imageUploadError, setImageUploadError] = useState<string | null>(null);
+  const [imageUploadSuccess, setImageUploadSuccess] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'1st' | '2nd'>('1st');
+  
+  // Section-specific upload state - track state per section
+  const [sectionUploadState, setSectionUploadState] = useState<Record<string, {
+    processing: boolean;
+    message: { type: 'success' | 'error'; text: string } | null;
+  }>>({});
   const [pendingSubmission, setPendingSubmission] = useState<{
     teamId: number | null;
     opponentName: string;
@@ -491,10 +585,6 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         // This ensures we catch typos and variations
         const normalizedKey = normalizeFieldName(key);
         const excluded = shouldExcludeField(normalizedKey);
-        // Debug: Log penalty fields being filtered
-        if (normalizedKey.toLowerCase().includes('penalty') && !normalizedKey.toLowerCase().includes('1st') && !normalizedKey.toLowerCase().includes('2nd')) {
-          console.log(`📊 Penalty field "${key}" (normalized: "${normalizedKey}") excluded? ${excluded}`);
-        }
         return !excluded;
       })
       .map(key => {
@@ -510,17 +600,9 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         // Deduplicate: if we've already seen this normalized name, skip it
         const fieldKey = field.name.toLowerCase().trim();
         if (seenNormalized.has(fieldKey)) {
-          // Special logging for corners and free kicks
-          if (fieldKey.includes('corner') || fieldKey.includes('free kick')) {
-            console.log(`⚠️ Duplicate corner/free kick detected: "${field.originalKey}" -> "${field.name}" (normalized: "${fieldKey}")`);
-          }
           return false;
         }
         seenNormalized.add(fieldKey);
-        // Log corners and free kicks being added
-        if (fieldKey.includes('corner') || fieldKey.includes('free kick')) {
-          console.log(`✅ Adding corner/free kick: "${field.originalKey}" -> "${field.name}"`);
-        }
         return true;
       })
       .map(({ originalKey, ...rest }) => rest); // Remove originalKey from final result
@@ -545,11 +627,6 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     
     const allFields = [...existingFields, ...requiredFieldsToAdd];
     
-    // Debug: Log required fields being added
-    if (requiredFieldsToAdd.length > 0) {
-      console.log('📊 Adding required fields to form:', requiredFieldsToAdd.map(f => f.name));
-    }
-    
     // Group by category and deduplicate fields with the same normalized name
     // Use case-insensitive comparison to catch variations
     const grouped: Record<string, Array<{ name: string; category: string }>> = {};
@@ -557,11 +634,26 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     allFields.forEach(field => {
       // Deduplicate: check case-insensitively to catch variations
       const fieldKey = field.name.toLowerCase().trim();
-      if (seenFields.has(fieldKey)) {
-        console.log(`📊 Skipping duplicate field: "${field.name}" (normalized key: "${fieldKey}")`);
+      
+      // Special handling for conversion rate fields - normalize variations
+      let normalizedKey = fieldKey;
+      if (normalizedKey.includes('conv') && normalizedKey.includes('rate')) {
+        // Normalize all conversion rate variations to "opp conv rate"
+        normalizedKey = normalizedKey.replace(/\bopp\s+conversion\s+rate\b/g, 'opp conv rate');
+        normalizedKey = normalizedKey.replace(/\bopponent\s+conversion\s+rate\b/g, 'opp conv rate');
+        normalizedKey = normalizedKey.replace(/\bopponent\s+conv\s+rate\b/g, 'opp conv rate');
+        normalizedKey = normalizedKey.replace(/\bopp\s+conv\.?\s+rate\b/g, 'opp conv rate');
+      }
+      
+      if (seenFields.has(normalizedKey)) {
         return;
       }
-      seenFields.add(fieldKey);
+      seenFields.add(normalizedKey);
+      
+      // If we normalized the key, update the field name to the canonical form
+      if (normalizedKey !== fieldKey && normalizedKey === 'opp conv rate') {
+        field.name = 'Opp Conv Rate';
+      }
       
       if (!grouped[field.category]) {
         grouped[field.category] = [];
@@ -574,28 +666,9 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
       const fields = grouped[category];
       const fieldNames = fields.map(f => f.name.toLowerCase().trim());
       const uniqueNames = new Set(fieldNames);
-      if (fieldNames.length !== uniqueNames.size) {
-        console.log(`⚠️ Potential duplicates in ${category}:`, fields.map(f => f.name));
-      }
     });
     
     // Debug: Log possession mins fields in Basic Stats categories
-    if (grouped['Basic Stats (1st Half)']) {
-      const possessionFields = grouped['Basic Stats (1st Half)'].filter(f => 
-        f.name.toLowerCase().includes('possession mins')
-      );
-      if (possessionFields.length > 0) {
-        console.log('📊 Possession Mins fields in Basic Stats (1st Half):', possessionFields.map(f => f.name));
-      }
-    }
-    if (grouped['Basic Stats (2nd Half)']) {
-      const possessionFields = grouped['Basic Stats (2nd Half)'].filter(f => 
-        f.name.toLowerCase().includes('possession mins')
-      );
-      if (possessionFields.length > 0) {
-        console.log('📊 Possession Mins fields in Basic Stats (2nd Half):', possessionFields.map(f => f.name));
-      }
-    }
     
     // Sort fields within each category
     // NOTE: For Basic Stats and Pass Strings, we DON'T sort here because we need to split into Team/Opponent first
@@ -994,6 +1067,206 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     setSubmitSuccess(false);
   };
 
+  // Section-specific upload handler for Basic Stats (1st Half) and Basic Stats (2nd Half)
+  const handleSectionImageUpload = async (event: React.ChangeEvent<HTMLInputElement>, section: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setSectionUploadState(prev => ({
+        ...prev,
+        [section]: { processing: false, message: { type: 'error', text: 'Please upload an image file' } }
+      }));
+      return;
+    }
+
+    // Set processing state for this specific section
+    setSectionUploadState(prev => ({
+      ...prev,
+      [section]: { processing: true, message: null }
+    }));
+
+    try {
+      // Extract stats from image using Gemini vision
+      // Determine period based on section: '1st' for Basic Stats (1st Half), '2nd' for Basic Stats (2nd Half)
+      const period = section === 'Basic Stats (1st Half)' ? '1st' : '2nd';
+      const { teamStats, opponentStats } = await extractStatsFromImage(file, period);
+      
+      // Merge team and opponent stats
+      const allStats = { ...teamStats, ...opponentStats };
+      
+      // Filter out computed fields
+      const filteredStats: Record<string, number> = {};
+      const excludedStats: string[] = [];
+      
+      Object.keys(allStats).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        const isAttemptsField = (lowerKey.includes('attempt') || lowerKey.includes('attempts')) && 
+                                !lowerKey.includes('penalty') && 
+                                !lowerKey.includes('penalties');
+        
+        if (shouldExcludeField(key) || isAttemptsField) {
+          excludedStats.push(key);
+        } else {
+          filteredStats[key] = allStats[key];
+        }
+      });
+
+      // Only match stats that belong to this section
+      const sectionFields = formFields[section] || [];
+      const allFormFields = sectionFields;
+      
+      let matchedCount = 0;
+      let unmatchedStats: string[] = [];
+      const matchedFields: string[] = [];
+      
+      // Process matches first to get accurate counts
+      Object.keys(filteredStats).forEach(extractedKey => {
+        // Try to find matching field in this section
+        const exactMatch = allFormFields.find(f => f.name === extractedKey);
+        
+        if (exactMatch) {
+          matchedCount++;
+          matchedFields.push(exactMatch.name);
+        } else {
+          // Try case-insensitive match
+          const caseInsensitiveMatch = allFormFields.find(
+            f => f.name.toLowerCase() === extractedKey.toLowerCase()
+          );
+          
+          if (caseInsensitiveMatch) {
+            matchedCount++;
+            matchedFields.push(caseInsensitiveMatch.name);
+          } else {
+            // Try normalized match
+            const normalizedExtracted = normalizeFieldName(extractedKey);
+            const normalizedMatch = allFormFields.find(
+              f => normalizeFieldName(f.name).toLowerCase() === normalizedExtracted.toLowerCase()
+            );
+            
+            if (normalizedMatch) {
+              matchedCount++;
+              matchedFields.push(normalizedMatch.name);
+            } else {
+              unmatchedStats.push(extractedKey);
+            }
+          }
+        }
+      });
+      
+      // Now update form data with matched stats
+      setFormData(prev => {
+        const updated = { ...prev };
+        
+        Object.keys(filteredStats).forEach(extractedKey => {
+          // Try to find matching field in this section
+          const exactMatch = allFormFields.find(f => f.name === extractedKey);
+          
+          if (exactMatch) {
+            updated[exactMatch.name] = filteredStats[extractedKey];
+          } else {
+            // Try case-insensitive match
+            const caseInsensitiveMatch = allFormFields.find(
+              f => f.name.toLowerCase() === extractedKey.toLowerCase()
+            );
+            
+            if (caseInsensitiveMatch) {
+              updated[caseInsensitiveMatch.name] = filteredStats[extractedKey];
+            } else {
+              // Try normalized match
+              const normalizedExtracted = normalizeFieldName(extractedKey);
+              const normalizedMatch = allFormFields.find(
+                f => normalizeFieldName(f.name).toLowerCase() === normalizedExtracted.toLowerCase()
+              );
+              
+              if (normalizedMatch) {
+                updated[normalizedMatch.name] = filteredStats[extractedKey];
+              }
+            }
+          }
+        });
+
+        return updated;
+      });
+
+      // Show success/error message
+      const totalStats = Object.keys(filteredStats).length;
+      
+      // Check if we actually matched any stats
+      if (matchedCount > 0) {
+        const message = unmatchedStats.length > 0
+          ? `Matched ${matchedCount} of ${totalStats} stats. ${unmatchedStats.length} unmatched.`
+          : `Successfully matched all ${matchedCount} statistics!`;
+        setSectionUploadState(prev => ({
+          ...prev,
+          [section]: { processing: false, message: { type: 'success', text: message } }
+        }));
+        setTimeout(() => {
+          setSectionUploadState(prev => ({
+            ...prev,
+            [section]: { processing: false, message: null }
+          }));
+        }, 5000);
+      } else if (totalStats > 0 && unmatchedStats.length > 0) {
+        // Stats were extracted but none matched
+        setSectionUploadState(prev => ({
+          ...prev,
+          [section]: { processing: false, message: { type: 'error', text: `Couldn't match ${totalStats} statistics to this section.` } }
+        }));
+      } else if (totalStats === 0 && excludedStats.length > 0) {
+        // Only computed fields were extracted (correctly excluded)
+        setSectionUploadState(prev => ({
+          ...prev,
+          [section]: { processing: false, message: { type: 'success', text: `Image processed. ${excludedStats.length} computed field${excludedStats.length > 1 ? 's' : ''} excluded.` } }
+        }));
+        setTimeout(() => {
+          setSectionUploadState(prev => ({
+            ...prev,
+            [section]: { processing: false, message: null }
+          }));
+        }, 3000);
+      } else if (totalStats > 0) {
+        // Stats were extracted but for some reason matchedCount is 0 (shouldn't happen, but show info)
+        setSectionUploadState(prev => ({
+          ...prev,
+          [section]: { processing: false, message: { type: 'success', text: `Image processed. ${totalStats} stat${totalStats > 1 ? 's' : ''} found and processed.` } }
+        }));
+        setTimeout(() => {
+          setSectionUploadState(prev => ({
+            ...prev,
+            [section]: { processing: false, message: null }
+          }));
+        }, 5000);
+      } else {
+        // No stats extracted at all
+        setSectionUploadState(prev => ({
+          ...prev,
+          [section]: { processing: false, message: { type: 'success', text: 'Image processed. No stats found in image.' } }
+        }));
+        setTimeout(() => {
+          setSectionUploadState(prev => ({
+            ...prev,
+            [section]: { processing: false, message: null }
+          }));
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error processing section image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to extract statistics';
+      setSectionUploadState(prev => ({
+        ...prev,
+        [section]: { processing: false, message: { type: 'error', text: errorMessage } }
+      }));
+    } finally {
+      setSectionUploadState(prev => ({
+        ...prev,
+        [section]: { processing: false, message: prev[section]?.message || null }
+      }));
+      event.target.value = '';
+    }
+  };
+
   // Handle image upload and OCR processing
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1009,31 +1282,53 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     setImageUploadError(null);
 
     try {
-      // Extract text from image using OCR
-      const ocrText = await extractStatsFromImage(file);
-      
-      // Parse stats with team/opponent separation
-      const { teamStats, opponentStats } = parseStatsWithTeamSeparation(
-        ocrText,
-        selectedPeriod
-      );
+      // Extract stats from image using Gemini vision
+      const { teamStats, opponentStats } = await extractStatsFromImage(file, selectedPeriod);
 
       // Merge team and opponent stats
       const allStats = { ...teamStats, ...opponentStats };
+      
+      // Filter out computed fields that shouldn't be in the form
+      // Use the same logic as shouldExcludeField to be consistent
+      const filteredStats: Record<string, number> = {};
+      const excludedStats: string[] = [];
+      
+      Object.keys(allStats).forEach(key => {
+        // Use the existing shouldExcludeField function to check if this should be excluded
+        // Also explicitly check for "Attempts" fields (which are computed)
+        const lowerKey = key.toLowerCase();
+        const isAttemptsField = (lowerKey.includes('attempt') || lowerKey.includes('attempts')) && 
+                                !lowerKey.includes('penalty') && 
+                                !lowerKey.includes('penalties');
+        
+        if (shouldExcludeField(key) || isAttemptsField) {
+          excludedStats.push(key);
+        } else {
+          filteredStats[key] = allStats[key];
+        }
+      });
 
       // Update form data with extracted values
+      let matchedCount = 0;
+      let unmatchedStats: string[] = [];
+      
       setFormData(prev => {
         const updated = { ...prev };
         
         // Match extracted stats to form field names
         // Try to find matching field names in the form
-        Object.keys(allStats).forEach(extractedKey => {
+        const allFormFields = Object.values(formFields || {}).flat();
+        
+        Object.keys(filteredStats).forEach(extractedKey => {
+          let matched = false;
+          
           // Try exact match first
-          const allFormFields = Object.values(formFields || {}).flat();
           const exactMatch = allFormFields.find(f => f.name === extractedKey);
           
           if (exactMatch) {
-            updated[exactMatch.name] = allStats[extractedKey];
+            updated[exactMatch.name] = filteredStats[extractedKey];
+            matched = true;
+            matchedCount++;
           } else {
             // Try case-insensitive match
             const caseInsensitiveMatch = allFormFields.find(
@@ -1041,7 +1336,9 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
             );
             
             if (caseInsensitiveMatch) {
-              updated[caseInsensitiveMatch.name] = allStats[extractedKey];
+              updated[caseInsensitiveMatch.name] = filteredStats[extractedKey];
+              matched = true;
+              matchedCount++;
             } else {
               // Try partial match (normalize field names)
               const normalizedExtracted = normalizeFieldName(extractedKey);
@@ -1050,10 +1347,30 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
               );
               
               if (normalizedMatch) {
-                updated[normalizedMatch.name] = allStats[extractedKey];
+                updated[normalizedMatch.name] = filteredStats[extractedKey];
+                matched = true;
+                matchedCount++;
               } else {
-                // Store with original key - user can review
-                updated[extractedKey] = allStats[extractedKey];
+                // Try fuzzy match - check if the normalized field name contains key words
+                // This handles cases where Gemini might return slightly different field names
+                const extractedWords = normalizedExtracted.toLowerCase().split(/\s+/);
+                const fuzzyMatch = allFormFields.find(f => {
+                  const normalizedFormName = normalizeFieldName(f.name).toLowerCase();
+                  const formWords = normalizedFormName.split(/\s+/);
+                  // Check if most words match (at least 2 words or 50% of words)
+                  const matchingWords = extractedWords.filter(word => 
+                    formWords.some(fw => fw.includes(word) || word.includes(fw))
+                  );
+                  return matchingWords.length >= Math.min(2, Math.ceil(extractedWords.length * 0.5));
+                });
+                
+                if (fuzzyMatch) {
+                  updated[fuzzyMatch.name] = filteredStats[extractedKey];
+                  matched = true;
+                  matchedCount++;
+                } else {
+                  unmatchedStats.push(extractedKey);
+                }
               }
             }
           }
@@ -1061,6 +1378,40 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
 
         return updated;
       });
+
+      // Show success/error message
+      // Only count non-computed stats for matching purposes
+      const totalStats = Object.keys(filteredStats).length;
+      const excludedCount = excludedStats.length;
+      
+      // Clear any previous errors first
+      setImageUploadError(null);
+      
+      if (matchedCount > 0) {
+        let message = `Successfully matched ${matchedCount} of ${totalStats} statistics`;
+        if (excludedCount > 0) {
+          message += ` (${excludedCount} computed field${excludedCount > 1 ? 's' : ''} excluded)`;
+        }
+        if (unmatchedStats.length > 0) {
+          message += `. ${unmatchedStats.length} could not be matched: ${unmatchedStats.slice(0, 3).join(', ')}${unmatchedStats.length > 3 ? '...' : ''}`;
+        } else {
+          message += '!';
+        }
+        setImageUploadSuccess(message);
+        // Clear success message after 8 seconds (longer so user can see it)
+        setTimeout(() => setImageUploadSuccess(null), 8000);
+      } else if (totalStats > 0 && unmatchedStats.length > 0) {
+        // Stats were extracted but none matched - only show error if there are actually unmatched stats
+        setImageUploadError(
+          `Extracted ${totalStats} statistics but couldn't match them to form fields. Check console for details. Unmatched fields: ${unmatchedStats.slice(0, 5).join(', ')}${unmatchedStats.length > 5 ? '...' : ''}`
+        );
+      } else if (excludedCount > 0 && totalStats === 0) {
+        // Only computed fields were extracted - this is actually fine
+        setImageUploadSuccess(
+          `Extracted ${excludedCount} computed field${excludedCount > 1 ? 's' : ''} (correctly excluded from form). No form fields to update.`
+        );
+        setTimeout(() => setImageUploadSuccess(null), 5000);
+      }
 
       // Clear any previous errors
       setErrors({});
@@ -1086,18 +1437,20 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     let teamFields = fields.filter(f => !isOpponentField(f.name));
     let opponentFields = fields.filter(f => isOpponentField(f.name));
     
-    // Sort each group separately - use Pass Strings sort for Pass Strings, otherwise Basic Stats sort
+    // Sort each group separately - use appropriate sort function based on category
     if (category === 'Pass Strings') {
       teamFields = sortPassStringsFields([...teamFields]); // Create new array to ensure sort works
       opponentFields = sortPassStringsFields([...opponentFields]); // Create new array to ensure sort works
+    } else if (category === 'Shots Map') {
+      // Use custom sort for Shots Map
+      const sorted = sortShotsMapFields([...teamFields], [...opponentFields]);
+      teamFields = sorted.teamFields;
+      opponentFields = sorted.opponentFields;
     } else {
       teamFields = sortBasicStatsFields([...teamFields]); // Create new array to ensure sort works
       opponentFields = sortBasicStatsFields([...opponentFields]); // Create new array to ensure sort works
     }
     
-    // Debug: Log sorted fields
-    console.log('📊 Team fields after sorting:', teamFields.map(f => f.name));
-    console.log('📊 Opponent fields after sorting:', opponentFields.map(f => f.name));
     
     return (
       <>
@@ -1250,64 +1603,6 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         </div>
       )}
 
-      {/* Image Upload Section */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="text-lg font-semibold text-gray-800 mb-3">Upload Screenshot (Optional)</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Upload a screenshot of your stats to automatically fill in the form. Team stats should be on the left, opponent stats on the right.
-        </p>
-        
-        <div className="flex items-center gap-4 mb-4">
-          <label className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Period:</span>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value as '1st' | '2nd')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
-              disabled={isProcessingImage}
-            >
-              <option value="1st">1st Half</option>
-              <option value="2nd">2nd Half</option>
-            </select>
-          </label>
-          
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              disabled={isProcessingImage}
-              className="hidden"
-              id="image-upload-input"
-            />
-            <span
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                isProcessingImage
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-[#6787aa] text-white hover:bg-[#5a7595] cursor-pointer'
-              }`}
-            >
-              {isProcessingImage ? 'Processing...' : 'Upload Screenshot'}
-            </span>
-          </label>
-        </div>
-
-        {imageUploadError && (
-          <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-sm">
-            {imageUploadError}
-          </div>
-        )}
-
-        {isProcessingImage && (
-          <div className="mt-2 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#6787aa]"></div>
-              <span>Extracting statistics from image...</span>
-            </div>
-          </div>
-        )}
-      </div>
-
       <form onSubmit={handleSubmit}>
         {categoryOrder.map((category, categoryIndex) => {
           const fields = formFields[category];
@@ -1320,12 +1615,56 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
             <div key={category} className="mb-6">
               <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
                 <div 
-                  className="px-6 py-4 border-b border-gray-200"
+                  className="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
                   style={{ backgroundColor: categoryColor }}
                 >
                   <h2 className={`text-lg font-semibold ${textColor}`}>
                     {category}
                   </h2>
+                  {(category === 'Basic Stats (1st Half)' || category === 'Basic Stats (2nd Half)') && (
+                    <div className="flex items-center gap-2">
+                      {sectionUploadState[category]?.message && (
+                        <span className={`text-xs ${
+                          sectionUploadState[category].message!.type === 'success' 
+                            ? 'text-green-100' 
+                            : 'text-red-100'
+                        }`}>
+                          {sectionUploadState[category].message!.text}
+                        </span>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleSectionImageUpload(e, category)}
+                        disabled={sectionUploadState[category]?.processing || false}
+                        className="hidden"
+                        id={`section-upload-${category}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById(`section-upload-${category}`)?.click()}
+                        disabled={sectionUploadState[category]?.processing || false}
+                        className={`flex items-center gap-1 px-2 py-1 bg-white text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition-colors ${
+                          sectionUploadState[category]?.processing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                        }`}
+                        title="Upload screenshot for this section"
+                      >
+                        {sectionUploadState[category]?.processing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600"></div>
+                            <span>Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <span>Upload</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="p-6">
                   {category === 'Game Info' ? (
