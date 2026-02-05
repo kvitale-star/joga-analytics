@@ -427,9 +427,9 @@ function App() {
       setError(null); // Clear any previous errors
       setLoading(false);
     }
-  }, [user, isLoading, USE_BACKEND_API]);
+  }, [user, isLoading, USE_BACKEND_API, loadData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     // Don't load if we're in API mode and not authenticated
     if (USE_BACKEND_API && !user) {
       console.log('Skipping data load - not authenticated in API mode');
@@ -505,7 +505,7 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, USE_BACKEND_API]);
 
   // Find column keys automatically (case-insensitive)
   const findColumnKey = (possibleKeys: string[]): string | null => {
