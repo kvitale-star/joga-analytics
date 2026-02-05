@@ -146,8 +146,8 @@ export function normalizeFieldName(fieldName: string): string {
  * 2. If duplicate normalized names exist, merge their values (prefer non-empty values)
  * 3. Return deduplicated data with canonical field names
  */
-export function deduplicateMatchData(matchData: Record<string, any>): DeduplicatedMatchData {
-  const normalized: Record<string, { value: any; originalKeys: string[] }> = {};
+export function deduplicateMatchData(matchData: Record<string, string | number>): DeduplicatedMatchData {
+  const normalized: Record<string, { value: string | number; originalKeys: string[] }> = {};
   
   // First pass: normalize all field names and collect values
   for (const [key, value] of Object.entries(matchData)) {
@@ -206,7 +206,7 @@ export function deduplicateMatchData(matchData: Record<string, any>): Deduplicat
  * Deduplicate column keys from match data array
  * Returns a deduplicated list of canonical field names
  */
-export function deduplicateColumnKeys(matchDataArray: Record<string, any>[]): string[] {
+export function deduplicateColumnKeys(matchDataArray: Record<string, string | number>[]): string[] {
   if (matchDataArray.length === 0) return [];
   
   // Collect all unique normalized field names across all matches
@@ -224,7 +224,7 @@ export function deduplicateColumnKeys(matchDataArray: Record<string, any>[]): st
  * Apply deduplication to an array of match data
  */
 export function deduplicateMatchDataArray(
-  matchDataArray: Record<string, any>[]
+  matchDataArray: Record<string, string | number>[]
 ): DeduplicatedMatchData[] {
   return matchDataArray.map(match => deduplicateMatchData(match));
 }
