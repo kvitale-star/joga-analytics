@@ -143,6 +143,10 @@ router.get('/find-existing', async (req, res) => {
       // Return the full match data for pre-filling
       const fullMatch = await getMatchById(existingMatch.id);
       
+      if (!fullMatch) {
+        return res.json({ match: null, found: false });
+      }
+      
       // Coaches/viewers can only view their assigned teams' matches
       if (req.userId && req.userRole && req.userRole !== 'admin') {
         const assignedTeamIds = await getUserTeamAssignments(req.userId);
@@ -460,6 +464,11 @@ router.put('/:id', canModifyMatch, async (req, res) => {
 
     // Get existing match to merge stats
     const existingMatch = await getMatchById(matchId);
+    
+    if (!existingMatch) {
+      return res.status(404).json({ error: 'Match not found' });
+    }
+    
     let finalStatsJson = statsJson;
 
     // If rawStats provided instead of statsJson, compute derived metrics and merge with existing
@@ -489,8 +498,11 @@ router.put('/:id', canModifyMatch, async (req, res) => {
         // If value is 0, keep existing value (don't update)
       });
 
+      // Normalize merged stats to ensure proper type for computeMatchStats
+      const normalizedMergedStats = normalizeFieldNames(mergedStats);
+      
       // Compute all derived metrics from merged stats
-      const computedStats = computeMatchStats(mergedStats);
+      const computedStats = computeMatchStats(normalizedMergedStats);
 
       // Combine merged raw + computed for final stats
       finalStatsJson = {
