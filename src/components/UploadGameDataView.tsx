@@ -504,10 +504,6 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
   const [seasons, setSeasons] = useState<Array<{ id: number; name: string; isActive: boolean }>>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewMatchStatsResponse | null>(null);
-  const [isProcessingImage, setIsProcessingImage] = useState(false);
-  const [imageUploadError, setImageUploadError] = useState<string | null>(null);
-  const [imageUploadSuccess, setImageUploadSuccess] = useState<string | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<'1st' | '2nd'>('1st');
   
   // Section-specific upload state - track state per section
   const [sectionUploadState, setSectionUploadState] = useState<Record<string, {
@@ -662,11 +658,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     });
     
     // Debug: Log any categories with potential duplicates
-    Object.keys(grouped).forEach(category => {
-      const fields = grouped[category];
-      const fieldNames = fields.map(f => f.name.toLowerCase().trim());
-      const uniqueNames = new Set(fieldNames);
-    });
+    // Fields are already deduplicated above
     
     // Debug: Log possession mins fields in Basic Stats categories
     
@@ -1267,165 +1259,6 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     }
   };
 
-  // Handle image upload and OCR processing
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setImageUploadError('Please upload an image file');
-      return;
-    }
-
-    setIsProcessingImage(true);
-    setImageUploadError(null);
-
-    try {
-      // Extract stats from image using Gemini vision
-      const { teamStats, opponentStats } = await extractStatsFromImage(file, selectedPeriod);
-
-      // Merge team and opponent stats
-      const allStats = { ...teamStats, ...opponentStats };
-      
-      // Filter out computed fields that shouldn't be in the form
-      // Use the same logic as shouldExcludeField to be consistent
-      const filteredStats: Record<string, number> = {};
-      const excludedStats: string[] = [];
-      
-      Object.keys(allStats).forEach(key => {
-        // Use the existing shouldExcludeField function to check if this should be excluded
-        // Also explicitly check for "Attempts" fields (which are computed)
-        const lowerKey = key.toLowerCase();
-        const isAttemptsField = (lowerKey.includes('attempt') || lowerKey.includes('attempts')) && 
-                                !lowerKey.includes('penalty') && 
-                                !lowerKey.includes('penalties');
-        
-        if (shouldExcludeField(key) || isAttemptsField) {
-          excludedStats.push(key);
-        } else {
-          filteredStats[key] = allStats[key];
-        }
-      });
-
-      // Update form data with extracted values
-      let matchedCount = 0;
-      let unmatchedStats: string[] = [];
-      
-      setFormData(prev => {
-        const updated = { ...prev };
-        
-        // Match extracted stats to form field names
-        // Try to find matching field names in the form
-        const allFormFields = Object.values(formFields || {}).flat();
-        
-        Object.keys(filteredStats).forEach(extractedKey => {
-          let matched = false;
-          
-          // Try exact match first
-          const exactMatch = allFormFields.find(f => f.name === extractedKey);
-          
-          if (exactMatch) {
-            updated[exactMatch.name] = filteredStats[extractedKey];
-            matched = true;
-            matchedCount++;
-          } else {
-            // Try case-insensitive match
-            const caseInsensitiveMatch = allFormFields.find(
-              f => f.name.toLowerCase() === extractedKey.toLowerCase()
-            );
-            
-            if (caseInsensitiveMatch) {
-              updated[caseInsensitiveMatch.name] = filteredStats[extractedKey];
-              matched = true;
-              matchedCount++;
-            } else {
-              // Try partial match (normalize field names)
-              const normalizedExtracted = normalizeFieldName(extractedKey);
-              const normalizedMatch = allFormFields.find(
-                f => normalizeFieldName(f.name).toLowerCase() === normalizedExtracted.toLowerCase()
-              );
-              
-              if (normalizedMatch) {
-                updated[normalizedMatch.name] = filteredStats[extractedKey];
-                matched = true;
-                matchedCount++;
-              } else {
-                // Try fuzzy match - check if the normalized field name contains key words
-                // This handles cases where Gemini might return slightly different field names
-                const extractedWords = normalizedExtracted.toLowerCase().split(/\s+/);
-                const fuzzyMatch = allFormFields.find(f => {
-                  const normalizedFormName = normalizeFieldName(f.name).toLowerCase();
-                  const formWords = normalizedFormName.split(/\s+/);
-                  // Check if most words match (at least 2 words or 50% of words)
-                  const matchingWords = extractedWords.filter(word => 
-                    formWords.some(fw => fw.includes(word) || word.includes(fw))
-                  );
-                  return matchingWords.length >= Math.min(2, Math.ceil(extractedWords.length * 0.5));
-                });
-                
-                if (fuzzyMatch) {
-                  updated[fuzzyMatch.name] = filteredStats[extractedKey];
-                  matched = true;
-                  matchedCount++;
-                } else {
-                  unmatchedStats.push(extractedKey);
-                }
-              }
-            }
-          }
-        });
-
-        return updated;
-      });
-
-      // Show success/error message
-      // Only count non-computed stats for matching purposes
-      const totalStats = Object.keys(filteredStats).length;
-      const excludedCount = excludedStats.length;
-      
-      // Clear any previous errors first
-      setImageUploadError(null);
-      
-      if (matchedCount > 0) {
-        let message = `Successfully matched ${matchedCount} of ${totalStats} statistics`;
-        if (excludedCount > 0) {
-          message += ` (${excludedCount} computed field${excludedCount > 1 ? 's' : ''} excluded)`;
-        }
-        if (unmatchedStats.length > 0) {
-          message += `. ${unmatchedStats.length} could not be matched: ${unmatchedStats.slice(0, 3).join(', ')}${unmatchedStats.length > 3 ? '...' : ''}`;
-        } else {
-          message += '!';
-        }
-        setImageUploadSuccess(message);
-        // Clear success message after 8 seconds (longer so user can see it)
-        setTimeout(() => setImageUploadSuccess(null), 8000);
-      } else if (totalStats > 0 && unmatchedStats.length > 0) {
-        // Stats were extracted but none matched - only show error if there are actually unmatched stats
-        setImageUploadError(
-          `Extracted ${totalStats} statistics but couldn't match them to form fields. Check console for details. Unmatched fields: ${unmatchedStats.slice(0, 5).join(', ')}${unmatchedStats.length > 5 ? '...' : ''}`
-        );
-      } else if (excludedCount > 0 && totalStats === 0) {
-        // Only computed fields were extracted - this is actually fine
-        setImageUploadSuccess(
-          `Extracted ${excludedCount} computed field${excludedCount > 1 ? 's' : ''} (correctly excluded from form). No form fields to update.`
-        );
-        setTimeout(() => setImageUploadSuccess(null), 5000);
-      }
-
-      // Clear any previous errors
-      setErrors({});
-    } catch (error) {
-      console.error('Error processing image:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to extract statistics from image';
-      setImageUploadError(errorMessage);
-      setErrors({ _general: errorMessage });
-    } finally {
-      setIsProcessingImage(false);
-      // Reset file input
-      event.target.value = '';
-    }
-  };
 
   // Render fields grouped by Team/Opponent for Basic Stats and other sections
   const renderFieldsWithSubsections = (

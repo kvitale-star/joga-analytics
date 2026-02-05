@@ -92,7 +92,7 @@ export async function extractTextFromImage(imageFile: File): Promise<string> {
  */
 export function parseStatsWithTeamSeparation(
   stats: Record<string, number>,
-  period: '1st' | '2nd' = '1st'
+  _period: '1st' | '2nd' = '1st'
 ): {
   teamStats: Record<string, number>;
   opponentStats: Record<string, number>;
