@@ -11,6 +11,7 @@ import {
 import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
 import { getUserTeamAssignments } from '../services/teamService.js';
 import { computeMatchStats, normalizeFieldNames } from '../services/matchStatsService.js';
+import { normalizeOpponentName, opponentNamesMatch, findBestOpponentMatch, calculateOpponentSimilarity } from '../utils/opponentMatching.js';
 
 const router = express.Router();
 
@@ -64,6 +65,185 @@ router.get('/', async (req, res) => {
     res.json(matches);
   } catch (error: any) {
     res.status(500).json({ error: error.message || 'Failed to get matches' });
+  }
+});
+
+/**
+ * Convert date string from MM/DD/YYYY to YYYY-MM-DD format for database queries
+ */
+function convertDateForQuery(dateStr: string): string {
+  // If already in YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Try to parse MM/DD/YYYY format
+  const mmddyyyy = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mmddyyyy) {
+    const month = mmddyyyy[1].padStart(2, '0');
+    const day = mmddyyyy[2].padStart(2, '0');
+    const year = mmddyyyy[3];
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Try to parse as Date object and convert (use local date methods to avoid timezone shifts)
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) {
+    // Use local date methods instead of toISOString to avoid timezone conversion
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Fallback: return as-is (might work for some database formats)
+  return dateStr;
+}
+
+/**
+ * GET /api/matches/find-existing
+ * Find existing match by Team ID + Opponent + Date (fuzzy opponent matching)
+ * Query params: teamId, opponentName, matchDate (accepts MM/DD/YYYY or YYYY-MM-DD)
+ */
+router.get('/find-existing', async (req, res) => {
+  try {
+    const { teamId, opponentName, matchDate } = req.query;
+    
+    if (!teamId || !opponentName || !matchDate) {
+      return res.status(400).json({ 
+        error: 'teamId, opponentName, and matchDate are required' 
+      });
+    }
+    
+    // Convert date to YYYY-MM-DD format for database query
+    const dateForQuery = convertDateForQuery(matchDate as string);
+    
+    // Get all matches for this team and date
+    const matches = await getMatches({
+      teamId: parseInt(teamId as string),
+      startDate: dateForQuery,
+      endDate: dateForQuery,
+    });
+    
+    // Find match with matching opponent (fuzzy - uses similarity threshold)
+    // Try exact match first, then fuzzy match
+    const normalizedInput = normalizeOpponentName(opponentName as string);
+    let existingMatch = matches.find(match => 
+      normalizeOpponentName(match.opponentName) === normalizedInput
+    );
+    
+    // If no exact match, try fuzzy matching with 70% similarity threshold
+    if (!existingMatch) {
+      existingMatch = matches.find(match => 
+        opponentNamesMatch(match.opponentName, opponentName as string, 0.7)
+      );
+    }
+    
+    if (existingMatch) {
+      // Return the full match data for pre-filling
+      const fullMatch = await getMatchById(existingMatch.id);
+      
+      // Coaches/viewers can only view their assigned teams' matches
+      if (req.userId && req.userRole && req.userRole !== 'admin') {
+        const assignedTeamIds = await getUserTeamAssignments(req.userId);
+        if (fullMatch.teamId && !assignedTeamIds.includes(fullMatch.teamId)) {
+          return res.status(403).json({ error: 'You can only view matches for your assigned teams' });
+        }
+      }
+      
+      return res.json({ match: fullMatch, found: true });
+    }
+    
+    return res.json({ match: null, found: false });
+  } catch (error: any) {
+    console.error('Error finding existing match:', error);
+    return res.status(500).json({ error: error.message || 'Failed to find existing match' });
+  }
+});
+
+/**
+ * GET /api/matches/opponents/suggestions
+ * Get opponent name suggestions based on partial input
+ * Query params: query (partial opponent name), teamId (optional), limit (default 10)
+ */
+router.get('/opponents/suggestions', async (req, res) => {
+  try {
+    const { query: searchQuery, teamId, limit = '10' } = req.query;
+    
+    if (!searchQuery || typeof searchQuery !== 'string' || searchQuery.trim().length === 0) {
+      return res.json({ suggestions: [] });
+    }
+    
+    const limitNum = parseInt(limit as string, 10) || 10;
+    const searchTerm = searchQuery.trim();
+    
+    // Get all matches (optionally filtered by team)
+    const filters: any = {};
+    if (teamId) {
+      filters.teamId = parseInt(teamId as string);
+    }
+    
+    const matches = await getMatches(filters);
+    
+    // Extract unique opponent names
+    const opponentSet = new Set<string>();
+    matches.forEach(match => {
+      if (match.opponentName && match.opponentName.trim()) {
+        opponentSet.add(match.opponentName.trim());
+      }
+    });
+    
+    const allOpponents = Array.from(opponentSet);
+    
+    // Find best matches using fuzzy matching
+    const suggestions: Array<{ name: string; similarity: number }> = [];
+    
+    for (const opponent of allOpponents) {
+      const similarity = calculateOpponentSimilarity(searchTerm, opponent);
+      if (similarity > 0.3) { // Lower threshold for suggestions (30% similarity)
+        suggestions.push({ name: opponent, similarity });
+      }
+    }
+    
+    // Sort by similarity (highest first), then alphabetically
+    suggestions.sort((a, b) => {
+      if (Math.abs(a.similarity - b.similarity) > 0.1) {
+        return b.similarity - a.similarity;
+      }
+      return a.name.localeCompare(b.name);
+    });
+    
+    // Also include exact/prefix matches at the top
+    const exactMatches = allOpponents.filter(opp => {
+      const normOpp = normalizeOpponentName(opp);
+      const normSearch = normalizeOpponentName(searchTerm);
+      return normOpp.includes(normSearch) || normSearch.includes(normOpp);
+    }).slice(0, limitNum);
+    
+    // Combine and deduplicate
+    const result: string[] = [];
+    const seen = new Set<string>();
+    
+    // Add exact/prefix matches first
+    for (const name of exactMatches) {
+      if (!seen.has(name)) {
+        result.push(name);
+        seen.add(name);
+      }
+    }
+    
+    // Add fuzzy matches
+    for (const { name } of suggestions) {
+      if (!seen.has(name) && result.length < limitNum) {
+        result.push(name);
+        seen.add(name);
+      }
+    }
+    
+    return res.json({ suggestions: result });
+  } catch (error: any) {
+    console.error('Error getting opponent suggestions:', error);
+    return res.status(500).json({ error: error.message || 'Failed to get opponent suggestions' });
   }
 });
 
@@ -270,10 +450,53 @@ router.put('/:id', canModifyMatch, async (req, res) => {
       notes,
       venue,
       referee,
+      // Raw stats from form (if statsJson not provided)
+      rawStats,
     } = req.body;
 
     if (!req.userId) {
       return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    // Get existing match to merge stats
+    const existingMatch = await getMatchById(matchId);
+    let finalStatsJson = statsJson;
+
+    // If rawStats provided instead of statsJson, compute derived metrics and merge with existing
+    if (rawStats && !statsJson) {
+      // Normalize field names from form input
+      const normalizedStats = normalizeFieldNames({
+        ...rawStats,
+        teamId,
+        opponentName,
+        matchDate,
+        competitionType,
+        result,
+        venue,
+        referee,
+        notes,
+      });
+
+      // Merge with existing stats (0s in rawStats mean "don't update" - keep existing value)
+      const existingStats = existingMatch.statsJson || {};
+      const mergedStats: Record<string, any> = { ...existingStats };
+      
+      // Only update fields that have non-zero values (0s act as placeholders)
+      Object.entries(normalizedStats).forEach(([key, value]) => {
+        if (value !== 0 && value !== '' && value !== null && value !== undefined) {
+          mergedStats[key] = value;
+        }
+        // If value is 0, keep existing value (don't update)
+      });
+
+      // Compute all derived metrics from merged stats
+      const computedStats = computeMatchStats(mergedStats);
+
+      // Combine merged raw + computed for final stats
+      finalStatsJson = {
+        ...mergedStats,
+        ...computedStats,
+      };
     }
 
     const match = await updateMatch(matchId, {
@@ -283,7 +506,7 @@ router.put('/:id', canModifyMatch, async (req, res) => {
       competitionType,
       result,
       isHome,
-      statsJson,
+      statsJson: finalStatsJson,
       statsSource,
       statsComputedAt,
       statsManualFields,

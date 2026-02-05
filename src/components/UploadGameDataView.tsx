@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { MatchData } from '../types';
-import { createMatch, previewMatchStats, PreviewMatchStatsResponse } from '../services/matchService';
+import { createMatch, updateMatch, previewMatchStats, PreviewMatchStatsResponse, Match } from '../services/matchService';
 import { JOGA_COLORS } from '../utils/colors';
 import { Team } from '../types/auth';
 import { PageLayout } from './PageLayout';
 import { getAllSeasons } from '../services/seasonService';
 import { normalizeFieldName } from '../utils/fieldDeduplication';
 import { MatchConfirmationModal } from './MatchConfirmationModal';
+import { ExistingMatchModal } from './ExistingMatchModal';
 import { extractStatsFromImage } from '../services/ocrService';
+import { apiGet } from '../services/apiClient';
 
 interface UploadGameDataViewProps {
   columnKeys: string[];
@@ -519,6 +521,14 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     isHome: boolean | null;
     rawStats: Record<string, any>;
   } | null>(null);
+  const [existingMatch, setExistingMatch] = useState<Match | null>(null);
+  const [isLoadingExistingMatch, setIsLoadingExistingMatch] = useState(false);
+  const [showExistingMatchModal, setShowExistingMatchModal] = useState(false);
+  const matchSearchParamsRef = useRef<{ teamId: number; opponentName: string; matchDate: string } | null>(null);
+  const [opponentSuggestions, setOpponentSuggestions] = useState<string[]>([]);
+  const [showOpponentSuggestions, setShowOpponentSuggestions] = useState(false);
+  const opponentInputRef = useRef<HTMLInputElement | null>(null);
+  const opponentSuggestionsRef = useRef<HTMLDivElement | null>(null);
 
   // Load seasons
   React.useEffect(() => {
@@ -535,6 +545,161 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
       }
     };
     loadSeasons();
+  }, []);
+
+  // Function to load existing match data into form
+  const loadExistingMatchData = useCallback((match: Match) => {
+    if (!match.statsJson) return;
+    
+    // Convert match data to form format
+    const existingData: Record<string, any> = {};
+    
+    // Load stats from statsJson
+    Object.entries(match.statsJson).forEach(([key, value]) => {
+      const normalizedKey = normalizeFieldName(key);
+      existingData[normalizedKey] = value;
+    });
+    
+    // Merge with current form data (form data takes precedence for fields user has entered)
+    setFormData(prev => {
+      const merged = { ...prev };
+      
+      // Only override with existing data if form field is empty/0/undefined
+      Object.entries(existingData).forEach(([key, value]) => {
+        const currentValue = prev[key];
+        if (currentValue === undefined || currentValue === '' || currentValue === 0 || currentValue === null) {
+          merged[key] = value;
+        }
+        // Otherwise keep user's input (don't overwrite)
+      });
+      
+      return merged;
+    });
+  }, []);
+
+  // Function to find existing match (actual API call)
+  const performMatchSearch = useCallback(async (teamId: number, opponentName: string, matchDate: string) => {
+    setIsLoadingExistingMatch(true);
+    try {
+      // Send date as-is (MM/DD/YYYY format) - backend will handle conversion
+      const response = await apiGet<{ match: Match; found: boolean }>(
+        `/matches/find-existing?teamId=${teamId}&opponentName=${encodeURIComponent(opponentName)}&matchDate=${encodeURIComponent(matchDate)}`
+      );
+      
+      if (response.found && response.match) {
+        setExistingMatch(response.match);
+        // Don't auto-pre-fill - user will choose via button/modal
+      } else {
+        setExistingMatch(null);
+      }
+    } catch (error) {
+      console.error('Error finding existing match:', error);
+      setExistingMatch(null);
+    } finally {
+      setIsLoadingExistingMatch(false);
+    }
+  }, []);
+
+  // Check for existing match when Team/Opponent/Date changes (with debounce)
+  useEffect(() => {
+    // Find Team field (not Team ID - the form uses Team dropdown with slug)
+    const teamKey = columnKeys.find(key => 
+      normalizeFieldName(key).toLowerCase().includes('team') && 
+      !normalizeFieldName(key).toLowerCase().includes('team id')
+    );
+    const opponentKey = columnKeys.find(key => 
+      normalizeFieldName(key).toLowerCase().includes('opponent')
+    );
+    const dateKey = columnKeys.find(key => 
+      normalizeFieldName(key).toLowerCase().includes('date')
+    );
+    
+    // Get team slug from form data
+    const teamSlug = teamKey && formData[teamKey] ? String(formData[teamKey]).trim() : '';
+    const opponentName = opponentKey && formData[opponentKey] ? String(formData[opponentKey]).trim() : '';
+    const matchDate = dateKey && formData[dateKey] ? String(formData[dateKey]) : '';
+    
+    // Need all three to search
+    if (!teamSlug || !opponentName || !matchDate) {
+      setExistingMatch(null);
+      matchSearchParamsRef.current = null;
+      return;
+    }
+    
+    // Look up team ID from slug
+    const team = Array.from(teamSlugMap.values()).find(t => t.slug === teamSlug);
+    const teamId = team?.id;
+    
+    if (!teamId) {
+      setExistingMatch(null);
+      matchSearchParamsRef.current = null;
+      return;
+    }
+
+    // Create search params object
+    const newSearchParams = { teamId, opponentName, matchDate };
+    
+    // Check if search params actually changed (avoid unnecessary API calls)
+    const currentParams = matchSearchParamsRef.current;
+    const paramsChanged = !currentParams || 
+      currentParams.teamId !== newSearchParams.teamId ||
+      currentParams.opponentName !== newSearchParams.opponentName ||
+      currentParams.matchDate !== newSearchParams.matchDate;
+    
+    if (!paramsChanged) {
+      // Same search params, no need to check again
+      return;
+    }
+
+    // Update search params ref
+    matchSearchParamsRef.current = newSearchParams;
+    
+    // Debounce: wait 300ms before checking (prevents flashing on rapid changes)
+    // Only show loading state when we actually start the API call
+    const timeoutId = setTimeout(() => {
+      // Double-check params haven't changed during the delay
+      if (matchSearchParamsRef.current?.teamId === newSearchParams.teamId &&
+          matchSearchParamsRef.current?.opponentName === newSearchParams.opponentName &&
+          matchSearchParamsRef.current?.matchDate === newSearchParams.matchDate) {
+        performMatchSearch(newSearchParams.teamId, newSearchParams.opponentName, newSearchParams.matchDate);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [formData, columnKeys, teamSlugMap, performMatchSearch]);
+
+  // Handle pre-fill from modal
+  const handlePreFillMatch = useCallback(() => {
+    if (existingMatch) {
+      loadExistingMatchData(existingMatch);
+    }
+    setShowExistingMatchModal(false);
+  }, [existingMatch, loadExistingMatchData]);
+
+  // Handle cancel from modal
+  const handleCancelPreFill = useCallback(() => {
+    setShowExistingMatchModal(false);
+  }, []);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        opponentInputRef.current &&
+        opponentSuggestionsRef.current &&
+        !opponentInputRef.current.contains(event.target as Node) &&
+        !opponentSuggestionsRef.current.contains(event.target as Node)
+      ) {
+        setShowOpponentSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   // JOGA colors for category headers - rotate through Volt Yellow, Valor Blue, and Pink Foam
@@ -802,6 +967,62 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     }
   };
 
+  // Fetch opponent suggestions
+  const fetchOpponentSuggestions = useCallback(async (query: string, teamId?: number) => {
+    if (!query || query.trim().length < 2) {
+      setOpponentSuggestions([]);
+      setShowOpponentSuggestions(false);
+      return;
+    }
+
+    try {
+      const teamIdParam = teamId ? `&teamId=${teamId}` : '';
+      const response = await apiGet<{ suggestions: string[] }>(
+        `/matches/opponents/suggestions?query=${encodeURIComponent(query)}${teamIdParam}&limit=10`
+      );
+      setOpponentSuggestions(response.suggestions || []);
+      setShowOpponentSuggestions(response.suggestions && response.suggestions.length > 0);
+    } catch (error) {
+      console.error('Error fetching opponent suggestions:', error);
+      setOpponentSuggestions([]);
+      setShowOpponentSuggestions(false);
+    }
+  }, []);
+
+  // Debounced opponent suggestion fetch
+  const opponentSuggestionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Handle opponent input change with autocomplete
+  const handleOpponentChange = useCallback((fieldName: string, value: string) => {
+    handleChange(fieldName, value);
+    
+    // Clear previous timeout
+    if (opponentSuggestionTimeoutRef.current) {
+      clearTimeout(opponentSuggestionTimeoutRef.current);
+    }
+    
+    // Find team ID if available
+    const teamKey = columnKeys.find(key => 
+      normalizeFieldName(key).toLowerCase().includes('team') && 
+      !normalizeFieldName(key).toLowerCase().includes('team id')
+    );
+    const teamSlug = teamKey && formData[teamKey] ? String(formData[teamKey]).trim() : '';
+    const team = teamSlug ? Array.from(teamSlugMap.values()).find(t => t.slug === teamSlug) : null;
+    const teamId = team?.id;
+    
+    // Debounce suggestion fetch
+    opponentSuggestionTimeoutRef.current = setTimeout(() => {
+      fetchOpponentSuggestions(value, teamId);
+    }, 300);
+  }, [formData, columnKeys, teamSlugMap, fetchOpponentSuggestions]);
+
+  // Handle opponent suggestion selection
+  const handleOpponentSuggestionSelect = useCallback((fieldName: string, suggestion: string) => {
+    handleChange(fieldName, suggestion);
+    setShowOpponentSuggestions(false);
+    setOpponentSuggestions([]);
+  }, []);
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -912,19 +1133,36 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
       }
     });
     
-    // Format date
+    // Format date - convert MM/DD/YYYY to YYYY-MM-DD
+    // IMPORTANT: Use local date methods to avoid timezone shifts (don't use toISOString)
     let matchDate = '';
     if (dateKey && formData[dateKey]) {
       const dateValue = formData[dateKey];
       if (typeof dateValue === 'string') {
         if (/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+          // Already in YYYY-MM-DD format
           matchDate = dateValue.split('T')[0];
         } else {
-          const parsed = new Date(dateValue);
-          if (!isNaN(parsed.getTime())) {
-            matchDate = parsed.toISOString().split('T')[0];
+          // Try to parse MM/DD/YYYY format
+          const mmddyyyy = dateValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          if (mmddyyyy) {
+            // Direct conversion without timezone conversion
+            const month = mmddyyyy[1].padStart(2, '0');
+            const day = mmddyyyy[2].padStart(2, '0');
+            const year = mmddyyyy[3];
+            matchDate = `${year}-${month}-${day}`;
           } else {
-            matchDate = dateValue;
+            // Fallback: try parsing as Date but use local methods
+            const parsed = new Date(dateValue);
+            if (!isNaN(parsed.getTime())) {
+              // Use local date methods to avoid timezone conversion
+              const year = parsed.getFullYear();
+              const month = String(parsed.getMonth() + 1).padStart(2, '0');
+              const day = String(parsed.getDate()).padStart(2, '0');
+              matchDate = `${year}-${month}-${day}`;
+            } else {
+              matchDate = dateValue;
+            }
           }
         }
       }
@@ -1008,16 +1246,36 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     setIsSubmitting(true);
     
     try {
-      // Create match via backend API
-      await createMatch({
-        teamId: pendingSubmission.teamId,
-        opponentName: pendingSubmission.opponentName,
-        matchDate: pendingSubmission.matchDate,
-        competitionType: pendingSubmission.competitionType,
-        result: pendingSubmission.result,
-        isHome: pendingSubmission.isHome,
-        rawStats: pendingSubmission.rawStats,
-      });
+      // If existing match found, update it; otherwise create new
+      if (existingMatch) {
+        // For updates, filter out 0s from rawStats (0s act as placeholders - don't update)
+        const rawStatsToUpdate: Record<string, any> = {};
+        Object.entries(pendingSubmission.rawStats).forEach(([key, value]) => {
+          // Only include non-zero values (0s mean "don't update this field")
+          if (value !== 0 && value !== '' && value !== null && value !== undefined) {
+            rawStatsToUpdate[key] = value;
+          }
+        });
+        
+        await updateMatch(existingMatch.id, {
+          teamId: pendingSubmission.teamId,
+          opponentName: pendingSubmission.opponentName,
+          matchDate: pendingSubmission.matchDate,
+          competitionType: pendingSubmission.competitionType,
+          result: pendingSubmission.result,
+          rawStats: rawStatsToUpdate,
+        });
+      } else {
+        await createMatch({
+          teamId: pendingSubmission.teamId,
+          opponentName: pendingSubmission.opponentName,
+          matchDate: pendingSubmission.matchDate,
+          competitionType: pendingSubmission.competitionType,
+          result: pendingSubmission.result,
+          isHome: pendingSubmission.isHome,
+          rawStats: pendingSubmission.rawStats,
+        });
+      }
       
       setSubmitSuccess(true);
       
@@ -1025,6 +1283,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
       setShowConfirmation(false);
       setPreviewData(null);
       setPendingSubmission(null);
+      setExistingMatch(null);
       
       // Callback to reload data
       if (onDataSubmitted) {
@@ -1418,6 +1677,14 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         onConfirm={handleConfirm}
         onCancel={handleCancel}
         isSubmitting={isSubmitting}
+        isUpdating={!!existingMatch}
+      />
+      <ExistingMatchModal
+        isOpen={showExistingMatchModal}
+        match={existingMatch}
+        teamSlugMap={teamSlugMap}
+        onPreFill={handlePreFillMatch}
+        onCancel={handleCancelPreFill}
       />
       <PageLayout
         title="Upload Game Data"
@@ -1454,6 +1721,42 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
                   <h2 className={`text-lg font-semibold ${textColor}`}>
                     {category}
                   </h2>
+                  {category === 'Game Info' && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowExistingMatchModal(true)}
+                        disabled={!existingMatch || isLoadingExistingMatch}
+                        className={`flex items-center gap-1 px-2 py-1 bg-white text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition-colors ${
+                          existingMatch && !isLoadingExistingMatch
+                            ? 'cursor-pointer'
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        title={existingMatch ? 'Load existing match data' : isLoadingExistingMatch ? 'Checking for existing match...' : 'No match found'}
+                      >
+                        {isLoadingExistingMatch ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600"></div>
+                            <span>Checking...</span>
+                          </>
+                        ) : existingMatch ? (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Load Match</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span>No Match</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                   {(category === 'Basic Stats (1st Half)' || category === 'Basic Stats (2nd Half)') && (
                     <div className="flex items-center gap-2">
                       {sectionUploadState[category]?.message && (
@@ -1600,15 +1903,52 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
                                 placeholder="0"
                               />
                             ) : (
-                              <input
-                                type="text"
-                                value={value as string}
-                                onChange={(e) => handleChange(fieldName, e.target.value)}
-                                className={`px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] ${
-                                  error ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                                required={isRequired}
-                              />
+                              <div className="relative">
+                                <input
+                                  ref={fieldName.toLowerCase().includes('opponent') ? opponentInputRef : null}
+                                  type="text"
+                                  value={value as string}
+                                  onChange={(e) => {
+                                    if (fieldName.toLowerCase().includes('opponent')) {
+                                      handleOpponentChange(fieldName, e.target.value);
+                                    } else {
+                                      handleChange(fieldName, e.target.value);
+                                    }
+                                  }}
+                                  onFocus={() => {
+                                    if (fieldName.toLowerCase().includes('opponent') && value && String(value).trim().length >= 2) {
+                                      const teamKey = columnKeys.find(key => 
+                                        normalizeFieldName(key).toLowerCase().includes('team') && 
+                                        !normalizeFieldName(key).toLowerCase().includes('team id')
+                                      );
+                                      const teamSlug = teamKey && formData[teamKey] ? String(formData[teamKey]).trim() : '';
+                                      const team = teamSlug ? Array.from(teamSlugMap.values()).find(t => t.slug === teamSlug) : null;
+                                      fetchOpponentSuggestions(String(value), team?.id);
+                                    }
+                                  }}
+                                  className={`px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] ${
+                                    error ? 'border-red-500' : 'border-gray-300'
+                                  }`}
+                                  required={isRequired}
+                                />
+                                {fieldName.toLowerCase().includes('opponent') && showOpponentSuggestions && opponentSuggestions.length > 0 && (
+                                  <div
+                                    ref={opponentSuggestionsRef}
+                                    className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                                  >
+                                    {opponentSuggestions.map((suggestion, index) => (
+                                      <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() => handleOpponentSuggestionSelect(fieldName, suggestion)}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none transition-colors"
+                                      >
+                                        {suggestion}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             )}
                             {error && (
                               <span className="text-red-500 text-xs mt-1">{error}</span>

@@ -12,22 +12,13 @@ export interface MatchData {
 }
 
 // Flag to ensure we only log config status once
-let hasLoggedConfig = false;
-
 /**
- * Gets config values lazily (after dotenv has loaded) and logs once
+ * Gets config values lazily (after dotenv has loaded)
+ * No logging to prevent secret exposure in logs
  */
 function getConfig(): { spreadsheetId: string | undefined; apiKey: string | undefined } {
   const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
   const apiKey = process.env.GOOGLE_SHEETS_API_KEY;
-  
-  // Log config status once on first access
-  if (!hasLoggedConfig) {
-    hasLoggedConfig = true;
-    console.log('📊 Sheets Service config:');
-    console.log('  GOOGLE_SHEETS_SPREADSHEET_ID:', spreadsheetId ? 'configured' : 'NOT SET');
-    console.log('  GOOGLE_SHEETS_API_KEY:', apiKey ? 'configured' : 'NOT SET');
-  }
   
   return { spreadsheetId, apiKey };
 }

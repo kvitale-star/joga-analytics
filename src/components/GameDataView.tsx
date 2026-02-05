@@ -8,7 +8,7 @@ import { UserMenu } from './UserMenu';
 import { Team } from '../types/auth';
 import { getTeamsForDropdown } from '../utils/teamMapping';
 import { useAuth } from '../contexts/AuthContext';
-import { formatDateWithUserPreference } from '../utils/dateFormatting';
+import { formatDateWithUserPreference, dateToYYYYMMDD } from '../utils/dateFormatting';
 
 interface GameDataViewProps {
   matchData: MatchData[];
@@ -344,7 +344,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     filteredMatches.forEach(match => {
       const date = parseDateHelper(match[dateKey]);
       if (date) {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = dateToYYYYMMDD(date);
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, date);
         }
@@ -429,7 +429,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
         const matchDate = parseDateHelper(match[dateKey]);
         if (!matchDate) return false;
         
-        const matchDateStr = matchDate.toISOString().split('T')[0];
+        const matchDateStr = dateToYYYYMMDD(matchDate);
         return matchDateStr === selectedDate;
       });
     }
@@ -1133,13 +1133,13 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
               
               {/* Table Content */}
               <div className="p-8">
-                <div className="overflow-x-auto -mx-8 px-8">
+                <div className="overflow-x-auto -mx-8 px-8 flex justify-center">
                   <table 
                     className="divide-y divide-gray-200" 
                     style={{ 
                       width: 'auto', 
                       tableLayout: 'auto',
-                      minWidth: '900px' // 4 games (4 * 150px) + metric column (300px)
+                      minWidth: `${300 + (reorderedData.length * 150)}px` // Metric column (300px) + games (150px each)
                     }}
                   >
                 <thead className="bg-gray-50">
@@ -1161,10 +1161,10 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                           onDragStart={() => handleDragStart(displayIndex)}
                           onDragOver={(e) => handleDragOver(e, displayIndex)}
                           onDragEnd={handleDragEnd}
-                          className={`px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-move hover:bg-gray-100 whitespace-nowrap ${
+                          className={`px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-move hover:bg-gray-100 whitespace-nowrap ${
                             draggedIndex === displayIndex ? 'opacity-50' : ''
                           }`}
-                          style={{ width: 'auto', maxWidth: '150px' }}
+                          style={{ width: '150px', minWidth: '150px' }}
                           title="Drag to reorder"
                         >
                           <div>{selectedTeam ? opponent : `${team} vs ${opponent}`}</div>
@@ -1187,8 +1187,8 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                         {reorderedData.map((match, displayIndex) => (
                           <td
                             key={`${metricKey}-${displayIndex}`}
-                            className="px-4 py-1.5 text-sm text-gray-700 whitespace-nowrap"
-                            style={{ width: 'auto', maxWidth: '150px' }}
+                            className="px-4 py-1.5 text-sm text-gray-700 whitespace-nowrap text-center"
+                            style={{ width: '150px', minWidth: '150px' }}
                           >
                             {formatValue(match[metricKey] as string | number | undefined, metricKey)}
                           </td>
@@ -1199,12 +1199,13 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                     const renderSectionHeaderRow = (label: 'Team' | 'Opponent') => (
                       <tr key={`section-${label}`}>
                         <td
-                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wider sticky left-0 z-10"
+                          className="px-4 py-3 text-xs font-semibold uppercase tracking-wider sticky left-0 z-10"
                           style={{
                             minWidth: '300px',
                             width: '300px',
-                            backgroundColor: '#f9fafb', // gray-50
-                            borderTop: '1px solid #e5e7eb', // gray-200
+                            backgroundColor: '#f3f4f6', // gray-100 - darker for better visibility
+                            borderTop: '2px solid #d1d5db', // gray-300 - thicker border
+                            borderBottom: '1px solid #e5e7eb', // gray-200
                           }}
                         >
                           {label}
@@ -1212,10 +1213,13 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                         {reorderedData.map((_, idx) => (
                           <td
                             key={`section-${label}-${idx}`}
-                            className="px-4 py-2"
+                            className="px-4 py-3 text-center"
                             style={{
-                              backgroundColor: '#f9fafb',
-                              borderTop: '1px solid #e5e7eb',
+                              width: '150px',
+                              minWidth: '150px',
+                              backgroundColor: '#f3f4f6', // gray-100 - darker for better visibility
+                              borderTop: '2px solid #d1d5db', // gray-300 - thicker border
+                              borderBottom: '1px solid #e5e7eb', // gray-200
                             }}
                           />
                         ))}
@@ -1226,6 +1230,22 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                       <>
                         {teamMetrics.length > 0 && renderSectionHeaderRow('Team')}
                         {teamMetrics.map(renderMetricRow)}
+                        {/* Spacer row between Team and Opponent sections */}
+                        {teamMetrics.length > 0 && opponentMetrics.length > 0 && (
+                          <tr key="spacer" className="h-4">
+                            <td 
+                              className="sticky left-0 z-10 bg-white"
+                              style={{ minWidth: '300px', width: '300px' }}
+                            />
+                            {reorderedData.map((_, idx) => (
+                              <td 
+                                key={`spacer-${idx}`}
+                                className="bg-white"
+                                style={{ width: '150px', minWidth: '150px' }}
+                              />
+                            ))}
+                          </tr>
+                        )}
                         {opponentMetrics.length > 0 && renderSectionHeaderRow('Opponent')}
                         {opponentMetrics.map(renderMetricRow)}
                       </>

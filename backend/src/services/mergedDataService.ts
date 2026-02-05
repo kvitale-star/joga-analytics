@@ -18,16 +18,28 @@ function convertMatchToMatchData(match: any): MatchData {
   let dateString: string = '';
   
   // First, convert to a Date object if needed
+  // IMPORTANT: Parse YYYY-MM-DD strings manually to avoid UTC timezone conversion
   let dateObj: Date | null = null;
   if (matchDateValue instanceof Date) {
     dateObj = matchDateValue;
   } else if (typeof matchDateValue === 'string') {
     if (matchDateValue.includes('T')) {
-      // ISO string - parse it
-      dateObj = new Date(matchDateValue);
+      // ISO string with time - parse it (but extract date parts using local methods)
+      const isoDate = new Date(matchDateValue);
+      // Use local date methods to avoid timezone shift
+      const year = isoDate.getFullYear();
+      const month = isoDate.getMonth();
+      const day = isoDate.getDate();
+      dateObj = new Date(year, month, day);
     } else if (/^\d{4}-\d{2}-\d{2}$/.test(matchDateValue)) {
-      // YYYY-MM-DD format - parse it
-      dateObj = new Date(matchDateValue);
+      // YYYY-MM-DD format - parse manually to avoid UTC conversion
+      const parts = matchDateValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (parts) {
+        const year = parseInt(parts[1], 10);
+        const month = parseInt(parts[2], 10) - 1; // JavaScript months are 0-indexed
+        const day = parseInt(parts[3], 10);
+        dateObj = new Date(year, month, day);
+      }
     } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(matchDateValue)) {
       // Already MM/DD/YYYY format - use as-is
       dateString = matchDateValue;
@@ -36,11 +48,15 @@ function convertMatchToMatchData(match: any): MatchData {
       dateObj = new Date(matchDateValue);
     }
   } else if (matchDateValue && typeof matchDateValue === 'object' && 'toISOString' in matchDateValue) {
-    // Handle Date-like objects
-    dateObj = new Date(matchDateValue.toISOString());
+    // Handle Date-like objects - use local date methods
+    const tempDate = new Date(matchDateValue.toISOString());
+    const year = tempDate.getFullYear();
+    const month = tempDate.getMonth();
+    const day = tempDate.getDate();
+    dateObj = new Date(year, month, day);
   }
   
-  // Convert Date object to MM/DD/YYYY format
+  // Convert Date object to MM/DD/YYYY format using local date methods
   if (dateObj && !isNaN(dateObj.getTime()) && !dateString) {
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');

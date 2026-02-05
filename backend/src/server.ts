@@ -24,12 +24,8 @@ const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '..', '.env') });
 
-// Log environment variable status (for debugging)
-console.log('🔧 Environment Variables Check:');
-console.log('  GOOGLE_SHEETS_SPREADSHEET_ID:', process.env.GOOGLE_SHEETS_SPREADSHEET_ID ? '✓ Set' : '✗ Not set');
-console.log('  GOOGLE_SHEETS_API_KEY:', process.env.GOOGLE_SHEETS_API_KEY ? '✓ Set' : '✗ Not set');
-console.log('  GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? '✓ Set' : '✗ Not set');
-console.log('  BOOTSTRAP_SECRET:', process.env.BOOTSTRAP_SECRET ? '✓ Set' : '✗ Not set');
+// Environment configuration loaded (no sensitive details logged)
+// Use deployment dashboard or protected diagnostics endpoint to verify configuration
 
 export const app = express();
 // Railway automatically sets PORT - use it or default to 3001 for local dev

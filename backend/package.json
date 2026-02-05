@@ -24,6 +24,8 @@
     "verify-computed-fields": "tsx src/scripts/verify-computed-fields.ts",
     "migrate-sheets": "tsx src/scripts/migrate-sheets-to-postgres.ts",
     "migrate-sheets:dry-run": "tsx src/scripts/migrate-sheets-to-postgres.ts --dry-run",
+    "fix-match-dates": "tsx scripts/fix-match-dates.ts",
+    "fix-match-dates:dry-run": "tsx scripts/fix-match-dates.ts --dry-run",
     "test": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --watch"
   },

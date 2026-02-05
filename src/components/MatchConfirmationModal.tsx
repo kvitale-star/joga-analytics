@@ -11,6 +11,7 @@ interface MatchConfirmationModalProps {
   onConfirm: () => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  isUpdating?: boolean;
 }
 
 export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
@@ -20,6 +21,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
   onConfirm,
   onCancel,
   isSubmitting = false,
+  isUpdating = false,
 }) => {
   if (!isOpen || !previewData) return null;
 
@@ -137,7 +139,9 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-gray-300 px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">Confirm Match Data</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {isUpdating ? 'Update Match Data' : 'Confirm Match Data'}
+          </h2>
           <button
             onClick={onCancel}
             disabled={isSubmitting}
@@ -148,6 +152,14 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
         </div>
         
         <div className="px-6 py-4">
+          {isUpdating && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-sm text-yellow-800">
+                ⚠️ <strong>Warning:</strong> This will update an existing match. 
+                Fields with values of 0 will keep their existing values (0s act as placeholders).
+              </p>
+            </div>
+          )}
           {/* Game Info */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-3 border-b border-gray-300 pb-2">
@@ -239,7 +251,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
               }
             }}
           >
-            {isSubmitting ? 'Saving...' : 'Confirm & Save'}
+            {isSubmitting ? 'Saving...' : isUpdating ? 'Update Match' : 'Confirm & Save'}
           </button>
         </div>
       </div>

@@ -51,7 +51,7 @@ import { WalkthroughOverlay } from './components/WalkthroughOverlay';
 import { getAllTeams } from './services/teamService';
 import { Team } from './types/auth';
 import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from './utils/teamMapping';
-import { formatDateWithUserPreference } from './utils/dateFormatting';
+import { formatDateWithUserPreference, dateToYYYYMMDD } from './utils/dateFormatting';
 import { JOGA_COLORS } from './utils/colors';
 
 type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
@@ -970,7 +970,7 @@ function App() {
         const matchDate = parseDateHelper(match[dateKey]);
         if (!matchDate) return false;
         
-        const matchDateStr = matchDate.toISOString().split('T')[0];
+        const matchDateStr = dateToYYYYMMDD(matchDate);
         return matchDateStr === selectedDate;
       });
     }
@@ -1047,7 +1047,7 @@ function App() {
     filteredMatches.forEach(match => {
       const date = parseDateHelper(match[dateKey]);
       if (date) {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = dateToYYYYMMDD(date);
         if (!dateMap.has(dateStr)) {
           dateMap.set(dateStr, date);
         }

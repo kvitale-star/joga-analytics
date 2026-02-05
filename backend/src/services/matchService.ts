@@ -69,10 +69,15 @@ export async function getMatches(filters?: {
   return matches.map(match => {
     // Convert match_date to string format (YYYY-MM-DD) if it's a Date object
     // PostgreSQL may return dates as Date objects even though schema says string
+    // IMPORTANT: Use local date methods to avoid timezone shifts (don't use toISOString)
     const matchDateValue: any = match.match_date;
     let matchDateString: string;
     if (matchDateValue instanceof Date) {
-      matchDateString = matchDateValue.toISOString().split('T')[0];
+      // Use local date methods to avoid timezone conversion issues
+      const year = matchDateValue.getFullYear();
+      const month = String(matchDateValue.getMonth() + 1).padStart(2, '0');
+      const day = String(matchDateValue.getDate()).padStart(2, '0');
+      matchDateString = `${year}-${month}-${day}`;
     } else if (typeof matchDateValue === 'string') {
       if (matchDateValue.includes('T')) {
         // If it's an ISO string, extract just the date part
@@ -81,8 +86,12 @@ export async function getMatches(filters?: {
         matchDateString = matchDateValue;
       }
     } else if (matchDateValue && typeof matchDateValue === 'object' && 'toISOString' in matchDateValue) {
-      // Handle Date-like objects
-      matchDateString = matchDateValue.toISOString().split('T')[0];
+      // Handle Date-like objects - use local date methods
+      const dateObj = new Date(matchDateValue);
+      const year = dateObj.getFullYear();
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getDate()).padStart(2, '0');
+      matchDateString = `${year}-${month}-${day}`;
     } else {
       matchDateString = String(matchDateValue || '');
     }
@@ -142,10 +151,15 @@ export async function getMatchById(matchId: number) {
 
   // Convert match_date to string format (YYYY-MM-DD) if it's a Date object
   // PostgreSQL may return dates as Date objects even though schema says string
+  // IMPORTANT: Use local date methods to avoid timezone shifts (don't use toISOString)
   const matchDateValue: any = match.match_date;
   let matchDateString: string;
   if (matchDateValue instanceof Date) {
-    matchDateString = matchDateValue.toISOString().split('T')[0];
+    // Use local date methods to avoid timezone conversion issues
+    const year = matchDateValue.getFullYear();
+    const month = String(matchDateValue.getMonth() + 1).padStart(2, '0');
+    const day = String(matchDateValue.getDate()).padStart(2, '0');
+    matchDateString = `${year}-${month}-${day}`;
   } else if (typeof matchDateValue === 'string') {
     if (matchDateValue.includes('T')) {
       // If it's an ISO string, extract just the date part
@@ -154,8 +168,12 @@ export async function getMatchById(matchId: number) {
       matchDateString = matchDateValue;
     }
   } else if (matchDateValue && typeof matchDateValue === 'object' && 'toISOString' in matchDateValue) {
-    // Handle Date-like objects
-    matchDateString = matchDateValue.toISOString().split('T')[0];
+    // Handle Date-like objects - use local date methods
+    const dateObj = new Date(matchDateValue);
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    matchDateString = `${year}-${month}-${day}`;
   } else {
     matchDateString = String(matchDateValue || '');
   }

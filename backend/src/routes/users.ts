@@ -9,6 +9,7 @@ import {
   getUserBasicInfo,
 } from '../services/userService.js';
 import { authenticateSession, requireAdmin } from '../middleware/auth.js';
+import { db } from '../db/database.js';
 
 const router = express.Router();
 
@@ -97,19 +98,47 @@ router.put('/:id', async (req, res) => {
     const isCurrentlyActive = targetUser.isActive;
 
     if (isCurrentlyAdmin && (isChangingToNonAdmin || isDeactivating)) {
-      // Check how many active admins would remain after this change
-      const excludeUserId = userId === currentUserId ? currentUserId : userId;
-      const remainingAdminCount = await getActiveAdminCount(excludeUserId);
+      // Use a transaction to prevent race conditions where two concurrent requests
+      // could both pass the "remaining admin > 0" check before either update commits
+      await db.transaction().execute(async (trx) => {
+        // Re-check admin count within transaction (exclude the target user being modified)
+        const remainingAdminCount = await trx
+          .selectFrom('users')
+          .select(trx.fn.count('id').as('count'))
+          .where('role', '=', 'admin')
+          .where('is_active', '=', 1)
+          .where('id', '!=', userId) // Exclude the target user being modified
+          .executeTakeFirst();
+        
+        const count = Number(remainingAdminCount?.count || 0);
+        
+        if (count === 0) {
+          throw new Error('Cannot change role or deactivate: this would leave no active admin users');
+        }
+        
+        // Perform the update within the same transaction
+        const updateData: any = {
+          updated_at: new Date().toISOString(),
+        };
+        
+        if (name !== undefined) updateData.name = name;
+        if (email !== undefined) updateData.email = email.toLowerCase().trim();
+        if (role !== undefined) updateData.role = role;
+        if (isActive !== undefined) updateData.is_active = isActive ? 1 : 0;
+        
+        await trx
+          .updateTable('users')
+          .set(updateData)
+          .where('id', '=', userId)
+          .execute();
+      });
       
-      if (remainingAdminCount === 0) {
-        return res.status(400).json({ 
-          error: 'Cannot change role or deactivate: this would leave no active admin users' 
-        });
-      }
+      res.json({ success: true });
+    } else {
+      // No admin protection needed, proceed with normal update
+      await updateUser(userId, { name, email, role, isActive });
+      res.json({ success: true });
     }
-
-    await updateUser(userId, { name, email, role, isActive });
-    res.json({ success: true });
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to update user' });
   }
