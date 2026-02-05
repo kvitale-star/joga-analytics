@@ -83,7 +83,65 @@ const ADDITIONAL_METRICS: string[] = [
 // Check if a metric should be treated as "additional" (hidden by default)
 const isAdditionalMetric = (metricKey: string): boolean => {
   const keyLower = metricKey.toLowerCase();
+  
+  // Check if it's a half-specific metric (contains "1st", "2nd", "first", or "second")
+  // Match various patterns: "(1st)", "(2nd)", "1st Half", "2nd Half", "First Half", "Second Half", etc.
+  // But exclude false positives like "21st", "12th", "1st period", "2nd period"
+  
+  // First check for explicit half indicators with parentheses or "half" keyword
+  const hasExplicitHalfIndicator = 
+    keyLower.includes('(1st)') || 
+    keyLower.includes('(2nd)') ||
+    keyLower.includes('(first)') ||
+    keyLower.includes('(second)') ||
+    keyLower.includes('1st half') || 
+    keyLower.includes('2nd half') ||
+    keyLower.includes('first half') ||
+    keyLower.includes('second half');
+  
+  if (hasExplicitHalfIndicator) {
+    return true;
+  }
+  
+  // Check for standalone "1st" or "2nd" as word boundaries (but exclude false positives)
+  // Exclude: "21st", "31st", "1st period", "2nd period", "1st place", etc.
+  const has1st = /\b1st\b/.test(keyLower);
+  const has2nd = /\b2nd\b/.test(keyLower);
+  const hasFirst = /\bfirst\b/.test(keyLower);
+  const hasSecond = /\bsecond\b/.test(keyLower);
+  
+  // Exclude false positives
+  const falsePositives = [
+    '21st', '31st', '41st', '51st', '61st', '71st', '81st', '91st',
+    '1st period', '2nd period', 'first period', 'second period',
+    '1st place', '2nd place', 'first place', 'second place',
+    'firstname', 'secondly', 'firstly'
+  ];
+  
+  const hasFalsePositive = falsePositives.some(fp => keyLower.includes(fp));
+  
+  if ((has1st || has2nd || hasFirst || hasSecond) && !hasFalsePositive) {
+    return true;
+  }
+  
   return ADDITIONAL_METRICS.some(pattern => keyLower.includes(pattern.toLowerCase()));
+};
+
+// Helper function to get category header color (rotating through JOGA colors starting with yellow)
+const getCategoryHeaderColor = (index: number): string => {
+  const colors = [JOGA_COLORS.voltYellow, JOGA_COLORS.valorBlue, JOGA_COLORS.pinkFoam];
+  return colors[index % colors.length];
+};
+
+// Determine if a metric is an opponent metric (used for Team/Opponent subsections)
+const isOpponentMetric = (metricKey: string): boolean => {
+  const lower = metricKey.toLowerCase();
+  return lower.includes('opp') ||
+         lower.includes('opponent') ||
+         lower.includes('(opp)') ||
+         lower.includes('(opponent)') ||
+         lower.includes(' against') ||
+         lower.includes('against');
 };
 
 // Helper function to categorize metrics - matches DataAtAGlanceView categorization
@@ -98,8 +156,8 @@ const categorizeMetrics = (columnKeys: string[]): Record<string, string[]> => {
     'Other': []
   };
 
-  // Metadata columns to skip (including match id)
-  const metadataColumns = ['Team', 'team', 'Opponent', 'opponent', 'Date', 'date', 'Match', 'match', 'Game', 'game', 'Competition Type', 'competition type', 'Match ID', 'match id', 'MatchId', 'matchId', 'Match ID', 'match_id'];
+  // Metadata columns to skip (including match id, referee, venue)
+  const metadataColumns = ['Team', 'team', 'Opponent', 'opponent', 'Date', 'date', 'Match', 'match', 'Game', 'game', 'Competition Type', 'competition type', 'Match ID', 'match id', 'MatchId', 'matchId', 'Match ID', 'match_id', 'Referee', 'referee', 'Venue', 'venue'];
 
   // Categorize columns based on keyword matching
   columnKeys.forEach(key => {
@@ -613,6 +671,18 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     setShowResetConfirm(false);
   }, [categorizedMetricsRaw, getDefaultMetricsForCategory, setSelectedShootingMetrics, setSelectedPassingMetrics, setSelectedPossessionMetrics, setSelectedJOGAMetrics, setSelectedDefenseMetrics, setSelectedSetPiecesMetrics, setSelectedOtherMetrics]);
 
+  // Allow resetting metrics from elsewhere in the app (e.g., User Preferences)
+  useEffect(() => {
+    const handler = () => {
+      handleResetMetrics();
+    };
+
+    window.addEventListener('joga:reset-game-data-metrics', handler as EventListener);
+    return () => {
+      window.removeEventListener('joga:reset-game-data-metrics', handler as EventListener);
+    };
+  }, [handleResetMetrics]);
+
   // Filter metrics based on category selections
   const categorizedMetrics = useMemo(() => {
     const result: Record<string, string[]> = {};
@@ -901,7 +971,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
             <>
         {/* Render table for each category */}
         <div className="space-y-6">
-          {Object.entries(categorizedMetrics).map(([category, metrics]) => {
+          {Object.entries(categorizedMetrics).map(([category, metrics], categoryIndex) => {
             // Get the appropriate state setter and selected values for this category
             const getCategoryState = () => {
               switch (category) {
@@ -925,24 +995,31 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
             };
             const categoryState = getCategoryState();
             const isConfigOpen = openConfigCategory === category;
+            const categoryColor = getCategoryHeaderColor(categoryIndex);
+            const textColor = categoryColor === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white';
 
             return (
             <div 
               key={category} 
-              className="bg-white rounded-lg shadow-md p-8 w-full overflow-hidden flex flex-col relative z-0 group"
+              className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col relative z-0 group"
               data-category={category}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">{category}</h2>
-                {/* Config Icon Button - visible on hover */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenConfigCategory(isConfigOpen ? null : category);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative"
-                  title="Configure metrics"
-                >
+              {/* Colored Header */}
+              <div 
+                className="px-8 py-4 border-b border-gray-200"
+                style={{ backgroundColor: categoryColor }}
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className={`text-xl font-semibold ${textColor}`}>{category}</h2>
+                  {/* Config Icon Button - visible on hover */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenConfigCategory(isConfigOpen ? null : category);
+                    }}
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 ${textColor === 'text-gray-900' ? 'text-gray-700 hover:text-gray-900 hover:bg-black hover:bg-opacity-10' : 'text-white hover:text-gray-100 hover:bg-white hover:bg-opacity-20'} rounded-full relative`}
+                    title="Configure metrics"
+                  >
                   {/* Gear Icon SVG */}
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -1052,8 +1129,19 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                   )}
                 </button>
               </div>
-              <div className="overflow-x-auto -mx-8 px-8">
-              <table className="divide-y divide-gray-200" style={{ width: 'auto', tableLayout: 'auto' }}>
+              </div>
+              
+              {/* Table Content */}
+              <div className="p-8">
+                <div className="overflow-x-auto -mx-8 px-8">
+                  <table 
+                    className="divide-y divide-gray-200" 
+                    style={{ 
+                      width: 'auto', 
+                      tableLayout: 'auto',
+                      minWidth: '900px' // 4 games (4 * 150px) + metric column (300px)
+                    }}
+                  >
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10" style={{ minWidth: '300px', width: '300px' }}>
@@ -1076,7 +1164,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                           className={`px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-move hover:bg-gray-100 whitespace-nowrap ${
                             draggedIndex === displayIndex ? 'opacity-50' : ''
                           }`}
-                          style={{ width: 'auto', maxWidth: '200px' }}
+                          style={{ width: 'auto', maxWidth: '150px' }}
                           title="Drag to reorder"
                         >
                           <div>{selectedTeam ? opponent : `${team} vs ${opponent}`}</div>
@@ -1087,22 +1175,67 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {metrics.map((metricKey) => (
-                    <tr key={metricKey} className="hover:bg-gray-50">
-                      <td className="px-4 py-1.5 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10" style={{ minWidth: '300px', width: '300px' }}>
-                        {metricKey}
-                      </td>
-                      {reorderedData.map((match, displayIndex) => (
-                        <td key={`${metricKey}-${displayIndex}`} className="px-4 py-1.5 text-sm text-gray-700 whitespace-nowrap" style={{ width: 'auto', maxWidth: '200px' }}>
-                          {formatValue(match[metricKey] as string | number | undefined, metricKey)}
+                  {(() => {
+                    const teamMetrics = metrics.filter(m => !isOpponentMetric(m));
+                    const opponentMetrics = metrics.filter(m => isOpponentMetric(m));
+
+                    const renderMetricRow = (metricKey: string) => (
+                      <tr key={metricKey} className="hover:bg-gray-50">
+                        <td className="px-4 py-1.5 text-sm font-medium text-gray-900 sticky left-0 bg-white z-10" style={{ minWidth: '300px', width: '300px' }}>
+                          {metricKey}
                         </td>
-                      ))}
-                    </tr>
-                  ))}
+                        {reorderedData.map((match, displayIndex) => (
+                          <td
+                            key={`${metricKey}-${displayIndex}`}
+                            className="px-4 py-1.5 text-sm text-gray-700 whitespace-nowrap"
+                            style={{ width: 'auto', maxWidth: '150px' }}
+                          >
+                            {formatValue(match[metricKey] as string | number | undefined, metricKey)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+
+                    const renderSectionHeaderRow = (label: 'Team' | 'Opponent') => (
+                      <tr key={`section-${label}`}>
+                        <td
+                          className="px-4 py-2 text-xs font-semibold uppercase tracking-wider sticky left-0 z-10"
+                          style={{
+                            minWidth: '300px',
+                            width: '300px',
+                            backgroundColor: '#f9fafb', // gray-50
+                            borderTop: '1px solid #e5e7eb', // gray-200
+                          }}
+                        >
+                          {label}
+                        </td>
+                        {reorderedData.map((_, idx) => (
+                          <td
+                            key={`section-${label}-${idx}`}
+                            className="px-4 py-2"
+                            style={{
+                              backgroundColor: '#f9fafb',
+                              borderTop: '1px solid #e5e7eb',
+                            }}
+                          />
+                        ))}
+                      </tr>
+                    );
+
+                    return (
+                      <>
+                        {teamMetrics.length > 0 && renderSectionHeaderRow('Team')}
+                        {teamMetrics.map(renderMetricRow)}
+                        {opponentMetrics.length > 0 && renderSectionHeaderRow('Opponent')}
+                        {opponentMetrics.map(renderMetricRow)}
+                      </>
+                    );
+                  })()}
                 </tbody>
               </table>
+                </div>
+              </div>
             </div>
-          </div>
           );
           })}
         </div>

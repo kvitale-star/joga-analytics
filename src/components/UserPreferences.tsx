@@ -15,6 +15,7 @@ export const UserPreferences: React.FC = () => {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [isResettingCharts, setIsResettingCharts] = useState(false);
   const [chartResetSuccess, setChartResetSuccess] = useState(false);
+  const [gameDataResetSuccess, setGameDataResetSuccess] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -244,6 +245,52 @@ export const UserPreferences: React.FC = () => {
           }}
         >
           {isResettingCharts ? 'Resetting...' : 'Reset All Charts'}
+        </button>
+      </div>
+
+      {/* Game Data Metrics Reset Section */}
+      <div className="mt-8 pt-8 border-t border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Game Data View</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Reset the Game Data dashboard metric selections back to the default set (full-game metrics only; half metrics hidden by default).
+        </p>
+
+        {gameDataResetSuccess && (
+          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+            Game Data metric selections have been reset to defaults!
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => {
+            if (!window.confirm('Reset Game Data metric selections to defaults? This will overwrite any custom metric selections you made in the Game Data view.')) {
+              return;
+            }
+
+            setGameDataResetSuccess(false);
+            window.dispatchEvent(new CustomEvent('joga:reset-game-data-metrics'));
+            setGameDataResetSuccess(true);
+            setTimeout(() => setGameDataResetSuccess(false), 5000);
+          }}
+          disabled={isLoading}
+          className="font-medium py-2 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed text-white"
+          style={{
+            backgroundColor: isLoading ? '#9ca3af' : JOGA_COLORS.valorBlue,
+            border: `2px solid ${isLoading ? '#9ca3af' : JOGA_COLORS.valorBlue}`,
+          }}
+          onMouseEnter={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = '#557799';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isLoading) {
+              e.currentTarget.style.backgroundColor = JOGA_COLORS.valorBlue;
+            }
+          }}
+        >
+          Reset Game Data Metrics
         </button>
       </div>
     </div>
