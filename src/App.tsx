@@ -408,27 +408,6 @@ function App() {
     }
   }, [viewMode]);
 
-  useEffect(() => {
-    // Don't try to load data while auth is still checking
-    if (isLoading) {
-      return;
-    }
-
-    // Only load data if user is authenticated (in API mode)
-    // In browser mode, data can be loaded without auth
-    if (!USE_BACKEND_API) {
-      // Browser mode - load data without auth
-      loadData();
-    } else if (user) {
-      // API mode - user is authenticated, load data
-      loadData();
-    } else {
-      // API mode - not authenticated, don't try to load (will show login page)
-      setError(null); // Clear any previous errors
-      setLoading(false);
-    }
-  }, [user, isLoading, USE_BACKEND_API, loadData]);
-
   const loadData = useCallback(async () => {
     // Don't load if we're in API mode and not authenticated
     if (USE_BACKEND_API && !user) {
@@ -457,8 +436,9 @@ function App() {
       
       try {
         const { deduplicateColumnKeys, deduplicateMatchDataArray } = await import('./utils/fieldDeduplication');
-        const deduplicatedData = deduplicateMatchDataArray(data);
-        const keys = deduplicateColumnKeys(deduplicatedData);
+        // Cast to the expected type (MatchData may have undefined, but deduplication handles it)
+        const deduplicatedData = deduplicateMatchDataArray(data as Record<string, string | number>[]);
+        const keys = deduplicateColumnKeys(data as Record<string, string | number>[]);
         
         if (keys.length > 0) {
           finalKeys = keys;
@@ -506,6 +486,27 @@ function App() {
       setLoading(false);
     }
   }, [user, USE_BACKEND_API]);
+
+  useEffect(() => {
+    // Don't try to load data while auth is still checking
+    if (isLoading) {
+      return;
+    }
+
+    // Only load data if user is authenticated (in API mode)
+    // In browser mode, data can be loaded without auth
+    if (!USE_BACKEND_API) {
+      // Browser mode - load data without auth
+      loadData();
+    } else if (user) {
+      // API mode - user is authenticated, load data
+      loadData();
+    } else {
+      // API mode - not authenticated, don't try to load (will show login page)
+      setError(null); // Clear any previous errors
+      setLoading(false);
+    }
+  }, [user, isLoading, USE_BACKEND_API, loadData]);
 
   // Find column keys automatically (case-insensitive)
   const findColumnKey = (possibleKeys: string[]): string | null => {
