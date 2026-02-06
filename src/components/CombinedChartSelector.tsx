@@ -102,7 +102,10 @@ export const CombinedChartSelector: React.FC<CombinedChartSelectorProps> = ({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white border border-gray-300 focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between ${className}`}
+        className={`w-full pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white border-2 focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between ${
+          selectedCharts.length > 0 ? 'border-[#ceff00]' : 'border-gray-300'
+        } ${className}`}
+        style={selectedCharts.length > 0 ? { borderColor: '#ceff00' } : {}}
       >
         <span className={selectedCharts.length === 0 ? 'text-gray-500' : 'text-gray-900'}>
           {displayText}

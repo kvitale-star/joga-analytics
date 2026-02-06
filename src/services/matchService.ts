@@ -11,6 +11,7 @@ export interface Match {
   matchDate: string;
   competitionType?: string | null;
   result?: string | null;
+  isHome?: boolean | null;
   statsJson?: any;
   statsSource?: string | null;
   statsComputedAt?: Date | null;
@@ -43,6 +44,7 @@ export interface UpdateMatchData {
   matchDate?: string;
   competitionType?: string | null;
   result?: string | null;
+  isHome?: boolean | null;
   rawStats?: Record<string, any>;
   notes?: string | null;
   venue?: string | null;
@@ -132,6 +134,7 @@ export async function updateMatch(matchId: number, data: UpdateMatchData): Promi
     matchDate: data.matchDate,
     competitionType: data.competitionType,
     result: data.result,
+    isHome: data.isHome,
     rawStats: data.rawStats,
     notes: data.notes,
     venue: data.venue,

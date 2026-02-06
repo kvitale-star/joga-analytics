@@ -47,6 +47,7 @@ import { PasswordResetForm } from './components/PasswordResetForm';
 import { EmailVerification } from './components/EmailVerification';
 import { SettingsView } from './components/SettingsView';
 import { Glossary } from './components/Glossary';
+import { MatchEditorView } from './components/MatchEditorView';
 import { WalkthroughOverlay } from './components/WalkthroughOverlay';
 import { getAllTeams } from './services/teamService';
 import { Team } from './types/auth';
@@ -54,7 +55,7 @@ import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from '.
 import { formatDateWithUserPreference, dateToYYYYMMDD } from './utils/dateFormatting';
 import { JOGA_COLORS } from './utils/colors';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
 
 function App() {
   const { user, isLoading, isSetupRequired } = useAuth();
@@ -1706,7 +1707,7 @@ function App() {
   // This prevents empty charts from being auto-filled and written to URL
 
   // Handle navigation from sidebar
-  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary') => {
+  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor') => {
     if (view === 'chat') {
       setViewMode('chat');
     } else if (view === 'team-data') {
@@ -1722,6 +1723,8 @@ function App() {
       setViewMode('settings');
     } else if (view === 'glossary') {
       setViewMode('glossary');
+    } else if (view === 'match-editor') {
+      setViewMode('match-editor');
     } else {
       setViewMode('dashboard');
     }
@@ -1984,6 +1987,21 @@ function App() {
     );
   }
 
+  // Render Match Editor view if selected (admin only)
+  if (viewMode === 'match-editor') {
+    return (
+      <div className="flex h-screen bg-gray-50 relative">
+        <Sidebar currentView="match-editor" onNavigate={handleNavigation} />
+        <div className="flex-1 ml-16 overflow-hidden">
+          <MatchEditorView />
+        </div>
+        {showWalkthrough && (
+          <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />
+        )}
+      </div>
+    );
+  }
+
   // Custom Charts view removed - now managed via chart selector and Settings
 
   // Render Club Data view if selected
@@ -2099,8 +2117,10 @@ function App() {
                 onChange={(e) => {
                   setSelectedTeam(e.target.value || null);
                 }}
-                className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-                style={{ borderColor: '#ceff00', width: 'auto', minWidth: '240px' }}
+                className={`px-3 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap ${
+                  selectedTeam ? 'border-[#ceff00]' : 'border-gray-300'
+                }`}
+                style={selectedTeam ? { borderColor: '#ceff00', width: 'auto', minWidth: '240px' } : { width: 'auto', minWidth: '240px' }}
               >
                 <option value="">Choose a team...</option>
                 {teams.map((team) => (
@@ -2119,8 +2139,10 @@ function App() {
                 onChange={(e) => {
                   setSelectedOpponent(e.target.value || null);
                 }}
-                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-                style={{ width: 'auto', minWidth: '140px' }}
+                className={`px-3 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap ${
+                  selectedOpponent ? 'border-[#ceff00]' : 'border-gray-300'
+                }`}
+                style={selectedOpponent ? { borderColor: '#ceff00', width: 'auto', minWidth: '140px' } : { width: 'auto', minWidth: '140px' }}
               >
                 <option value="">All Opponents</option>
                 {availableOpponents.map((opponent) => (

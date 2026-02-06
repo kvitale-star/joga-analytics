@@ -64,9 +64,19 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`pl-3 pr-2 py-1.5 text-sm rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-left flex items-center justify-between whitespace-nowrap ${
-          isTeamDropdown ? 'border-2 border-[#ceff00]' : 'border border-gray-300'
+          isTeamDropdown && selectedValues.length > 0
+            ? 'border-2 border-[#ceff00]'
+            : isTeamDropdown
+            ? 'border-2 border-gray-300'
+            : selectedValues.length > 0
+            ? 'border-2 border-[#ceff00]'
+            : 'border border-gray-300'
         }`}
-        style={isTeamDropdown ? { borderColor: '#ceff00', width: 'auto', minWidth: minWidthValue } : { width: 'auto', minWidth: minWidthValue }}
+        style={
+          (isTeamDropdown && selectedValues.length > 0) || (!isTeamDropdown && selectedValues.length > 0)
+            ? { borderColor: '#ceff00', width: 'auto', minWidth: minWidthValue }
+            : { width: 'auto', minWidth: minWidthValue }
+        }
       >
         <span className={`${selectedValues.length === 0 ? 'text-gray-500' : 'text-gray-900'} whitespace-nowrap`}>
           {displayText}

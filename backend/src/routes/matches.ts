@@ -44,8 +44,8 @@ router.get('/', async (req, res) => {
     }
 
     // Role-based visibility:
-    // - Admin: can view all matches
-    // - Coach: can view only matches for assigned teams
+    // - Admin: can view all matches (including unlinked matches with teamId: null)
+    // - Coach: can view only matches for assigned teams (including unlinked matches)
     // - Viewer: (not used in UI yet) keep same as coach for safety (no access to other teams)
     if (req.userId && req.userRole && req.userRole !== 'admin') {
       const assignedTeamIds = await getUserTeamAssignments(req.userId);
@@ -55,7 +55,7 @@ router.get('/', async (req, res) => {
         return res.status(403).json({ error: 'You can only view matches for your assigned teams' });
       }
 
-      // Otherwise, scope to assigned teams
+      // Otherwise, scope to assigned teams (includes unlinked matches via service layer)
       if (!filters.teamId) {
         filters.teamIds = assignedTeamIds;
       }

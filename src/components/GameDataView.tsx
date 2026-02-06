@@ -819,8 +819,10 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
                   setSelectedTeam(e.target.value || null);
                   setSelectedOpponents([]); // Reset opponents when team changes
                 }}
-                className="px-3 py-1.5 text-sm border-2 border-[#ceff00] rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-                style={{ borderColor: '#ceff00', width: 'auto', minWidth: '140px' }}
+                className={`px-3 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap ${
+                  selectedTeam ? 'border-[#ceff00]' : 'border-gray-300'
+                }`}
+                style={selectedTeam ? { borderColor: '#ceff00', width: 'auto', minWidth: '140px' } : { width: 'auto', minWidth: '140px' }}
               >
                 <option value="">Choose a team...</option>
                 {teams.map((team) => (

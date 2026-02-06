@@ -1,6 +1,6 @@
 import { useURLState } from './useURLState';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
 
 /**
  * Get the view-scoped key for a state variable
@@ -18,6 +18,7 @@ function getViewScopedKey(view: ViewMode, key: string): string {
     'settings': 'settings',
     'chat': 'chat',
     'glossary': 'glossary',
+    'match-editor': 'matchEditor',
   };
   
   const prefix = viewPrefixes[view] || view;

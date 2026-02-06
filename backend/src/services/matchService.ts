@@ -45,7 +45,15 @@ export async function getMatches(filters?: {
     query = query.where('matches.team_id', '=', filters.teamId);
   }
   if (filters?.teamIds && filters.teamIds.length > 0) {
-    query = query.where('matches.team_id', 'in', filters.teamIds);
+    // Include matches with team_id in the list OR team_id is NULL
+    // This allows finding unlinked matches (teamId: null) when searching
+    const teamIdsArray = filters.teamIds; // Type assertion for Kysely
+    query = query.where((eb) => 
+      eb.or([
+        eb('matches.team_id', 'in', teamIdsArray),
+        eb('matches.team_id', 'is', eb.lit(null))
+      ])
+    );
   }
 
   if (filters?.opponentName) {

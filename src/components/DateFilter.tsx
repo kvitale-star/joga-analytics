@@ -21,8 +21,10 @@ export const DateFilter: React.FC<DateFilterProps> = ({
       <select
         value={selectedDate || ''}
         onChange={(e) => onDateChange(e.target.value || '')}
-        className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap"
-        style={{ width: 'auto', minWidth: '140px' }}
+        className={`px-3 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap ${
+          selectedDate ? 'border-[#ceff00]' : 'border-gray-300'
+        }`}
+        style={selectedDate ? { borderColor: '#ceff00', width: 'auto', minWidth: '140px' } : { width: 'auto', minWidth: '140px' }}
       >
         <option value="">All Dates</option>
         {availableDates.map((date) => (

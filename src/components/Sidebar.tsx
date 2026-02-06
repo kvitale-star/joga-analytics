@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
-type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary';
+type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary';
+  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
   onNavigate: (view: ViewType) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleMouseEnter = () => {
@@ -304,7 +306,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               onClick={() => onNavigate('settings' as any)}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
-              } hover:bg-gray-700 text-gray-300`}
+              } ${
+                currentView === 'settings'
+                  ? 'bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300'
+              }`}
               title={!isExpanded ? 'Settings' : undefined}
             >
               <svg
@@ -336,6 +342,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 Settings
               </span>
             </button>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => onNavigate('match-editor' as any)}
+                className={`w-full flex items-center py-3 text-sm transition-colors ${
+                  isExpanded ? 'px-4 justify-start' : 'justify-center'
+                } ${
+                  currentView === 'match-editor'
+                    ? 'bg-gray-700 text-white'
+                    : 'hover:bg-gray-700 text-gray-300'
+                }`}
+                title={!isExpanded ? 'Match Editor' : undefined}
+              >
+                <svg
+                  className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                  />
+                </svg>
+                <span 
+                  className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
+                    isExpanded 
+                      ? 'opacity-100 max-w-[200px]' 
+                      : 'opacity-0 max-w-0 overflow-hidden'
+                  }`}
+                >
+                  Match Editor
+                </span>
+              </button>
+            )}
           </div>
         </div>
       </nav>

@@ -278,7 +278,10 @@ export const ClubDataView: React.FC<ClubDataViewProps> = ({
                   }
                 }}
                 placeholder="All"
-                className="w-20 px-2 py-1.5 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-center"
+                className={`w-20 px-2 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-center ${
+                  lastNGames ? 'border-[#ceff00]' : 'border-gray-300'
+                }`}
+                style={lastNGames ? { borderColor: '#ceff00' } : {}}
               />
             </div>
           </div>
