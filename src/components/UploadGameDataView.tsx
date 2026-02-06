@@ -724,6 +724,10 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
 
   // Required fields that should always appear on the form, even if they don't exist in the data
   const requiredFields = [
+    // Game Info fields
+    'Home/Away',
+    'Competition Type',
+    // Stats fields
     'Possession Mins (1st)',
     'Possession Mins (2nd)',
     'Opp Possession Mins (1st)',
