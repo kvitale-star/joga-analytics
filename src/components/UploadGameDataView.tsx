@@ -729,6 +729,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     'Date',
     'Home/Away',
     'Competition Type',
+    'Competition',
     // Stats fields
     'Possession Mins (1st)',
     'Possession Mins (2nd)',
