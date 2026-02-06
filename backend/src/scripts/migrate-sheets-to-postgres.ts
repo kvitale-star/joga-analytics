@@ -83,8 +83,8 @@ function parseDate(dateValue: string | number | undefined): string | null {
   return null;
 }
 
-async function migrateSheetsToPostgres(options: MigrationOptions = {}) {
-  const { dryRun = false, updateExisting = false, sheetRange = 'Match Log!A1:ZZ1000' } = options;
+async function migrateSheetsToPostgres(options: MigrationOptions & { skipDestroy?: boolean } = {}) {
+  const { dryRun = false, updateExisting = false, sheetRange = 'Match Log!A1:ZZ1000', skipDestroy = false } = options;
 
   console.log('🚀 Starting Google Sheets to PostgreSQL migration...');
   console.log(`   Dry run: ${dryRun ? 'YES' : 'NO'}`);
@@ -275,7 +275,10 @@ async function migrateSheetsToPostgres(options: MigrationOptions = {}) {
     console.error('❌ Migration failed:', error);
     throw error;
   } finally {
-    await db.destroy();
+    // Only destroy connection if not called from API (when skipDestroy is true, keep connection alive)
+    if (!skipDestroy) {
+      await db.destroy();
+    }
   }
 }
 

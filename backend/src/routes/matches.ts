@@ -12,6 +12,8 @@ import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
 import { getUserTeamAssignments } from '../services/teamService.js';
 import { computeMatchStats, normalizeFieldNames } from '../services/matchStatsService.js';
 import { normalizeOpponentName, opponentNamesMatch, findBestOpponentMatch, calculateOpponentSimilarity } from '../utils/opponentMatching.js';
+import { migrateSheetsToPostgres } from '../scripts/migrate-sheets-to-postgres.js';
+import { requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -626,6 +628,39 @@ router.post('/:id/events', canModifyMatch, async (req, res) => {
     res.status(201).json(event);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to create game event' });
+  }
+});
+
+/**
+ * POST /api/matches/migrate-sheets
+ * Admin-only endpoint to trigger Google Sheets to PostgreSQL migration
+ * Query params: dryRun (true/false), updateExisting (true/false)
+ */
+router.post('/migrate-sheets', requireAdmin, async (req, res) => {
+  try {
+    const dryRun = req.query.dryRun === 'true' || req.body.dryRun === true;
+    const updateExisting = req.query.updateExisting === 'true' || req.body.updateExisting === true;
+
+    console.log('🚀 Migration triggered via API:', { dryRun, updateExisting });
+
+    // Run migration (this will output to console/logs)
+    // skipDestroy: true to keep database connection alive for the API server
+    await migrateSheetsToPostgres({ dryRun, updateExisting, skipDestroy: true });
+
+    res.json({ 
+      success: true, 
+      message: dryRun 
+        ? 'Dry run completed. Check logs for details.' 
+        : 'Migration completed. Check logs for details.',
+      dryRun,
+      updateExisting
+    });
+  } catch (error: any) {
+    console.error('❌ Migration failed:', error);
+    res.status(500).json({ 
+      error: error.message || 'Migration failed',
+      details: error.stack
+    });
   }
 });
 
