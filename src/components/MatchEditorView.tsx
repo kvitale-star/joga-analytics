@@ -235,7 +235,12 @@ export const MatchEditorView: React.FC = () => {
   };
 
   const handleSelectMatch = (match: Match) => {
-    setSelectedMatch(match);
+    // If clicking on an already-selected match, deselect it
+    if (selectedMatch?.id === match.id) {
+      setSelectedMatch(null);
+    } else {
+      setSelectedMatch(match);
+    }
   };
 
   if (!user || user.role !== 'admin') {
