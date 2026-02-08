@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Match, getMatchById, getMatches, updateMatch, MatchFilters } from '../services/matchService';
 import { getAllTeams } from '../services/teamService';
@@ -18,6 +18,7 @@ export const MatchEditorView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const successMessageRef = useRef<HTMLDivElement>(null);
   
   // Filter state
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
@@ -516,6 +517,16 @@ export const MatchEditorView: React.FC = () => {
     return stats;
   }, [selectedMatch]);
 
+  // Scroll to top when success message appears
+  useEffect(() => {
+    if (success && successMessageRef.current) {
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(() => {
+        successMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  }, [success]);
+
   // Reset form when selected match changes
   useEffect(() => {
     if (selectedMatch) {
@@ -660,9 +671,6 @@ export const MatchEditorView: React.FC = () => {
       });
       
       setSuccess('Match updated successfully!');
-      
-      // Scroll to top to show the success message
-      window.scrollTo({ top: 0, behavior: 'smooth' });
       
       // Reload the match to get updated data
       const updatedMatch = await getMatchById(selectedMatch.id);
@@ -855,7 +863,7 @@ export const MatchEditorView: React.FC = () => {
         )}
 
         {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+          <div ref={successMessageRef} className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
             {success}
           </div>
         )}
