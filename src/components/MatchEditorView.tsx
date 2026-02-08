@@ -411,6 +411,170 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
            lower.includes(' against') || lower.includes('against');
   };
 
+  // Field ordering for Basic Stats sections (matching Upload Game Data)
+  const BASIC_STATS_ORDER = [
+    'goals',
+    'possession', // General possession (must come before specific ones)
+    'shot', 'shots',
+    'corners', 'corner',
+    'free kick', 'free kicks',
+    'passes completed', 'passes comp', 'passes',
+    'penalty', 'penalties',
+    'possession minutes', 'possession mins', // Specific: possession minutes
+    'possession won', // Specific: possession won
+    'throw-in', 'throw in'
+  ];
+
+  // Sort fields within Basic Stats category (matching Upload Game Data)
+  const sortBasicStatsFields = (fields: Array<{ name: string; category: string }>): Array<{ name: string; category: string }> => {
+    return fields.sort((a, b) => {
+      const aLower = a.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      const bLower = b.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      
+      let aIndex = -1;
+      let bIndex = -1;
+      
+      if (aLower.includes('possession mins') || aLower.includes('possession minutes')) {
+        aIndex = BASIC_STATS_ORDER.findIndex(order => order === 'possession minutes' || order === 'possession mins');
+      } else if (aLower.includes('possession won') || aLower.includes('possessions won')) {
+        aIndex = BASIC_STATS_ORDER.findIndex(order => order === 'possession won');
+      } else {
+        for (let i = 0; i < BASIC_STATS_ORDER.length; i++) {
+          const order = BASIC_STATS_ORDER[i];
+          if (order === 'possession minutes' || order === 'possession mins' || order === 'possession won') {
+            continue;
+          }
+          if (aLower.includes(order)) {
+            aIndex = i;
+            break;
+          }
+        }
+      }
+      
+      if (bLower.includes('possession mins') || bLower.includes('possession minutes')) {
+        bIndex = BASIC_STATS_ORDER.findIndex(order => order === 'possession minutes' || order === 'possession mins');
+      } else if (bLower.includes('possession won') || bLower.includes('possessions won')) {
+        bIndex = BASIC_STATS_ORDER.findIndex(order => order === 'possession won');
+      } else {
+        for (let i = 0; i < BASIC_STATS_ORDER.length; i++) {
+          const order = BASIC_STATS_ORDER[i];
+          if (order === 'possession minutes' || order === 'possession mins' || order === 'possession won') {
+            continue;
+          }
+          if (bLower.includes(order)) {
+            bIndex = i;
+            break;
+          }
+        }
+      }
+      
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      return a.name.localeCompare(b.name);
+    });
+  };
+
+  // Sort Pass Strings fields (matching Upload Game Data)
+  const sortPassStringsFields = (fields: Array<{ name: string; category: string }>): Array<{ name: string; category: string }> => {
+    return fields.sort((a, b) => {
+      const getPassStringNum = (name: string): number => {
+        const match = name.match(/(\d+)[\s-]?pass/i);
+        return match ? parseInt(match[1]) : 0;
+      };
+      
+      const aNum = getPassStringNum(a.name);
+      const bNum = getPassStringNum(b.name);
+      
+      if (aNum === 10 && bNum === 10) return a.name.localeCompare(b.name);
+      if (aNum === 10 && bNum !== 10) return 1;
+      if (bNum === 10 && aNum !== 10) return -1;
+      if (aNum !== 0 && bNum !== 0) return aNum - bNum;
+      
+      return a.name.localeCompare(b.name);
+    });
+  };
+
+  // Sort Shots Map fields (matching Upload Game Data)
+  const sortShotsMapFields = (teamFields: Array<{ name: string; category: string }>, opponentFields: Array<{ name: string; category: string }>): {
+    teamFields: Array<{ name: string; category: string }>;
+    opponentFields: Array<{ name: string; category: string }>;
+  } => {
+    const teamOrder = [
+      'conversion rate',
+      'inside box conv rate',
+      'outside box conv rate',
+      '% attempts inside box',
+      'attempts inside box %',
+      '% attempts outside box',
+      'attempts outside box %'
+    ];
+    
+    const sortedTeamFields = [...teamFields].sort((a, b) => {
+      const aLower = a.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      const bLower = b.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      
+      let aIndex = -1;
+      let bIndex = -1;
+      
+      for (let i = 0; i < teamOrder.length; i++) {
+        if (aLower.includes(teamOrder[i])) {
+          aIndex = i;
+          break;
+        }
+      }
+      
+      for (let i = 0; i < teamOrder.length; i++) {
+        if (bLower.includes(teamOrder[i])) {
+          bIndex = i;
+          break;
+        }
+      }
+      
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      return a.name.localeCompare(b.name);
+    });
+    
+    const opponentOrder = ['opp conv rate'];
+    
+    const sortedOpponentFields = [...opponentFields].sort((a, b) => {
+      const aLower = a.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      const bLower = b.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      
+      let aIndex = -1;
+      let bIndex = -1;
+      
+      for (let i = 0; i < opponentOrder.length; i++) {
+        if (aLower.includes(opponentOrder[i])) {
+          aIndex = i;
+          break;
+        }
+      }
+      
+      for (let i = 0; i < opponentOrder.length; i++) {
+        if (bLower.includes(opponentOrder[i])) {
+          bIndex = i;
+          break;
+        }
+      }
+      
+      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      
+      return a.name.localeCompare(b.name);
+    });
+    
+    return {
+      teamFields: sortedTeamFields,
+      opponentFields: sortedOpponentFields
+    };
+  };
+
   // Categorize field helper (matching UploadGameDataView exactly)
   const categorizeField = (fieldName: string): string => {
     const lower = fieldName.toLowerCase();
@@ -514,53 +678,163 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
     'Opp Throw-in (2nd)',
   ];
 
-  // Extract and organize stats from match - show ALL fields from columnKeys + requiredFields (like Upload Game Data)
-  const organizedStats = useMemo(() => {
-    const stats: Record<string, Record<string, any>> = {};
-    const statsJson = selectedMatch?.statsJson || {};
-    
-    // Build set of all fields that should be shown (from columnKeys + requiredFields)
+  // Build formFields structure exactly like Upload Game Data (matching structure and ordering)
+  const formFields = useMemo(() => {
     const seenNormalized = new Set<string>();
     
-    // Add fields from columnKeys
-    (columnKeys || []).forEach(key => {
-      const normalizedKey = normalizeFieldName(key);
-      if (shouldExcludeField(normalizedKey)) return;
-      
-      const fieldKey = normalizedKey.toLowerCase().trim();
-      if (seenNormalized.has(fieldKey)) return;
-      seenNormalized.add(fieldKey);
-      
-      const category = categorizeField(normalizedKey);
-      if (!stats[category]) stats[category] = {};
-      // Use value from statsJson if available, otherwise use 0 for number fields or empty string
-      // Try multiple key variations to find the value
-      const value = statsJson[key] ?? statsJson[normalizedKey] ?? 
-                    Object.entries(statsJson).find(([k]) => 
-                      normalizeFieldName(k).toLowerCase() === fieldKey
-                    )?.[1];
-      stats[category][normalizedKey] = value !== undefined && value !== null ? value : '';
-    });
+    // Start with fields from columnKeys (matching Upload Game Data logic)
+    const existingFields = (columnKeys || [])
+      .filter(key => {
+        const normalizedKey = normalizeFieldName(key);
+        const excluded = shouldExcludeField(normalizedKey);
+        return !excluded;
+      })
+      .map(key => {
+        const normalizedName = normalizeFieldName(key);
+        return {
+          originalKey: key,
+          name: normalizedName,
+          category: categorizeField(normalizedName),
+        };
+      })
+      .filter(field => {
+        const fieldKey = field.name.toLowerCase().trim();
+        if (seenNormalized.has(fieldKey)) {
+          return false;
+        }
+        seenNormalized.add(fieldKey);
+        return true;
+      })
+      .map(field => ({
+        name: field.name,
+        category: field.category,
+        originalKey: field.originalKey, // Keep originalKey for value lookup
+      }));
     
     // Add required fields that don't already exist
-    requiredFields.forEach(reqField => {
-      const normalizedReq = normalizeFieldName(reqField);
-      const reqKey = normalizedReq.toLowerCase().trim();
-      if (seenNormalized.has(reqKey)) return;
-      seenNormalized.add(reqKey);
+    const requiredFieldsToAdd = requiredFields
+      .filter(reqField => {
+        const normalizedReq = normalizeFieldName(reqField);
+        const reqKey = normalizedReq.toLowerCase().trim();
+        return !seenNormalized.has(reqKey);
+      })
+      .map(name => {
+        const normalizedName = normalizeFieldName(name);
+        const fieldKey = normalizedName.toLowerCase().trim();
+        seenNormalized.add(fieldKey);
+        return {
+          name: normalizedName,
+          category: categorizeField(normalizedName),
+        };
+      });
+    
+    const allFields = [...existingFields, ...requiredFieldsToAdd];
+    
+    // Group by category (matching Upload Game Data)
+    const grouped: Record<string, Array<{ name: string; category: string }>> = {};
+    const seenFields = new Set<string>();
+    
+    allFields.forEach(field => {
+      const fieldKey = field.name.toLowerCase().trim();
       
-      const category = categorizeField(normalizedReq);
-      if (!stats[category]) stats[category] = {};
-      // Use value from statsJson if available, otherwise use 0 for number fields or empty string
-      const value = statsJson[reqField] ?? statsJson[normalizedReq] ??
-                    Object.entries(statsJson).find(([k]) => 
-                      normalizeFieldName(k).toLowerCase() === reqKey
-                    )?.[1];
-      stats[category][normalizedReq] = value !== undefined && value !== null ? value : '';
+      // Special handling for conversion rate fields
+      let normalizedKey = fieldKey;
+      if (normalizedKey.includes('conv') && normalizedKey.includes('rate')) {
+        normalizedKey = normalizedKey.replace(/\bopp\s+conversion\s+rate\b/g, 'opp conv rate');
+        normalizedKey = normalizedKey.replace(/\bopponent\s+conversion\s+rate\b/g, 'opp conv rate');
+        normalizedKey = normalizedKey.replace(/\bopponent\s+conv\s+rate\b/g, 'opp conv rate');
+        normalizedKey = normalizedKey.replace(/\bopp\s+conv\.?\s+rate\b/g, 'opp conv rate');
+      }
+      
+      if (seenFields.has(normalizedKey)) {
+        return;
+      }
+      seenFields.add(normalizedKey);
+      
+      if (normalizedKey !== fieldKey && normalizedKey === 'opp conv rate') {
+        field.name = 'Opp Conv Rate';
+      }
+      
+      if (!grouped[field.category]) {
+        grouped[field.category] = [];
+      }
+      grouped[field.category].push(field);
     });
     
-    return stats;
+    // Sort fields within each category (matching Upload Game Data)
+    Object.keys(grouped).forEach(category => {
+      if (category === 'Game Info') {
+        const priorityOrder = ['team', 'opponent', 'date', 'competition type', 'competition', 'home/away', 'home away', 'result'];
+        grouped[category].sort((a, b) => {
+          const aLower = a.name.toLowerCase();
+          const bLower = b.name.toLowerCase();
+          const aIndex = priorityOrder.findIndex(p => aLower.includes(p));
+          const bIndex = priorityOrder.findIndex(p => bLower.includes(p));
+          if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+          return a.name.localeCompare(b.name);
+        });
+      } else if (category === 'Possession Location') {
+        grouped[category] = grouped[category].filter(field => {
+          const lower = field.name.toLowerCase();
+          return lower.includes('possess % (def)') || lower.includes('possess % (mid)') || lower.includes('possess % (att)');
+        });
+        
+        grouped[category].sort((a, b) => {
+          const aLower = a.name.toLowerCase();
+          const bLower = b.name.toLowerCase();
+          
+          const getZoneOrder = (name: string): number => {
+            if (name.includes('(def)') || name.includes(' def')) return 1;
+            if (name.includes('(mid)') || name.includes(' mid')) return 2;
+            if (name.includes('(att)') || name.includes(' att')) return 3;
+            return 0;
+          };
+          
+          const aZone = getZoneOrder(aLower);
+          const bZone = getZoneOrder(bLower);
+          
+          if (aZone !== 0 && bZone !== 0) return aZone - bZone;
+          if (aZone !== 0) return -1;
+          if (bZone !== 0) return 1;
+          
+          return a.name.localeCompare(b.name);
+        });
+      } else if (category === 'Pass Location') {
+        grouped[category] = grouped[category].filter(field => {
+          const lower = field.name.toLowerCase();
+          return (lower.includes('pass %') && (lower.includes('zone') || lower.includes('by zone'))) &&
+                 !lower.includes('possess %');
+        });
+        
+        grouped[category].sort((a, b) => {
+          const aLower = a.name.toLowerCase();
+          const bLower = b.name.toLowerCase();
+          
+          const getZoneOrder = (name: string): number => {
+            if (name.includes('(def)') || name.includes(' def')) return 1;
+            if (name.includes('(mid)') || name.includes(' mid')) return 2;
+            if (name.includes('(att)') || name.includes(' att')) return 3;
+            return 0;
+          };
+          
+          const aZone = getZoneOrder(aLower);
+          const bZone = getZoneOrder(bLower);
+          
+          if (aZone !== 0 && bZone !== 0) return aZone - bZone;
+          if (aZone !== 0) return -1;
+          if (bZone !== 0) return 1;
+          
+          return a.name.localeCompare(b.name);
+        });
+      }
+      // Note: Basic Stats, Pass Strings, and Shots Map are sorted in renderFieldsWithSubsections
+    });
+    
+    return grouped;
   }, [selectedMatch, columnKeys]);
+
 
   // Scroll to top when success message appears
   useEffect(() => {
@@ -694,6 +968,142 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
       return 'number';
     }
     return 'text';
+  };
+
+  // Get field width (matching Upload Game Data)
+  const getFieldWidth = (fieldName: string): string => {
+    const lower = fieldName.toLowerCase();
+    if (lower.includes('possession %') || lower.includes('possess %')) {
+      return 'md:col-span-1 lg:col-span-1';
+    }
+    return 'md:col-span-1 lg:col-span-1';
+  };
+
+  // Render fields grouped by Team/Opponent for Basic Stats and other sections (matching Upload Game Data)
+  const renderFieldsWithSubsections = (
+    fields: Array<{ name: string; category: string; originalKey?: string }>,
+    category?: string
+  ) => {
+    const statsJson = selectedMatch?.statsJson || {};
+    
+    // Split into team and opponent fields FIRST, then sort each group
+    let teamFields = fields.filter(f => !isOpponentField(f.name));
+    let opponentFields = fields.filter(f => isOpponentField(f.name));
+    
+    // Sort each group separately - use appropriate sort function based on category
+    if (category === 'Pass Strings') {
+      teamFields = sortPassStringsFields([...teamFields]);
+      opponentFields = sortPassStringsFields([...opponentFields]);
+    } else if (category === 'Shots Map') {
+      const sorted = sortShotsMapFields([...teamFields], [...opponentFields]);
+      teamFields = sorted.teamFields;
+      opponentFields = sorted.opponentFields;
+    } else {
+      teamFields = sortBasicStatsFields([...teamFields]);
+      opponentFields = sortBasicStatsFields([...opponentFields]);
+    }
+    
+    return (
+      <>
+        {teamFields.length > 0 && (
+          <>
+            <div className="mt-4 mb-2">
+              <h3 className="text-md font-semibold text-gray-800">Team</h3>
+              <div className="border-t border-gray-300 mt-1"></div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {teamFields.map(field => {
+                const fieldName = field.name;
+                const value = editedStats[fieldName] ?? 
+                  (statsJson[fieldName] ?? 
+                   statsJson[field.originalKey || ''] ??
+                   Object.entries(statsJson).find(([k]) => 
+                     normalizeFieldName(k).toLowerCase() === fieldName.toLowerCase()
+                   )?.[1] ?? '');
+                const inputType = getInputType(fieldName);
+                
+                return (
+                  <div key={fieldName} className={`flex flex-col ${getFieldWidth(fieldName)}`}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {normalizeFieldName(fieldName)}
+                    </label>
+                    {inputType === 'number' ? (
+                      <input
+                        type="number"
+                        step="any"
+                        value={value === '' || value === null || value === undefined ? '' : value}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                          setEditedStats(prev => ({ ...prev, [fieldName]: val }));
+                        }}
+                        className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] border-gray-300"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={value as string || ''}
+                        onChange={(e) => setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }))}
+                        className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] border-gray-300"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+        
+        {opponentFields.length > 0 && (
+          <>
+            <div className="mt-6 mb-2">
+              <h3 className="text-md font-semibold text-gray-800">Opponent</h3>
+              <div className="border-t border-gray-300 mt-1"></div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {opponentFields.map(field => {
+                const fieldName = field.name;
+                const value = editedStats[fieldName] ?? 
+                  (statsJson[fieldName] ?? 
+                   statsJson[field.originalKey || ''] ??
+                   Object.entries(statsJson).find(([k]) => 
+                     normalizeFieldName(k).toLowerCase() === fieldName.toLowerCase()
+                   )?.[1] ?? '');
+                const inputType = getInputType(fieldName);
+                
+                return (
+                  <div key={fieldName} className={`flex flex-col ${getFieldWidth(fieldName)}`}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {normalizeFieldName(fieldName)}
+                    </label>
+                    {inputType === 'number' ? (
+                      <input
+                        type="number"
+                        step="any"
+                        value={value === '' || value === null || value === undefined ? '' : value}
+                        onChange={(e) => {
+                          const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                          setEditedStats(prev => ({ ...prev, [fieldName]: val }));
+                        }}
+                        className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] border-gray-300"
+                        placeholder="0"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={value as string || ''}
+                        onChange={(e) => setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }))}
+                        className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] border-gray-300"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </>
+    );
   };
 
   const handleSave = async () => {
@@ -1061,30 +1471,10 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                 const categoryColor = getCategoryHeaderColor(categoryIndex);
                 const textColor = categoryColor === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white';
                 
-                // Get fields for this category
-                let fields: Array<{ name: string; value: any }> = [];
+                // Get fields for this category from formFields (matching Upload Game Data structure)
+                const categoryFields = formFields[category] || [];
                 
-                if (category === 'Game Info') {
-                  // Game Info fields are in separate state
-                  fields = [
-                    { name: 'Team', value: editedTeamId },
-                    { name: 'Opponent Name', value: editedOpponentName },
-                    { name: 'Match Date', value: editedMatchDate },
-                    { name: 'Competition Type', value: editedCompetitionType },
-                    { name: 'Result', value: editedResult },
-                    { name: 'Home/Away', value: editedIsHome },
-                    { name: 'Notes', value: editedNotes },
-                  ];
-                } else {
-                  // Stats fields from organizedStats
-                  const categoryStats = organizedStats[category] || {};
-                  fields = Object.entries(categoryStats).map(([key, value]) => ({
-                    name: key,
-                    value: editedStats[key] ?? (value as string | number),
-                  }));
-                }
-                
-                if (fields.length === 0 && category !== 'Game Info') return null;
+                if (categoryFields.length === 0 && category !== 'Game Info') return null;
                 
                 return (
                   <div key={category} className="mb-6">
@@ -1146,12 +1536,11 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                         {/* Game Info - 3 column layout */}
                         {category === 'Game Info' ? (
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {fields.map(field => {
+                            {categoryFields.map(field => {
                               const fieldName = field.name;
-                              const value = field.value ?? '';
                               
                               // Special handling for Game Info fields
-                              if (fieldName === 'Team') {
+                              if (fieldName.toLowerCase().includes('team') && !fieldName.toLowerCase().includes('team id')) {
                                 return (
                                   <div key={fieldName}>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1172,7 +1561,7 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                                   </div>
                                 );
                               }
-                              if (fieldName === 'Home/Away') {
+                              if (fieldName.toLowerCase().includes('home/away') || fieldName.toLowerCase().includes('home away')) {
                                 return (
                                   <div key={fieldName}>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1190,7 +1579,7 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                                   </div>
                                 );
                               }
-                              if (fieldName === 'Notes') {
+                              if (fieldName.toLowerCase().includes('notes')) {
                                 return (
                                   <div key={fieldName} className="md:col-span-3">
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1207,131 +1596,97 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                                 );
                               }
                               // Other Game Info fields as text inputs
-                              const setterMap: Record<string, (val: string) => void> = {
-                                'Opponent Name': setEditedOpponentName,
-                                'Match Date': setEditedMatchDate,
-                                'Competition Type': setEditedCompetitionType,
-                                'Result': setEditedResult,
-                              };
-                              const setter = setterMap[fieldName];
+                              const lowerFieldName = fieldName.toLowerCase();
+                              let setter: ((val: string) => void) | null = null;
+                              let inputType: 'text' | 'date' = 'text';
+                              let isRequired = false;
+                              
+                              if (lowerFieldName.includes('opponent') && !lowerFieldName.includes('opponent id')) {
+                                setter = setEditedOpponentName;
+                                isRequired = true;
+                              } else if (lowerFieldName.includes('date') && !lowerFieldName.includes('match id')) {
+                                setter = setEditedMatchDate;
+                                inputType = 'date';
+                                isRequired = true;
+                              } else if (lowerFieldName.includes('competition type')) {
+                                setter = setEditedCompetitionType;
+                              } else if (lowerFieldName.includes('result') && !lowerFieldName.includes('result id')) {
+                                setter = setEditedResult;
+                              }
+                              
                               if (!setter) return null;
+                              
+                              const currentValue = fieldName.toLowerCase().includes('opponent') ? editedOpponentName :
+                                                   fieldName.toLowerCase().includes('date') ? editedMatchDate :
+                                                   fieldName.toLowerCase().includes('competition type') ? editedCompetitionType :
+                                                   fieldName.toLowerCase().includes('result') ? editedResult : '';
                               
                               return (
                                 <div key={fieldName}>
                                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    {fieldName} {fieldName === 'Opponent Name' || fieldName === 'Match Date' ? '*' : ''}
+                                    {normalizeFieldName(fieldName)} {isRequired ? '*' : ''}
                                   </label>
                                   <input
-                                    type={fieldName === 'Match Date' ? 'date' : 'text'}
-                                    value={String(value)}
-                                    onChange={(e) => setter(e.target.value)}
+                                    type={inputType}
+                                    value={String(currentValue)}
+                                    onChange={(e) => setter!(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                                    required={fieldName === 'Opponent Name' || fieldName === 'Match Date'}
-                                    placeholder={fieldName === 'Competition Type' ? 'e.g., League, Cup, Friendly' : fieldName === 'Result' ? 'e.g., 2-1, W, L, D' : ''}
+                                    required={isRequired}
+                                    placeholder={fieldName.toLowerCase().includes('competition type') ? 'e.g., League, Cup, Friendly' : fieldName.toLowerCase().includes('result') ? 'e.g., 2-1, W, L, D' : ''}
                                   />
                                 </div>
                               );
                             })}
                           </div>
                         ) : (
-                          // Stats sections - separate Team and Opponent
-                          <>
-                            {/* Team Fields */}
-                            {fields.filter(f => !isOpponentField(f.name)).length > 0 && (
-                              <>
-                                <div className="mt-4 mb-2">
-                                  <h3 className="text-md font-semibold text-gray-800">Team</h3>
-                                  <div className="border-t border-gray-300 mt-1"></div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                  {fields.filter(f => !isOpponentField(f.name)).map(field => {
-                                    const fieldName = field.name;
-                                    const inputType = getInputType(fieldName);
-                                    const value = field.value ?? '';
-                                    
-                                    return (
-                                      <div key={fieldName} className="flex flex-col">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                          {fieldName}
-                                        </label>
-                                        {inputType === 'number' ? (
-                                          <input
-                                            type="number"
-                                            step="any"
-                                            min="0"
-                                            value={value}
-                                            onChange={(e) => {
-                                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
-                                              setEditedStats(prev => ({ ...prev, [fieldName]: newValue }));
-                                            }}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
-                                            placeholder="0"
-                                          />
-                                        ) : (
-                                          <input
-                                            type="text"
-                                            value={String(value)}
-                                            onChange={(e) => {
-                                              setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }));
-                                            }}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
-                                          />
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </>
-                            )}
-                            
-                            {/* Opponent Fields */}
-                            {fields.filter(f => isOpponentField(f.name)).length > 0 && (
-                              <>
-                                <div className="mt-6 mb-2">
-                                  <h3 className="text-md font-semibold text-gray-800">Opponent</h3>
-                                  <div className="border-t border-gray-300 mt-1"></div>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                  {fields.filter(f => isOpponentField(f.name)).map(field => {
-                                    const fieldName = field.name;
-                                    const inputType = getInputType(fieldName);
-                                    const value = field.value ?? '';
-                                    
-                                    return (
-                                      <div key={fieldName} className="flex flex-col">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                          {fieldName}
-                                        </label>
-                                        {inputType === 'number' ? (
-                                          <input
-                                            type="number"
-                                            step="any"
-                                            min="0"
-                                            value={value}
-                                            onChange={(e) => {
-                                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
-                                              setEditedStats(prev => ({ ...prev, [fieldName]: newValue }));
-                                            }}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
-                                            placeholder="0"
-                                          />
-                                        ) : (
-                                          <input
-                                            type="text"
-                                            value={String(value)}
-                                            onChange={(e) => {
-                                              setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }));
-                                            }}
-                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
-                                          />
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </>
-                            )}
-                          </>
+                          // Stats sections - use renderFieldsWithSubsections for Basic Stats, Pass Strings, Shots Map
+                          // For other categories, render directly
+                          (category === 'Basic Stats (1st Half)' || category === 'Basic Stats (2nd Half)' || 
+                           category === 'Pass Strings' || category === 'Shots Map') ? (
+                            renderFieldsWithSubsections(categoryFields, category)
+                          ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                              {categoryFields.map(field => {
+                                const fieldName = field.name;
+                                const statsJson = selectedMatch?.statsJson || {};
+                                const value = editedStats[fieldName] ?? 
+                                  (statsJson[fieldName] ?? 
+                                   ((field as any).originalKey ? statsJson[(field as any).originalKey] : undefined) ??
+                                   Object.entries(statsJson).find(([k]) => 
+                                     normalizeFieldName(k).toLowerCase() === fieldName.toLowerCase()
+                                   )?.[1] ?? '');
+                                const inputType = getInputType(fieldName);
+                                
+                                return (
+                                  <div key={fieldName} className={`flex flex-col ${getFieldWidth(fieldName)}`}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                      {normalizeFieldName(fieldName)}
+                                    </label>
+                                    {inputType === 'number' ? (
+                                      <input
+                                        type="number"
+                                        step="any"
+                                        value={value === '' || value === null || value === undefined ? '' : value}
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? '' : parseFloat(e.target.value);
+                                          setEditedStats(prev => ({ ...prev, [fieldName]: val }));
+                                        }}
+                                        className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] border-gray-300"
+                                        placeholder="0"
+                                      />
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        value={value as string || ''}
+                                        onChange={(e) => setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }))}
+                                        className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] border-gray-300"
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )
                         )}
                       </div>
                     </div>
