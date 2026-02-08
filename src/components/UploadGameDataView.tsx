@@ -8,6 +8,7 @@ import { getAllSeasons } from '../services/seasonService';
 import { normalizeFieldName } from '../utils/fieldDeduplication';
 import { MatchConfirmationModal } from './MatchConfirmationModal';
 import { ExistingMatchModal } from './ExistingMatchModal';
+import { Modal } from './Modal';
 import { extractStatsFromImage } from '../services/ocrService';
 import { apiGet } from '../services/apiClient';
 
@@ -501,7 +502,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
   const [formData, setFormData] = useState<Record<string, string | number>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<{ message: string; matchId: number | null } | null>(null);
   const [activeSeasonId, setActiveSeasonId] = useState<number | null>(null);
   const [seasons, setSeasons] = useState<Array<{ id: number; name: string; isActive: boolean }>>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -1211,7 +1212,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     }
     
     setIsSubmitting(true);
-    setSubmitSuccess(false);
+    setSubmitSuccess(null);
     
     try {
       const submissionData = prepareSubmissionData();
@@ -1254,6 +1255,8 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     setIsSubmitting(true);
     
     try {
+      let savedMatch: Match;
+      
       // If existing match found, update it; otherwise create new
       if (existingMatch) {
         // For updates, filter out 0s from rawStats (0s act as placeholders - don't update)
@@ -1265,7 +1268,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
           }
         });
         
-        await updateMatch(existingMatch.id, {
+        savedMatch = await updateMatch(existingMatch.id, {
           teamId: pendingSubmission.teamId,
           opponentName: pendingSubmission.opponentName,
           matchDate: pendingSubmission.matchDate,
@@ -1274,7 +1277,7 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
           rawStats: rawStatsToUpdate,
         });
       } else {
-        await createMatch({
+        savedMatch = await createMatch({
           teamId: pendingSubmission.teamId,
           opponentName: pendingSubmission.opponentName,
           matchDate: pendingSubmission.matchDate,
@@ -1285,24 +1288,29 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         });
       }
       
-      setSubmitSuccess(true);
-      
-      // Close modal
+      // Close confirmation modal
       setShowConfirmation(false);
       setPreviewData(null);
       setPendingSubmission(null);
       setExistingMatch(null);
       
+      // Show success modal with match ID
+      setSubmitSuccess({
+        message: existingMatch 
+          ? 'Match updated successfully!' 
+          : 'Game data submitted successfully!',
+        matchId: savedMatch.id,
+      });
+      
+      // Scroll to top
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+      
       // Callback to reload data
       if (onDataSubmitted) {
         onDataSubmitted();
       }
-      
-      // Reset form after successful submission
-      setTimeout(() => {
-        setFormData({});
-        setSubmitSuccess(false);
-      }, 2000);
     } catch (error) {
       console.error('Error submitting form:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to submit data. Please try again.';
@@ -1323,7 +1331,15 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
   const handleReset = () => {
     setFormData({});
     setErrors({});
-    setSubmitSuccess(false);
+    setSubmitSuccess(null);
+  };
+  
+  // Handle success modal close
+  const handleSuccessModalClose = () => {
+    setSubmitSuccess(null);
+    // Reset form after closing success modal
+    setFormData({});
+    setErrors({});
   };
 
   // Section-specific upload handler for Basic Stats (1st Half) and Basic Stats (2nd Half)
@@ -1694,16 +1710,60 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         onPreFill={handlePreFillMatch}
         onCancel={handleCancelPreFill}
       />
+      
+      {/* Success Modal */}
+      <Modal
+        isOpen={!!submitSuccess}
+        onClose={handleSuccessModalClose}
+        title="Success"
+        maxWidth="sm"
+      >
+        <div className="text-center py-4">
+          <div className="mb-4">
+            <svg
+              className="mx-auto h-12 w-12 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p className="text-lg text-gray-900 mb-2">{submitSuccess?.message}</p>
+          {submitSuccess?.matchId && (
+            <p className="text-sm text-gray-600 mb-6">
+              Match ID: <span className="font-semibold">{submitSuccess.matchId}</span>
+            </p>
+          )}
+          <button
+            onClick={handleSuccessModalClose}
+            className="px-6 py-2 rounded-lg font-medium transition-colors text-black"
+            style={{
+              backgroundColor: JOGA_COLORS.voltYellow,
+              border: `2px solid ${JOGA_COLORS.voltYellow}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#b8e600';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
+      
       <PageLayout
         title="Upload Game Data"
       subtitle="Enter data for a single game"
       maxWidth="7xl"
     >
-      {submitSuccess && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
-          Game data submitted successfully!
-        </div>
-      )}
 
       {errors._general && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
