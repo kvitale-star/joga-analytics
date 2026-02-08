@@ -1113,31 +1113,39 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
     }
     
     // Prepare raw stats (exclude game info fields that go to top level)
+    // Include ALL metric fields from formFields, defaulting to 0 for number fields if not entered
     const rawStats: Record<string, any> = {};
-    Object.keys(formData).forEach(key => {
+    
+    // Get all metric fields from formFields (excluding Game Info category)
+    const allMetricFields = Object.values(formFields)
+      .flat()
+      .filter(field => field.category !== 'Game Info')
+      .map(field => field.name);
+    
+    // Process all metric fields
+    allMetricFields.forEach(fieldName => {
       // Skip game info fields that are handled separately
-      if (key === teamKey || key === opponentKey || key === dateKey || 
-          key === competitionTypeKey || key === competitionKey || 
-          key === resultKey || key === homeAwayKey) {
+      if (fieldName === teamKey || fieldName === opponentKey || fieldName === dateKey || 
+          fieldName === competitionTypeKey || fieldName === competitionKey || 
+          fieldName === resultKey || fieldName === homeAwayKey) {
         return;
       }
-      // Include all other fields as raw stats
-      // For number fields, default to 0 if empty/invalid
-      const value = formData[key];
-      const inputType = getInputType(key);
+      
+      const inputType = getInputType(fieldName);
+      const value = formData[fieldName];
       
       if (inputType === 'number') {
-        // For number fields, always include a value (default to 0 if empty/invalid)
+        // For number fields, always include a value (default to 0 if empty/invalid/not entered)
         if (value === '' || value === null || value === undefined || isNaN(Number(value))) {
-          rawStats[key] = 0;
+          rawStats[fieldName] = 0;
         } else {
           const numValue = typeof value === 'string' ? parseFloat(value) : value;
-          rawStats[key] = isNaN(numValue) ? 0 : numValue;
+          rawStats[fieldName] = isNaN(numValue) ? 0 : numValue;
         }
       } else {
-        // For non-number fields, only include if not empty
+        // For non-number fields (text/select), only include if explicitly entered
         if (value !== '' && value !== null && value !== undefined) {
-          rawStats[key] = value;
+          rawStats[fieldName] = value;
         }
       }
     });

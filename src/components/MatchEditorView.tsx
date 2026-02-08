@@ -12,7 +12,11 @@ import { UserMenu } from './UserMenu';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
 import { Modal } from './Modal';
 
-export const MatchEditorView: React.FC = () => {
+interface MatchEditorViewProps {
+  columnKeys: string[];
+}
+
+export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) => {
   const { user } = useAuth();
   const [teams, setTeams] = useState<Team[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -498,24 +502,65 @@ export const MatchEditorView: React.FC = () => {
     return 'Other';
   };
 
-  // Extract and organize stats from match (excluding computed fields and specific excluded fields)
+  // Required fields that should always be shown (matching Upload Game Data)
+  const requiredFields = [
+    'Possession Mins (1st)',
+    'Possession Mins (2nd)',
+    'Opp Possession Mins (1st)',
+    'Opp Possession Mins (2nd)',
+    'Throw-in (1st)',
+    'Throw-in (2nd)',
+    'Opp Throw-in (1st)',
+    'Opp Throw-in (2nd)',
+  ];
+
+  // Extract and organize stats from match - show ALL fields from columnKeys + requiredFields (like Upload Game Data)
   const organizedStats = useMemo(() => {
-    if (!selectedMatch?.statsJson) return {};
     const stats: Record<string, Record<string, any>> = {};
-    Object.entries(selectedMatch.statsJson).forEach(([key, value]) => {
+    const statsJson = selectedMatch?.statsJson || {};
+    
+    // Build set of all fields that should be shown (from columnKeys + requiredFields)
+    const seenNormalized = new Set<string>();
+    
+    // Add fields from columnKeys
+    (columnKeys || []).forEach(key => {
       const normalizedKey = normalizeFieldName(key);
-      // Skip computed fields
       if (shouldExcludeField(normalizedKey)) return;
-      // Skip Shot Map and Heatmap fields with ((1st)) or ((2nd)) pattern
-      const lower = normalizedKey.toLowerCase();
-      if (lower.includes('shot map') && (lower.includes('(1st)') || lower.includes('(2nd)'))) return;
-      if (lower.includes('heatmap') && (lower.includes('(1st)') || lower.includes('(2nd)'))) return;
+      
+      const fieldKey = normalizedKey.toLowerCase().trim();
+      if (seenNormalized.has(fieldKey)) return;
+      seenNormalized.add(fieldKey);
+      
       const category = categorizeField(normalizedKey);
       if (!stats[category]) stats[category] = {};
-      stats[category][normalizedKey] = value;
+      // Use value from statsJson if available, otherwise use 0 for number fields or empty string
+      // Try multiple key variations to find the value
+      const value = statsJson[key] ?? statsJson[normalizedKey] ?? 
+                    Object.entries(statsJson).find(([k]) => 
+                      normalizeFieldName(k).toLowerCase() === fieldKey
+                    )?.[1];
+      stats[category][normalizedKey] = value !== undefined && value !== null ? value : '';
     });
+    
+    // Add required fields that don't already exist
+    requiredFields.forEach(reqField => {
+      const normalizedReq = normalizeFieldName(reqField);
+      const reqKey = normalizedReq.toLowerCase().trim();
+      if (seenNormalized.has(reqKey)) return;
+      seenNormalized.add(reqKey);
+      
+      const category = categorizeField(normalizedReq);
+      if (!stats[category]) stats[category] = {};
+      // Use value from statsJson if available, otherwise use 0 for number fields or empty string
+      const value = statsJson[reqField] ?? statsJson[normalizedReq] ??
+                    Object.entries(statsJson).find(([k]) => 
+                      normalizeFieldName(k).toLowerCase() === reqKey
+                    )?.[1];
+      stats[category][normalizedReq] = value !== undefined && value !== null ? value : '';
+    });
+    
     return stats;
-  }, [selectedMatch]);
+  }, [selectedMatch, columnKeys]);
 
   // Scroll to top when success message appears
   useEffect(() => {

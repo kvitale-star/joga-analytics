@@ -2042,7 +2042,7 @@ function App() {
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="match-editor" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16 flex flex-col overflow-auto">
-          <MatchEditorView />
+          <MatchEditorView columnKeys={columnKeys} />
         </div>
         {showWalkthrough && (
           <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />
