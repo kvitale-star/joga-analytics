@@ -26,13 +26,23 @@ const actualLoginRateLimiter = rateLimit({
   skipSuccessfulRequests: true, // Don't count successful requests
 });
 
+// Helper to check if we're in test environment
+const isTestEnv = () => {
+  return process.env.NODE_ENV === 'test' || 
+         process.env.JEST_WORKER_ID !== undefined ||
+         process.env.DISABLE_RATE_LIMIT === 'true';
+};
+
 // In test mode, create a no-op middleware that just calls next()
 const noOpRateLimiter = (req: any, res: any, next: any) => next();
 
-// Export a middleware that checks environment at request time
+/**
+ * Rate limiter for login attempts
+ * 5 attempts per 15 minutes per IP
+ * Disabled in test environment to allow test suite to run
+ */
 export const loginRateLimiter = (req: any, res: any, next: any) => {
-  const isTestEnv = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
-  if (isTestEnv) {
+  if (isTestEnv()) {
     return noOpRateLimiter(req, res, next);
   }
   return actualLoginRateLimiter(req, res, next);
@@ -41,8 +51,9 @@ export const loginRateLimiter = (req: any, res: any, next: any) => {
 /**
  * Rate limiter for password reset requests
  * 3 attempts per hour per IP
+ * Disabled in test environment to allow test suite to run
  */
-export const passwordResetRateLimiter = rateLimit({
+const actualPasswordResetRateLimiter = rateLimit({
   ...rateLimitConfig,
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // Limit each IP to 3 requests per windowMs
@@ -50,11 +61,19 @@ export const passwordResetRateLimiter = rateLimit({
   skipSuccessfulRequests: false, // Count all requests (even successful ones)
 });
 
+export const passwordResetRateLimiter = (req: any, res: any, next: any) => {
+  if (isTestEnv()) {
+    return noOpRateLimiter(req, res, next);
+  }
+  return actualPasswordResetRateLimiter(req, res, next);
+};
+
 /**
  * Rate limiter for email verification requests
  * 5 attempts per hour per IP
+ * Disabled in test environment to allow test suite to run
  */
-export const emailVerificationRateLimiter = rateLimit({
+const actualEmailVerificationRateLimiter = rateLimit({
   ...rateLimitConfig,
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5, // Limit each IP to 5 requests per windowMs
@@ -62,13 +81,28 @@ export const emailVerificationRateLimiter = rateLimit({
   skipSuccessfulRequests: false,
 });
 
+export const emailVerificationRateLimiter = (req: any, res: any, next: any) => {
+  if (isTestEnv()) {
+    return noOpRateLimiter(req, res, next);
+  }
+  return actualEmailVerificationRateLimiter(req, res, next);
+};
+
 /**
  * Rate limiter for general auth endpoints
  * 10 requests per 15 minutes per IP
+ * Disabled in test environment to allow test suite to run
  */
-export const authRateLimiter = rateLimit({
+const actualAuthRateLimiter = rateLimit({
   ...rateLimitConfig,
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 requests per windowMs
   message: 'Too many requests, please try again later.',
 });
+
+export const authRateLimiter = (req: any, res: any, next: any) => {
+  if (isTestEnv()) {
+    return noOpRateLimiter(req, res, next);
+  }
+  return actualAuthRateLimiter(req, res, next);
+};

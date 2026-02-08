@@ -15,8 +15,7 @@ describe('Authentication System', () => {
     // Clean up any existing test data
     await cleanupTestData();
     client = await getTestClient();
-    // Add a small delay to avoid rate limiting issues
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Rate limiting is disabled in test environment, no delay needed
   });
 
   afterAll(async () => {
@@ -28,8 +27,7 @@ describe('Authentication System', () => {
     beforeEach(async () => {
       // Create a test user before each login test
       await createTestUser(testEmail, testPassword, testName, 'coach', true, true);
-      // Small delay to avoid rate limiting - longer for first test
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Rate limiting is disabled in test environment, no delay needed
     });
 
     afterEach(async () => {
@@ -45,22 +43,8 @@ describe('Authentication System', () => {
           password: testPassword,
         });
       
-      // Handle rate limiting gracefully
-      if (response.status === 429) {
-        // Wait and retry
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const retryResponse = await makeRequest()
-          .post('/api/auth/login')
-          .send({
-            email: testEmail,
-            password: testPassword,
-          });
-        expect(retryResponse.status).toBe(200);
-        expect(retryResponse.body).toHaveProperty('user');
-        expect(retryResponse.body).toHaveProperty('session');
-        return;
-      }
-      
+      // Rate limiting is disabled in test environment, so 429 should not occur
+      // If it does, it indicates a configuration issue
       expect(response.status).toBe(200);
 
       expect(response.body).toHaveProperty('user');

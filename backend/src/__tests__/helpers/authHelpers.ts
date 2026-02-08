@@ -84,18 +84,16 @@ export async function createTestAdmin(
       break;
     }
     
-    // Rate limited - wait longer
+    // Rate limiting is disabled in test environment, so 429 should not occur
+    // If it does, fail immediately to surface configuration issues
     if (loginResponse.status === 429) {
-      const rateLimitDelay = 2000 + (loginRetries * 500); // 2s, 2.5s, 3s, etc.
-      await new Promise(resolve => setTimeout(resolve, rateLimitDelay));
-      loginRetries++;
-      continue;
+      throw new Error('Rate limiting occurred in test environment - check rate limiter configuration');
     }
     
-    // Authentication failed - might be timing issue
+    // Authentication failed - might be timing issue (database commit delay)
     if (loginResponse.status === 401) {
-      // Exponential backoff for auth failures
-      const authDelay = Math.min(200 * Math.pow(2, loginRetries), 1500);
+      // Exponential backoff for auth failures (reduced delay since rate limiting is disabled)
+      const authDelay = Math.min(100 * Math.pow(2, loginRetries), 500);
       await new Promise(resolve => setTimeout(resolve, authDelay));
       loginRetries++;
       continue;
@@ -231,18 +229,16 @@ export async function createTestCoach(
       break;
     }
     
-    // Rate limited - wait longer
+    // Rate limiting is disabled in test environment, so 429 should not occur
+    // If it does, fail immediately to surface configuration issues
     if (loginResponse.status === 429) {
-      const rateLimitDelay = 2000 + (loginRetries * 500); // 2s, 2.5s, 3s, etc.
-      await new Promise(resolve => setTimeout(resolve, rateLimitDelay));
-      loginRetries++;
-      continue;
+      throw new Error('Rate limiting occurred in test environment - check rate limiter configuration');
     }
     
-    // Authentication failed - might be timing issue
+    // Authentication failed - might be timing issue (database commit delay)
     if (loginResponse.status === 401) {
-      // Exponential backoff for auth failures
-      const authDelay = Math.min(200 * Math.pow(2, loginRetries), 1500);
+      // Exponential backoff for auth failures (reduced delay since rate limiting is disabled)
+      const authDelay = Math.min(100 * Math.pow(2, loginRetries), 500);
       await new Promise(resolve => setTimeout(resolve, authDelay));
       loginRetries++;
       continue;
@@ -378,18 +374,16 @@ export async function createTestViewer(
       break;
     }
     
-    // Rate limited - wait longer
+    // Rate limiting is disabled in test environment, so 429 should not occur
+    // If it does, fail immediately to surface configuration issues
     if (loginResponse.status === 429) {
-      const rateLimitDelay = 2000 + (loginRetries * 500); // 2s, 2.5s, 3s, etc.
-      await new Promise(resolve => setTimeout(resolve, rateLimitDelay));
-      loginRetries++;
-      continue;
+      throw new Error('Rate limiting occurred in test environment - check rate limiter configuration');
     }
     
-    // Authentication failed - might be timing issue
+    // Authentication failed - might be timing issue (database commit delay)
     if (loginResponse.status === 401) {
-      // Exponential backoff for auth failures
-      const authDelay = Math.min(200 * Math.pow(2, loginRetries), 1500);
+      // Exponential backoff for auth failures (reduced delay since rate limiting is disabled)
+      const authDelay = Math.min(100 * Math.pow(2, loginRetries), 500);
       await new Promise(resolve => setTimeout(resolve, authDelay));
       loginRetries++;
       continue;

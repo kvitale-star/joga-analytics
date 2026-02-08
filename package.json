@@ -19,7 +19,9 @@
     "start": "serve -s dist -l $PORT",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 210",
     "lint:fix": "eslint src --ext ts,tsx --fix",
-    "check": "npm run type-check && npm run lint"
+    "check": "npm run type-check && npm run lint",
+    "test": "npm --prefix backend test",
+    "test:watch": "npm --prefix backend test:watch"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

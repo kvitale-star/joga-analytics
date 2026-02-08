@@ -202,10 +202,7 @@ describe('User Management API', () => {
         createdUser = await getUserByEmailForAuth(email);
       }
       
-      // Additional delay before login attempt
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Verify password works (with robust retry logic)
+      // Verify password works (with robust retry logic for database timing)
       let loginResponse;
       let loginRetries = 0;
       const maxLoginRetries = 5;
@@ -219,14 +216,14 @@ describe('User Management API', () => {
           break;
         }
         
+        // Rate limiting is disabled in test environment, so 429 should not occur
         if (loginResponse.status === 429) {
-          await new Promise(resolve => setTimeout(resolve, 2000 + (loginRetries * 500)));
-          loginRetries++;
-          continue;
+          throw new Error('Rate limiting occurred in test environment - check rate limiter configuration');
         }
         
+        // Authentication failed - might be timing issue (database commit delay)
         if (loginResponse.status === 401) {
-          const authDelay = Math.min(200 * Math.pow(2, loginRetries), 1500);
+          const authDelay = Math.min(100 * Math.pow(2, loginRetries), 500);
           await new Promise(resolve => setTimeout(resolve, authDelay));
           loginRetries++;
           continue;
