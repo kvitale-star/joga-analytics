@@ -372,7 +372,12 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
     const normalizedFieldName = fieldName.replace(/\s+/g, ' ').trim();
     const lower = normalizedFieldName.toLowerCase();
     
-    // Exclude specific fields (shot map, heatmap, etc.)
+    // Exclude Shot Map and Heatmap fields (including variations with half indicators)
+    if (lower.includes('shot map') || lower.includes('heatmap') || lower.includes('heat map')) {
+      return true;
+    }
+    
+    // Exclude specific fields (match id, notes, etc.)
     if (EXCLUDED_FIELDS.some(excluded => lower === excluded || lower.includes(excluded))) {
       return true;
     }
