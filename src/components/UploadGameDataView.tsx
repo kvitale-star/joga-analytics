@@ -1235,14 +1235,25 @@ export const UploadGameDataView: React.FC<UploadGameDataViewProps> = ({
         rawStats: submissionData.rawStats,
       });
       
+      // Validate preview data
+      if (!preview || !preview.gameInfo || !preview.rawStats) {
+        throw new Error('Invalid preview data received from server');
+      }
+      
       // Store preview data and pending submission
       setPreviewData(preview);
       setPendingSubmission(submissionData);
       setShowConfirmation(true);
+      
+      // Clear any previous errors
+      setErrors({});
     } catch (error) {
       console.error('Error previewing match stats:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to preview match data. Please try again.';
       setErrors({ _general: errorMessage });
+      // Ensure confirmation modal is closed on error
+      setShowConfirmation(false);
+      setPreviewData(null);
     } finally {
       setIsSubmitting(false);
     }
