@@ -7,12 +7,39 @@
 
 ## Table of Contents
 
-1. [Chart Customization (Phase 0.5)](#chart-customization-phase-05)
-2. [User Agency Features](#user-agency-features)
-3. [Team Management Enhancements](#team-management-enhancements)
-4. [Security & Testing](#security--testing)
-5. [Infrastructure & Deployment](#infrastructure--deployment)
-6. [Future Enhancements](#future-enhancements)
+1. [Code TODOs](#code-todos)
+2. [Chart Customization (Phase 0.5)](#chart-customization-phase-05)
+3. [User Agency Features](#user-agency-features)
+4. [Team Management Enhancements](#team-management-enhancements)
+5. [Security & Testing](#security--testing)
+6. [Infrastructure & Deployment](#infrastructure--deployment)
+7. [Future Enhancements](#future-enhancements)
+
+---
+
+## Code TODOs
+
+### Backend Code TODOs
+
+#### 1. Migration Script Update Logic
+**File:** `backend/src/scripts/migrate-sheets-to-postgres.ts:147`  
+**Priority:** Low  
+**Status:** Not Started
+
+The migration script currently only creates new matches. If update functionality is needed (e.g., re-running migration with updated sheet data), update logic needs to be implemented.
+
+**Estimated Time:** 2-4 hours
+
+#### 2. Weighted SPI Formulas
+**File:** `backend/src/services/matchStatsService.ts:118-120`  
+**Priority:** Medium  
+**Status:** Not Started
+
+Basic SPI is implemented, but weighted versions (`spi (w)` and `opp spi (w)`) need formulas. This affects computed stats that may be used in charts and analysis.
+
+**Estimated Time:** 4-6 hours (research + implementation)
+
+**Reference:** [COMPUTED_FIELDS_VERIFICATION.md](./COMPUTED_FIELDS_VERIFICATION.md)
 
 ---
 
@@ -289,7 +316,10 @@
 
 **Target:** 95%+ test coverage
 
-**Reference:** [TEST_FAILURES.md](./TEST_FAILURES.md)
+**References:** 
+- [TEST_FAILURES.md](./TEST_FAILURES.md)
+- [TESTING_TODOS.md](./TESTING_TODOS.md) - Testing infrastructure improvements and remaining tasks
+- [TESTING_IMPROVEMENTS.md](../TESTING_IMPROVEMENTS.md) - Completed testing improvements
 
 ---
 
@@ -361,11 +391,18 @@
 
 ## Related Documentation
 
-- [PHASE_0.5_CHART_CUSTOMIZATION_PLAN.md](./PHASE_0.5_CHART_CUSTOMIZATION_PLAN.md) - Chart customization implementation
+### Implementation Plans
+- [PHASE_0.5_CHART_CUSTOMIZATION_PLAN.md](./PHASE_0.5_CHART_CUSTOMIZATION_PLAN.md) - Chart customization implementation (✅ Complete)
 - [PHASE_2_TEAM_BUMP_UTILITY.md](./PHASE_2_TEAM_BUMP_UTILITY.md) - Team bump utility design
-- [ROADMAP_USER_AGENCY.md](./ROADMAP_USER_AGENCY.md) - User agency roadmap
-- [STRATEGY_USER_AGENCY.md](./STRATEGY_USER_AGENCY.md) - User agency strategy
-- [VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md](./VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md) - View-scoped URL state (✅ Implemented)
-- [SECURITY_REMEDIATION_PLAN.md](./SECURITY_REMEDIATION_PLAN.md) - Security fixes
-- [TEST_FAILURES.md](./TEST_FAILURES.md) - Test suite status
-- [TEAM_MANAGEMENT.md](./TEAM_MANAGEMENT.md) - Team management docs
+
+### Strategy & Roadmaps
+- [ROADMAP_USER_AGENCY.md](./ROADMAP_USER_AGENCY.md) - User agency implementation roadmap
+- [STRATEGY_USER_AGENCY.md](./STRATEGY_USER_AGENCY.md) - User agency strategy and vision
+
+### Technical Documentation
+- [VIEW_STATE_IMPLEMENTATION.md](./VIEW_STATE_IMPLEMENTATION.md) - View-scoped URL state implementation (✅ Complete)
+- [VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md](./VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md) - Original analysis and recommendations
+- [SECURITY_REMEDIATION_PLAN.md](./SECURITY_REMEDIATION_PLAN.md) - Security fixes and remediation
+- [TESTING_TODOS.md](./TESTING_TODOS.md) - Testing infrastructure improvements and remaining tasks
+- [TEST_FAILURES.md](./TEST_FAILURES.md) - Test suite status and known failures
+- [TEAM_MANAGEMENT.md](./TEAM_MANAGEMENT.md) - Team management features and documentation

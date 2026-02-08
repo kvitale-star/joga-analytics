@@ -115,9 +115,19 @@ joga-visualizer/
 └── scripts/         # Development scripts
 ```
 
+## Testing
+
+Run tests from the root directory:
+```bash
+npm test
+```
+
+For more details, see **[Testing Improvements](./TESTING_IMPROVEMENTS.md)**.
+
 ## Documentation
 
 - **[Backend README](./backend/README.md)** - Backend API documentation
+- **[Testing Improvements](./TESTING_IMPROVEMENTS.md)** - Testing configuration improvements (✅ Complete)
 - **[Outstanding Items](./docs/OUTSTANDING_ITEMS.md)** - Planned features and phases
 - **[Chart Customization Plan](./docs/PHASE_0.5_CHART_CUSTOMIZATION_PLAN.md)** - Chart customization implementation (✅ Complete - All 18 charts)
 - **[View State Implementation](./docs/VIEW_STATE_IMPLEMENTATION.md)** - View-scoped URL state (✅ Implemented)

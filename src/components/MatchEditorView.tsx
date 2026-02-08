@@ -163,22 +163,66 @@ export const MatchEditorView: React.FC = () => {
   }, [selectedSeasonId, selectedTeamId, opponentName, startDate, endDate, missingHalfTimeStats, teams]);
 
   // Helper function to check if match has half-time stats
+  // Returns false if ALL Basic Stats (1st Half) and Basic Stats (2nd Half) fields are missing or 0
   const hasHalfTimeStats = (match: Match): boolean => {
     if (!match.statsJson || typeof match.statsJson !== 'object') {
       return false;
     }
     const stats = match.statsJson;
-    // Check for key half-time indicators
-    return !!(
-      stats.goalsFor1stHalf !== undefined || 
-      stats.shotsFor1stHalf !== undefined || 
-      stats.passesFor1stHalf !== undefined ||
-      stats.attemptsFor1stHalf !== undefined ||
-      stats.goalsFor2ndHalf !== undefined ||
-      stats.shotsFor2ndHalf !== undefined ||
-      stats.passesFor2ndHalf !== undefined ||
-      stats.attemptsFor2ndHalf !== undefined
-    );
+    
+    // List of Basic Stats fields to check (both raw field names and normalized field names)
+    // These are the specific fields shown in Basic Stats (1st Half) and Basic Stats (2nd Half) sections
+    const basicStatsFields = [
+      // 1st Half - Team
+      'goalsFor1stHalf', 'Goals For (1st)',
+      'shotsFor1stHalf', 'Shots For (1st)',
+      'cornersFor1stHalf', 'Corners For (1st)',
+      'freeKicksFor1stHalf', 'Free Kicks For (1st)',
+      'penaltyFor1stHalf', 'Penalty For (1st)',
+      'passesFor1stHalf', 'Passes Comp (1st)', 'Passes Completed (1st)',
+      'possessionMins1stHalf', 'Possession Mins (1st)', 'Possession Minutes (1st)',
+      'possession1stHalf', 'Possession (1st)',
+      'possessionsWon1stHalf', 'Possessions Won (1st)',
+      // 1st Half - Opponent
+      'goalsAgainst1stHalf', 'Goals Against (1st)',
+      'shotsAgainst1stHalf', 'Shots Against (1st)',
+      'cornersAgainst1stHalf', 'Corners Against (1st)',
+      'freeKicksAgainst1stHalf', 'Free Kicks Against (1st)',
+      'penaltyAgainst1stHalf', 'Penalty Against (1st)',
+      'passesAgainst1stHalf', 'Opp Passes Comp (1st)', 'Opp Passes Completed (1st)',
+      'oppPossessionMins1stHalf', 'Opp Possession Mins (1st)', 'Opp Possession Minutes (1st)',
+      'oppPossession1stHalf', 'Opp Possession (1st)',
+      'oppPossessionsWon1stHalf', 'Opp Possessions Won (1st)',
+      // 2nd Half - Team
+      'goalsFor2ndHalf', 'Goals For (2nd)',
+      'shotsFor2ndHalf', 'Shots For (2nd)',
+      'cornersFor2ndHalf', 'Corners For (2nd)',
+      'freeKicksFor2ndHalf', 'Free Kicks For (2nd)',
+      'penaltyFor2ndHalf', 'Penalty For (2nd)',
+      'passesFor2ndHalf', 'Passes Comp (2nd)', 'Passes Completed (2nd)',
+      'possessionMins2ndHalf', 'Possession Mins (2nd)', 'Possession Minutes (2nd)',
+      'possession2ndHalf', 'Possession (2nd)',
+      'possessionsWon2ndHalf', 'Possessions Won (2nd)',
+      // 2nd Half - Opponent
+      'goalsAgainst2ndHalf', 'Goals Against (2nd)',
+      'shotsAgainst2ndHalf', 'Shots Against (2nd)',
+      'cornersAgainst2ndHalf', 'Corners Against (2nd)',
+      'freeKicksAgainst2ndHalf', 'Free Kicks Against (2nd)',
+      'penaltyAgainst2ndHalf', 'Penalty Against (2nd)',
+      'passesAgainst2ndHalf', 'Opp Passes Comp (2nd)', 'Opp Passes Completed (2nd)',
+      'oppPossessionMins2ndHalf', 'Opp Possession Mins (2nd)', 'Opp Possession Minutes (2nd)',
+      'oppPossession2ndHalf', 'Opp Possession (2nd)',
+      'oppPossessionsWon2ndHalf', 'Opp Possessions Won (2nd)',
+    ];
+    
+    // Check if at least one field exists and has a non-zero value
+    const hasNonZeroValue = basicStatsFields.some(fieldName => {
+      const value = stats[fieldName];
+      // Field has a value if it's not undefined, not null, not empty string, and not 0
+      return value !== undefined && value !== null && value !== '' && value !== 0;
+    });
+    
+    return hasNonZeroValue;
   };
 
   // Sort results based on sortBy option
@@ -408,10 +452,10 @@ export const MatchEditorView: React.FC = () => {
       const normalizedKey = normalizeFieldName(key);
       // Skip computed fields
       if (shouldExcludeField(normalizedKey)) return;
-      // Skip Shot Map and Heatmap fields with ((1st)) pattern
+      // Skip Shot Map and Heatmap fields with ((1st)) or ((2nd)) pattern
       const lower = normalizedKey.toLowerCase();
-      if (lower.includes('shot map') && lower.includes('(1st)')) return;
-      if (lower.includes('heatmap') && lower.includes('(1st)')) return;
+      if (lower.includes('shot map') && (lower.includes('(1st)') || lower.includes('(2nd)'))) return;
+      if (lower.includes('heatmap') && (lower.includes('(1st)') || lower.includes('(2nd)'))) return;
       const category = categorizeField(normalizedKey);
       if (!stats[category]) stats[category] = {};
       stats[category][normalizedKey] = value;

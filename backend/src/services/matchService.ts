@@ -3,35 +3,66 @@ import type { MatchesTable, GameEventsTable } from '../db/schema.js';
 
 /**
  * Check if a match has half-time statistics (1st and 2nd half data)
- * Returns true if at least one half-time field exists with a value
+ * Returns false if ALL Basic Stats (1st Half) and Basic Stats (2nd Half) fields are missing or 0
  */
 export function hasHalfTimeStats(statsJson: any): boolean {
   if (!statsJson || typeof statsJson !== 'object') {
     return false;
   }
   
-  // Check for key half-time indicators
-  // We check for the most common ones that indicate half-time data was entered
-  const halfTimeFields = [
-    'goalsFor1stHalf', 'goalsAgainst1stHalf',
-    'shotsFor1stHalf', 'shotsAgainst1stHalf',
-    'attemptsFor1stHalf', 'attemptsAgainst1stHalf',
-    'passesFor1stHalf', 'passesAgainst1stHalf',
-    'cornersFor1stHalf', 'cornersAgainst1stHalf',
-    'freeKicksFor1stHalf', 'freeKicksAgainst1stHalf',
-    'goalsFor2ndHalf', 'goalsAgainst2ndHalf',
-    'shotsFor2ndHalf', 'shotsAgainst2ndHalf',
-    'attemptsFor2ndHalf', 'attemptsAgainst2ndHalf',
-    'passesFor2ndHalf', 'passesAgainst2ndHalf',
-    'cornersFor2ndHalf', 'cornersAgainst2ndHalf',
-    'freeKicksFor2ndHalf', 'freeKicksAgainst2ndHalf',
+  // List of Basic Stats fields to check (both raw field names and normalized field names)
+  // These are the specific fields shown in Basic Stats (1st Half) and Basic Stats (2nd Half) sections
+  const basicStatsFields = [
+    // 1st Half - Team
+    'goalsFor1stHalf', 'Goals For (1st)',
+    'shotsFor1stHalf', 'Shots For (1st)',
+    'cornersFor1stHalf', 'Corners For (1st)',
+    'freeKicksFor1stHalf', 'Free Kicks For (1st)',
+    'penaltyFor1stHalf', 'Penalty For (1st)',
+    'passesFor1stHalf', 'Passes Comp (1st)', 'Passes Completed (1st)',
+    'possessionMins1stHalf', 'Possession Mins (1st)', 'Possession Minutes (1st)',
+    'possession1stHalf', 'Possession (1st)',
+    'possessionsWon1stHalf', 'Possessions Won (1st)',
+    // 1st Half - Opponent
+    'goalsAgainst1stHalf', 'Goals Against (1st)',
+    'shotsAgainst1stHalf', 'Shots Against (1st)',
+    'cornersAgainst1stHalf', 'Corners Against (1st)',
+    'freeKicksAgainst1stHalf', 'Free Kicks Against (1st)',
+    'penaltyAgainst1stHalf', 'Penalty Against (1st)',
+    'passesAgainst1stHalf', 'Opp Passes Comp (1st)', 'Opp Passes Completed (1st)',
+    'oppPossessionMins1stHalf', 'Opp Possession Mins (1st)', 'Opp Possession Minutes (1st)',
+    'oppPossession1stHalf', 'Opp Possession (1st)',
+    'oppPossessionsWon1stHalf', 'Opp Possessions Won (1st)',
+    // 2nd Half - Team
+    'goalsFor2ndHalf', 'Goals For (2nd)',
+    'shotsFor2ndHalf', 'Shots For (2nd)',
+    'cornersFor2ndHalf', 'Corners For (2nd)',
+    'freeKicksFor2ndHalf', 'Free Kicks For (2nd)',
+    'penaltyFor2ndHalf', 'Penalty For (2nd)',
+    'passesFor2ndHalf', 'Passes Comp (2nd)', 'Passes Completed (2nd)',
+    'possessionMins2ndHalf', 'Possession Mins (2nd)', 'Possession Minutes (2nd)',
+    'possession2ndHalf', 'Possession (2nd)',
+    'possessionsWon2ndHalf', 'Possessions Won (2nd)',
+    // 2nd Half - Opponent
+    'goalsAgainst2ndHalf', 'Goals Against (2nd)',
+    'shotsAgainst2ndHalf', 'Shots Against (2nd)',
+    'cornersAgainst2ndHalf', 'Corners Against (2nd)',
+    'freeKicksAgainst2ndHalf', 'Free Kicks Against (2nd)',
+    'penaltyAgainst2ndHalf', 'Penalty Against (2nd)',
+    'passesAgainst2ndHalf', 'Opp Passes Comp (2nd)', 'Opp Passes Completed (2nd)',
+    'oppPossessionMins2ndHalf', 'Opp Possession Mins (2nd)', 'Opp Possession Minutes (2nd)',
+    'oppPossession2ndHalf', 'Opp Possession (2nd)',
+    'oppPossessionsWon2ndHalf', 'Opp Possessions Won (2nd)',
   ];
   
-  // Check if at least one half-time field exists and has a value
-  return halfTimeFields.some(field => {
-    const value = statsJson[field];
-    return value !== undefined && value !== null && value !== '';
+  // Check if at least one field exists and has a non-zero value
+  const hasNonZeroValue = basicStatsFields.some(fieldName => {
+    const value = statsJson[fieldName];
+    // Field has a value if it's not undefined, not null, not empty string, and not 0
+    return value !== undefined && value !== null && value !== '' && value !== 0;
   });
+  
+  return hasNonZeroValue;
 }
 
 /**

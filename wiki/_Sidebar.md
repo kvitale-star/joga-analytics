@@ -1,0 +1,16 @@
+# Navigation
+
+* [Home](Home)
+* [Getting Started](Getting-Started)
+* [User Guide](User-Guide)
+* [Team Data View](Team-Data-View)
+* [Club Data View](Club-Data-View)
+* [Game Data View](Game-Data-View)
+* [Upload Game Data](Upload-Game-Data)
+* [Match Editor](Match-Editor)
+* [AI Chat Assistant](AI-Chat-Assistant)
+* [Chart Customization](Chart-Customization)
+* [Settings and Preferences](Settings-and-Preferences)
+* [Metric Glossary](Metric-Glossary)
+* [FAQ](FAQ)
+* [Troubleshooting](Troubleshooting)
