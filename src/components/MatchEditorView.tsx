@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Match, getMatchById, getMatches, updateMatch, MatchFilters } from '../services/matchService';
 import { getAllTeams } from '../services/teamService';
@@ -10,6 +10,7 @@ import { normalizeFieldName } from '../utils/fieldDeduplication';
 import { extractStatsFromImage } from '../services/ocrService';
 import { UserMenu } from './UserMenu';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
+import { Modal } from './Modal';
 
 export const MatchEditorView: React.FC = () => {
   const { user } = useAuth();
@@ -18,7 +19,6 @@ export const MatchEditorView: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const successMessageRef = useRef<HTMLDivElement>(null);
   
   // Filter state
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | null>(null);
@@ -519,11 +519,11 @@ export const MatchEditorView: React.FC = () => {
 
   // Scroll to top when success message appears
   useEffect(() => {
-    if (success && successMessageRef.current) {
-      // Use setTimeout to ensure DOM has updated
+    if (success) {
+      // Scroll to top after React has rendered
       setTimeout(() => {
-        successMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 50);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
     }
   }, [success]);
 
@@ -670,8 +670,6 @@ export const MatchEditorView: React.FC = () => {
         rawStats: editedStats, // Include stats in update
       });
       
-      setSuccess('Match updated successfully!');
-      
       // Reload the match to get updated data
       const updatedMatch = await getMatchById(selectedMatch.id);
       setSelectedMatch(updatedMatch);
@@ -679,7 +677,8 @@ export const MatchEditorView: React.FC = () => {
       // Update in search results if present
       setSearchResults(prev => prev.map(m => m.id === updatedMatch.id ? updatedMatch : m));
       
-      setTimeout(() => setSuccess(''), 3000);
+      // Show success modal
+      setSuccess('Match updated successfully!');
     } catch (err: any) {
       setError(err.message || 'Failed to update match');
     } finally {
@@ -859,12 +858,6 @@ export const MatchEditorView: React.FC = () => {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             {error}
-          </div>
-        )}
-
-        {success && (
-          <div ref={successMessageRef} className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-            {success}
           </div>
         )}
 
@@ -1337,6 +1330,49 @@ export const MatchEditorView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Modal
+        isOpen={!!success}
+        onClose={() => setSuccess(null)}
+        title="Success"
+        maxWidth="sm"
+      >
+        <div className="text-center py-4">
+          <div className="mb-4">
+            <svg
+              className="mx-auto h-12 w-12 text-green-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <p className="text-lg text-gray-900 mb-6">{success}</p>
+          <button
+            onClick={() => setSuccess(null)}
+            className="px-6 py-2 rounded-lg font-medium transition-colors text-black"
+            style={{
+              backgroundColor: JOGA_COLORS.voltYellow,
+              border: `2px solid ${JOGA_COLORS.voltYellow}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#b8e600';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+            }}
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
     </>
   );
 };
