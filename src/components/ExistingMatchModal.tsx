@@ -2,7 +2,7 @@ import React from 'react';
 import { Match } from '../services/matchService';
 import { Team } from '../types/auth';
 import { JOGA_COLORS } from '../utils/colors';
-import { formatDate } from '../utils/dateFormatting';
+import { formatDateString } from '../utils/dateFormatting';
 
 interface ExistingMatchModalProps {
   isOpen: boolean;
@@ -28,35 +28,6 @@ export const ExistingMatchModal: React.FC<ExistingMatchModalProps> = ({
       'Unknown Team'
     : 'No Team Selected';
 
-  // Format match date to avoid timezone issues
-  // match.matchDate is typically YYYY-MM-DD string, parse it manually
-  const formatMatchDate = (dateStr: string | undefined): string => {
-    if (!dateStr) return '';
-    
-    // If it's already in YYYY-MM-DD format, parse it manually to avoid timezone conversion
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      const parts = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (parts) {
-        const year = parseInt(parts[1], 10);
-        const month = parseInt(parts[2], 10) - 1; // JavaScript months are 0-indexed
-        const day = parseInt(parts[3], 10);
-        const date = new Date(year, month, day);
-        return formatDate(date, 'MM/DD/YYYY');
-      }
-    }
-    
-    // Fallback: try to parse as Date
-    try {
-      const date = new Date(dateStr);
-      if (!isNaN(date.getTime())) {
-        return formatDate(date, 'MM/DD/YYYY');
-      }
-    } catch (e) {
-      // Ignore parse errors
-    }
-    
-    return dateStr;
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -94,7 +65,7 @@ export const ExistingMatchModal: React.FC<ExistingMatchModalProps> = ({
                 <div>
                   <div className="text-sm font-medium text-gray-600">Match Date</div>
                   <div className="text-base font-semibold text-gray-900">
-                    {formatMatchDate(match.matchDate)}
+                    {formatDateString(match.matchDate)}
                   </div>
                 </div>
               )}

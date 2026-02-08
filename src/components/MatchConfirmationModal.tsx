@@ -3,6 +3,7 @@ import { PreviewMatchStatsResponse } from '../services/matchService';
 import { Team } from '../types/auth';
 import { normalizeFieldName } from '../utils/fieldDeduplication';
 import { JOGA_COLORS } from '../utils/colors';
+import { formatDateStringLocale } from '../utils/dateFormatting';
 
 interface MatchConfirmationModalProps {
   isOpen: boolean;
@@ -180,7 +181,7 @@ export const MatchConfirmationModal: React.FC<MatchConfirmationModalProps> = ({
                 <div className="bg-gray-50 p-2 rounded">
                   <div className="text-sm font-medium text-gray-600">Match Date</div>
                   <div className="text-base font-semibold text-gray-900">
-                    {new Date(gameInfo.matchDate).toLocaleDateString()}
+                    {formatDateStringLocale(gameInfo.matchDate)}
                   </div>
                 </div>
               )}

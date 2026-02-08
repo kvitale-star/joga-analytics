@@ -240,13 +240,13 @@ export const MatchEditorView: React.FC = () => {
         // Missing half-time stats come first
         if (!aHasHalfTime && bHasHalfTime) return -1;
         if (aHasHalfTime && !bHasHalfTime) return 1;
-        // Then sort by date (newest first)
-        return new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+        // Then sort by date (newest first) - compare YYYY-MM-DD strings directly to avoid timezone issues
+        return (b.matchDate || '').localeCompare(a.matchDate || '');
       });
     }
-    // Default: sort by date (newest first)
+    // Default: sort by date (newest first) - compare YYYY-MM-DD strings directly to avoid timezone issues
     return results.sort((a, b) => 
-      new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime()
+      (b.matchDate || '').localeCompare(a.matchDate || '')
     );
   }, [searchResults, options]);
 

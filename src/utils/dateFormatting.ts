@@ -64,3 +64,61 @@ export function dateToYYYYMMDD(date: Date): string {
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Parse a YYYY-MM-DD date string into a Date object without timezone conversion
+ * This prevents dates from shifting by one day when parsed from UTC strings
+ * 
+ * IMPORTANT: Use this instead of new Date(dateStr) when parsing YYYY-MM-DD strings
+ * to avoid timezone conversion issues.
+ */
+export function parseYYYYMMDD(dateStr: string): Date {
+  // If it's already in YYYY-MM-DD format, parse it manually to avoid timezone conversion
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const parts = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (parts) {
+      const year = parseInt(parts[1], 10);
+      const month = parseInt(parts[2], 10) - 1; // JavaScript months are 0-indexed
+      const day = parseInt(parts[3], 10);
+      return new Date(year, month, day);
+    }
+  }
+  
+  // Fallback: try to parse as Date (may have timezone issues)
+  return new Date(dateStr);
+}
+
+/**
+ * Format a YYYY-MM-DD date string for display without timezone conversion
+ * This prevents dates from shifting by one day when displayed
+ * 
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @param format - Output format (default: MM/DD/YYYY)
+ * @returns Formatted date string
+ */
+export function formatDateString(dateStr: string | undefined | null, format: DateFormat = 'MM/DD/YYYY'): string {
+  if (!dateStr) return '';
+  
+  // Parse the date string without timezone conversion
+  const date = parseYYYYMMDD(dateStr);
+  
+  // Format using the specified format
+  return formatDate(date, format);
+}
+
+/**
+ * Format a YYYY-MM-DD date string using toLocaleDateString without timezone conversion
+ * This prevents dates from shifting by one day when displayed
+ * 
+ * @param dateStr - Date string in YYYY-MM-DD format
+ * @returns Locale-formatted date string
+ */
+export function formatDateStringLocale(dateStr: string | undefined | null): string {
+  if (!dateStr) return '';
+  
+  // Parse the date string without timezone conversion
+  const date = parseYYYYMMDD(dateStr);
+  
+  // Use toLocaleDateString for locale-aware formatting
+  return date.toLocaleDateString();
+}
