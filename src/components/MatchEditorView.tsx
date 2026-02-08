@@ -9,6 +9,7 @@ import { dateToYYYYMMDD } from '../utils/dateFormatting';
 import { normalizeFieldName } from '../utils/fieldDeduplication';
 import { extractStatsFromImage } from '../services/ocrService';
 import { UserMenu } from './UserMenu';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
 
 export const MatchEditorView: React.FC = () => {
   const { user } = useAuth();
@@ -24,8 +25,7 @@ export const MatchEditorView: React.FC = () => {
   const [opponentName, setOpponentName] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [missingHalfTimeStats, setMissingHalfTimeStats] = useState<boolean>(false);
-  const [sortBy, setSortBy] = useState<'date' | 'missingHalfTime'>('date');
+  const [options, setOptions] = useState<string[]>([]);
   
   // Results and selection
   const [searchResults, setSearchResults] = useState<Match[]>([]);
@@ -128,6 +128,10 @@ export const MatchEditorView: React.FC = () => {
           filters.endDate = startDate;
         }
         
+        if (options.includes('missingHalfStats')) {
+          filters.missingHalfTimeStats = true;
+        }
+        
         const matches = await getMatches(filters);
         
         // Filter by season (teams must match selected season)
@@ -160,7 +164,7 @@ export const MatchEditorView: React.FC = () => {
     // Debounce the filter to avoid too many API calls
     const timeoutId = setTimeout(filterMatches, 300);
     return () => clearTimeout(timeoutId);
-  }, [selectedSeasonId, selectedTeamId, opponentName, startDate, endDate, missingHalfTimeStats, teams]);
+  }, [selectedSeasonId, selectedTeamId, opponentName, startDate, endDate, options, teams]);
 
   // Helper function to check if match has half-time stats
   // Returns false if ALL Basic Stats (1st Half) and Basic Stats (2nd Half) fields are missing or 0
@@ -225,10 +229,10 @@ export const MatchEditorView: React.FC = () => {
     return hasNonZeroValue;
   };
 
-  // Sort results based on sortBy option
+  // Sort results - if "Missing Half Stats" option is selected, prioritize matches missing half-time stats
   const sortedResults = useMemo(() => {
     const results = [...searchResults];
-    if (sortBy === 'missingHalfTime') {
+    if (options.includes('missingHalfStats')) {
       return results.sort((a, b) => {
         const aHasHalfTime = hasHalfTimeStats(a);
         const bHasHalfTime = hasHalfTimeStats(b);
@@ -243,7 +247,7 @@ export const MatchEditorView: React.FC = () => {
     return results.sort((a, b) => 
       new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime()
     );
-  }, [searchResults, sortBy]);
+  }, [searchResults, options]);
 
   // Calculate pagination
   const itemsPerPage = 20;
@@ -253,6 +257,55 @@ export const MatchEditorView: React.FC = () => {
   const paginatedResults = selectedMatch 
     ? [selectedMatch] // Show only selected match when one is selected
     : sortedResults.slice(startIndex, endIndex); // Show paginated results
+
+  // Helper function to format match result with score
+  // Converts "W", "L", "D" or score like "3-2" to "W (3-2)", "L (1-3)", "T (1-1)" format
+  const formatMatchResult = (result: string | null | undefined, statsJson: any): string => {
+    if (!result) return '';
+    
+    // Check if result is already in format "W", "L", "D"
+    const upperResult = result.toUpperCase().trim();
+    if (upperResult === 'W' || upperResult === 'L' || upperResult === 'D' || upperResult === 'T') {
+      // Try to find score in statsJson
+      const goalsFor = statsJson?.goalsFor || statsJson?.['Goals For'];
+      const goalsAgainst = statsJson?.goalsAgainst || statsJson?.['Goals Against'];
+      
+      // If we have both goals, format as "W (3-2)" or "L (1-3)" or "T (1-1)"
+      if (goalsFor !== undefined && goalsAgainst !== undefined && 
+          goalsFor !== null && goalsAgainst !== null) {
+        const resultLetter = upperResult === 'T' ? 'T' : upperResult;
+        return `${resultLetter} (${goalsFor}-${goalsAgainst})`;
+      }
+      // Otherwise just return the result letter
+      return upperResult;
+    }
+    
+    // If result is already a score like "3-2", try to determine W/L/T
+    const scoreMatch = result.match(/^(\d+)-(\d+)$/);
+    if (scoreMatch) {
+      const goalsFor = parseInt(scoreMatch[1]);
+      const goalsAgainst = parseInt(scoreMatch[2]);
+      if (goalsFor > goalsAgainst) {
+        return `W (${goalsFor}-${goalsAgainst})`;
+      } else if (goalsFor < goalsAgainst) {
+        return `L (${goalsFor}-${goalsAgainst})`;
+      } else {
+        return `T (${goalsFor}-${goalsAgainst})`;
+      }
+    }
+    
+    // If result contains both letter and score like "W 3-2", format it
+    const combinedMatch = result.match(/^([WLD])\s*(\d+)-(\d+)$/i);
+    if (combinedMatch) {
+      const letter = combinedMatch[1].toUpperCase();
+      const goalsFor = combinedMatch[2];
+      const goalsAgainst = combinedMatch[3];
+      return `${letter === 'D' ? 'T' : letter} (${goalsFor}-${goalsAgainst})`;
+    }
+    
+    // Fallback: return as-is
+    return result;
+  };
 
   // Helper function to parse date string without timezone conversion
   const parseDateString = (dateStr: string): string => {
@@ -764,35 +817,18 @@ export const MatchEditorView: React.FC = () => {
               />
               </div>
 
-              {/* Missing Half-Time Stats Filter */}
-              <div className="flex-shrink-0 flex items-end">
-                <label className="flex items-center gap-2 cursor-pointer pb-1">
-                  <input
-                    type="checkbox"
-                    checked={missingHalfTimeStats}
-                    onChange={(e) => setMissingHalfTimeStats(e.target.checked)}
-                    className="rounded border-gray-300 text-[#ceff00] focus:ring-[#ceff00]"
-                  />
-                  <span className="text-xs font-medium text-gray-700 whitespace-nowrap">
-                    Missing Half-Time Stats
-                  </span>
-                </label>
-              </div>
-
-              {/* Sort Option */}
+              {/* Options */}
               <div className="flex-shrink-0">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Sort By</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'date' | 'missingHalfTime')}
-                  className={`px-3 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap text-black ${
-                    sortBy ? 'border-[#ceff00]' : 'border-gray-300'
-                  }`}
-                  style={sortBy ? { borderColor: '#ceff00', width: 'auto', minWidth: '160px' } : { width: 'auto', minWidth: '160px' }}
-                >
-                  <option value="date">Date (Newest First)</option>
-                  <option value="missingHalfTime">Missing Half-Time First</option>
-                </select>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Options</label>
+                <MultiSelectDropdown
+                  options={[
+                    { value: 'missingHalfStats', label: 'Missing Half Stats' }
+                  ]}
+                  selectedValues={options}
+                  onSelectionChange={setOptions}
+                  placeholder="Select options..."
+                  className="min-w-[180px]"
+                />
               </div>
             </div>
           </div>
@@ -858,7 +894,7 @@ export const MatchEditorView: React.FC = () => {
                           <span className="font-semibold text-gray-900 text-sm">#{match.id}</span>
                           {!hasHalfTimeStats(match) && (
                             <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded whitespace-nowrap">
-                              Missing Half-Time Stats
+                              Missing Half Stats
                             </span>
                           )}
                           <span className="text-sm text-gray-700">
@@ -871,7 +907,9 @@ export const MatchEditorView: React.FC = () => {
                           {match.result && (
                             <>
                               <span className="text-gray-400">•</span>
-                              <span className="text-sm font-medium text-gray-900">{match.result}</span>
+                              <span className="text-sm font-medium text-gray-900">
+                                {formatMatchResult(match.result, match.statsJson)}
+                              </span>
                             </>
                           )}
                           {match.competitionType && (
