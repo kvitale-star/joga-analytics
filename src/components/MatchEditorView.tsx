@@ -354,10 +354,28 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
     'result',
   ];
 
-  // Check if a field should be excluded (computed fields)
+  // Fields to exclude (matching Upload Game Data)
+  const EXCLUDED_FIELDS = [
+    'shot map', 'heatmap', 'heat map',
+    'match id', 'matchid', 'notes',
+    'behavioral avg', 'cpi',
+    // Exclude duplicate Game Info fields
+    'team id', 'teamid', // Use "Team" instead
+    'opponent name', 'opponentname', // Use "Opponent" instead
+    'match date', // Use "Date" instead (keep "Date" as primary)
+    // Unused fields
+    'referee', 'venue',
+  ];
+
+  // Check if a field should be excluded (computed fields and excluded fields)
   const shouldExcludeField = (fieldName: string): boolean => {
     const normalizedFieldName = fieldName.replace(/\s+/g, ' ').trim();
     const lower = normalizedFieldName.toLowerCase();
+    
+    // Exclude specific fields (shot map, heatmap, etc.)
+    if (EXCLUDED_FIELDS.some(excluded => lower === excluded || lower.includes(excluded))) {
+      return true;
+    }
     
     // Check against computed fields list
     if (COMPUTED_FIELDS.some(computed => {
