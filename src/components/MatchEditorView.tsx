@@ -577,12 +577,19 @@ export const MatchEditorView: React.FC = () => {
     }));
 
     try {
-      const extractedStats = await extractStatsFromImage(file);
+      // Determine period based on category
+      const period = category.includes('1st') || category.includes('First') ? '1st' : '2nd';
+      
+      // Extract stats from image - returns { teamStats, opponentStats }
+      const { teamStats, opponentStats } = await extractStatsFromImage(file, period);
+      
+      // Merge team and opponent stats into a single object
+      const allStats = { ...teamStats, ...opponentStats };
       
       // Update editedStats with extracted stats
       setEditedStats(prev => {
         const updated = { ...prev };
-        Object.entries(extractedStats).forEach(([key, value]) => {
+        Object.entries(allStats).forEach(([key, value]) => {
           const normalizedKey = normalizeFieldName(key);
           // Convert value to string or number
           if (typeof value === 'number' || typeof value === 'string') {
