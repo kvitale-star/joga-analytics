@@ -1,5 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
 
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
+
+/**
+ * Get the view-scoped localStorage key for a state variable
+ * @param view - Current view mode
+ * @param key - State key
+ * @returns Scoped key like "joga.dashboard.team" or "joga.clubData.teams"
+ */
+export function getViewScopedStorageKey(view: ViewMode, key: string): string {
+  const viewPrefixes: Record<ViewMode, string> = {
+    'dashboard': 'dashboard',
+    'game-data': 'gameData',
+    'club-data': 'clubData',
+    'upload-game-data': 'uploadGameData',
+    'settings': 'settings',
+    'chat': 'chat',
+    'glossary': 'glossary',
+    'match-editor': 'matchEditor',
+  };
+  
+  const prefix = viewPrefixes[view] || view;
+  return `joga.${prefix}.${key}`;
+}
+
 /**
  * Custom hook for localStorage-based state
  * Similar to useURLState but stores in localStorage instead of URL
@@ -10,7 +34,11 @@ import { useState, useEffect, useCallback } from 'react';
  * @param options - Options for parsing/serializing
  * 
  * @example
- * const [metrics, setMetrics] = useLocalStorageState('gameData.shootingMetrics', []);
+ * const [metrics, setMetrics] = useLocalStorageState('joga.gameData.shootingMetrics', []);
+ * 
+ * @example
+ * // Using view-scoped key helper
+ * const [team, setTeam] = useLocalStorageState(getViewScopedStorageKey('dashboard', 'team'), null);
  */
 export function useLocalStorageState<T>(
   key: string,

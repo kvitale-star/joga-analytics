@@ -4,8 +4,7 @@ import { fetchMergedMatchData } from './services/sheetsService';
 import { invalidateAIContextCache } from './services/aiService';
 import { sheetConfig } from './config';
 import { useURLState } from './hooks/useURLState';
-import { useViewScopedState } from './hooks/useViewScopedState';
-import { useLocalStorageState } from './hooks/useLocalStorageState';
+import { useLocalStorageState, getViewScopedStorageKey } from './hooks/useLocalStorageState';
 import { StatsCard } from './components/StatsCard';
 import { getMissingDataInfo } from './utils/missingDataUtils';
 import { ShotsChart } from './components/ShotsChart';
@@ -144,25 +143,69 @@ function App() {
     loadCustomCharts();
   }, [viewMode, user, matchData.length]);
  
-  // Dashboard view-scoped state
-  const [selectedTeam, setSelectedTeam] = useViewScopedState<string | null>(viewMode, 'team', null, {
-    serialize: (v) => v || '',
-    deserialize: (v) => v || null,
-  });
-  const [selectedOpponent, setSelectedOpponent] = useViewScopedState<string | null>(viewMode, 'opponent', null, {
-    serialize: (v) => v || '',
-    deserialize: (v) => v || null,
-  });
-  const [selectedDate, setSelectedDate] = useViewScopedState<string>(viewMode, 'date', '');
-  const [selectedChartGroup, setSelectedChartGroup] = useViewScopedState<string | null>(viewMode, 'chartGroup', null, {
-    serialize: (v) => v || '',
-    deserialize: (v) => v || null,
-  });
-  // Chart selections - stored in localStorage (not URL) to keep URLs short
+  // Dashboard view state - stored in localStorage (persists when switching views)
+  const [selectedTeam, setSelectedTeam] = useLocalStorageState<string | null>(
+    getViewScopedStorageKey('dashboard', 'team'), 
+    null,
+    {
+      serialize: (v) => v || '',
+      deserialize: (v) => v || null,
+    }
+  );
+  const [selectedOpponent, setSelectedOpponent] = useLocalStorageState<string | null>(
+    getViewScopedStorageKey('dashboard', 'opponent'), 
+    null,
+    {
+      serialize: (v) => v || '',
+      deserialize: (v) => v || null,
+    }
+  );
+  const [selectedDate, setSelectedDate] = useLocalStorageState<string>(
+    getViewScopedStorageKey('dashboard', 'date'), 
+    ''
+  );
+  // Chart group selections - stored in localStorage per view (persists when switching views)
+  const [dashboardSelectedChartGroup, setDashboardSelectedChartGroup] = useLocalStorageState<string | null>(
+    getViewScopedStorageKey('dashboard', 'chartGroup'), 
+    null,
+    {
+      serialize: (v) => v || '',
+      deserialize: (v) => v || null,
+    }
+  );
+  const [clubDataSelectedChartGroup, setClubDataSelectedChartGroup] = useLocalStorageState<string | null>(
+    getViewScopedStorageKey('club-data', 'chartGroup'), 
+    null,
+    {
+      serialize: (v) => v || '',
+      deserialize: (v) => v || null,
+    }
+  );
+  
+  // Select the appropriate chart group state based on current view
+  const selectedChartGroup = viewMode === 'dashboard' ? dashboardSelectedChartGroup : clubDataSelectedChartGroup;
+  const setSelectedChartGroup = viewMode === 'dashboard' ? setDashboardSelectedChartGroup : setClubDataSelectedChartGroup;
+  // Chart selections - stored in localStorage per view (persists when switching views)
   // Chart preferences (which metrics are visible, etc.) are stored in database
   // Can contain both ChartType values and custom chart IDs (format: 'custom-chart-{id}')
-  const [selectedCharts, setSelectedCharts] = useLocalStorageState<(ChartType | string)[]>(
-    viewMode === 'dashboard' ? 'joga.dashboard.charts' : 'joga.clubData.charts',
+  // Use separate state for dashboard and club-data views
+  const [dashboardSelectedCharts, setDashboardSelectedCharts] = useLocalStorageState<(ChartType | string)[]>(
+    'joga.dashboard.charts',
+    [],
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (v) => {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      },
+    }
+  );
+  const [clubDataSelectedCharts, setClubDataSelectedCharts] = useLocalStorageState<(ChartType | string)[]>(
+    'joga.clubData.charts',
     [],
     {
       serialize: (v) => JSON.stringify(v),
@@ -177,39 +220,55 @@ function App() {
     }
   );
   
-  // Dashboard options for Team Data: 'showChartLabels', 'includeOpponents'
-  const [dashboardOptions, setDashboardOptions] = useViewScopedState<string[]>(viewMode, 'dashboardOptions', ['showChartLabels'], {
-    serialize: (v) => JSON.stringify(v),
-    deserialize: (v) => {
-      try {
-        const parsed = JSON.parse(v);
-        return Array.isArray(parsed) ? parsed : ['showChartLabels'];
-      } catch {
-        return ['showChartLabels'];
-      }
-    },
-  });
+  // Select the appropriate chart state based on current view
+  const selectedCharts = viewMode === 'dashboard' ? dashboardSelectedCharts : clubDataSelectedCharts;
+  const setSelectedCharts = viewMode === 'dashboard' ? setDashboardSelectedCharts : setClubDataSelectedCharts;
   
-  // Club Data view-scoped state
-  const [additionalOptions, setAdditionalOptions] = useViewScopedState<string[]>('club-data', 'additionalOptions', ['boys', 'girls', 'showChartLabels'], {
-    serialize: (v) => JSON.stringify(v),
-    deserialize: (v) => {
-      try {
-        const parsed = JSON.parse(v);
-        return Array.isArray(parsed) ? parsed : ['boys', 'girls', 'showChartLabels'];
-      } catch {
-        return ['boys', 'girls', 'showChartLabels'];
-      }
-    },
-  });
-  const [lastNGames, setLastNGames] = useViewScopedState<number | null>('club-data', 'lastNGames', 10, {
-    serialize: (v) => v?.toString() || '',
-    deserialize: (v) => {
-      if (!v) return null;
-      const num = parseInt(v, 10);
-      return isNaN(num) ? null : num;
-    },
-  });
+  // Dashboard options for Team Data: 'showChartLabels', 'includeOpponents'
+  const [dashboardOptions, setDashboardOptions] = useLocalStorageState<string[]>(
+    'joga.dashboard.dashboardOptions', 
+    ['showChartLabels'],
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (v) => {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : ['showChartLabels'];
+        } catch {
+          return ['showChartLabels'];
+        }
+      },
+    }
+  );
+  
+  // Club Data view state - stored in localStorage (persists when switching views)
+  const [additionalOptions, setAdditionalOptions] = useLocalStorageState<string[]>(
+    'joga.clubData.additionalOptions', 
+    ['boys', 'girls', 'showChartLabels'],
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (v) => {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : ['boys', 'girls', 'showChartLabels'];
+        } catch {
+          return ['boys', 'girls', 'showChartLabels'];
+        }
+      },
+    }
+  );
+  const [lastNGames, setLastNGames] = useLocalStorageState<number | null>(
+    'joga.clubData.lastNGames', 
+    10,
+    {
+      serialize: (v) => v?.toString() || '',
+      deserialize: (v) => {
+        if (!v) return 10;
+        const num = parseInt(v, 10);
+        return isNaN(num) ? 10 : num;
+      },
+    }
+  );
   
   // Chart expansion state - synced with chart configs (loaded from saved preferences)
   const [expandedCharts, setExpandedCharts] = useState<Record<string, boolean>>({});
@@ -249,18 +308,22 @@ function App() {
     };
   }, []); // Empty deps - function doesn't depend on any props/state
   
-  // Selected teams for Club Data (multiselect)
-  const [selectedClubTeams, setSelectedClubTeams] = useViewScopedState<string[]>('club-data', 'teams', [], {
-    serialize: (v) => JSON.stringify(v),
-    deserialize: (v) => {
-      try {
-        const parsed = JSON.parse(v);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    },
-  });
+  // Selected teams for Club Data (multiselect) - stored in localStorage
+  const [selectedClubTeams, setSelectedClubTeams] = useLocalStorageState<string[]>(
+    'joga.clubData.teams', 
+    [],
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (v) => {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      },
+    }
+  );
   
   // Helper to check if boys teams are included
   const includeBoysTeams = additionalOptions.includes('boys');
@@ -269,18 +332,22 @@ function App() {
   // Helper to check if black teams are included
   const includeBlackTeams = additionalOptions.includes('blackTeams');
   
-  // Game Data View specific URL state (view-scoped)
-  const [selectedOpponents, setSelectedOpponents] = useViewScopedState<string[]>('game-data', 'opponents', [], {
-    serialize: (v) => JSON.stringify(v),
-    deserialize: (v) => {
-      try {
-        const parsed = JSON.parse(v);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
-      }
-    },
-  });
+  // Game Data View state - stored in localStorage (persists when switching views)
+  const [selectedOpponents, setSelectedOpponents] = useLocalStorageState<string[]>(
+    'joga.gameData.opponents', 
+    [],
+    {
+      serialize: (v) => JSON.stringify(v),
+      deserialize: (v) => {
+        try {
+          const parsed = JSON.parse(v);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      },
+    }
+  );
   // Metric selections for Game Data view
   // Store in localStorage (not URL) to keep URLs short - these are UI preferences, not bookmarkable filters
   // Only critical filters (team, opponent, date) are in URL for bookmarking
@@ -362,8 +429,8 @@ function App() {
     },
   });
 
-  // Clean up old non-scoped URL parameters and metric selections (now in localStorage) when switching views
-  // This provides backward compatibility and cleans up legacy URLs
+  // Clean up all URL parameters except 'view' and 'token' when switching views
+  // All other state is now stored in localStorage and persists across view switches
   useEffect(() => {
     // Don't clean up URL params if we're on password reset or email verification pages
     // These pages need to preserve the token parameter
@@ -375,34 +442,16 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     let changed = false;
 
-    // Define old non-scoped param names that should be removed
-    // These are legacy params from before view-scoping
-    const legacyParams = [
-      'team', 'opponent', 'date', 'chartGroup', 'charts', 'lastNGames',
-      'gameOpponents', 'selectedClubTeams', 'additionalOptions', 'dashboardOptions',
-      'shootingMetrics', 'passingMetrics', 'possessionMetrics', 'jogaMetrics',
-      'defenseMetrics', 'setPiecesMetrics', 'otherMetrics'
-    ];
-    
-    // Also remove view-scoped parameters that are now stored in localStorage
-    const localStorageParams = [
-      // Metric selections (Game Data view)
-      'gameData.shootingMetrics', 'gameData.passingMetrics', 'gameData.possessionMetrics',
-      'gameData.jogaMetrics', 'gameData.defenseMetrics', 'gameData.setPiecesMetrics', 'gameData.otherMetrics',
-      // Chart selections (Dashboard and Club Data views)
-      'dashboard.charts', 'clubData.charts'
-    ];
-
-    // Remove legacy params (view-scoped params are handled automatically by useViewScopedState)
-    // Always preserve 'view' and 'token' parameters
-    for (const key of [...legacyParams, ...localStorageParams]) {
-      if (params.has(key) && key !== 'view' && key !== 'token') {
+    // Remove all params except 'view' and 'token'
+    // All other state is stored in localStorage and persists when switching views
+    for (const key of params.keys()) {
+      if (key !== 'view' && key !== 'token') {
         params.delete(key);
         changed = true;
       }
     }
 
-    // Update URL if we removed any legacy params
+    // Update URL if we removed any params
     if (changed) {
       const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`;
       window.history.replaceState({}, '', newUrl);

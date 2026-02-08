@@ -642,9 +642,6 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     }
   }, [categorizedMetricsRaw, selectedShootingMetrics.length, selectedPassingMetrics.length, selectedPossessionMetrics.length, selectedJOGAMetrics.length, selectedDefenseMetrics.length, selectedSetPiecesMetrics.length, selectedOtherMetrics.length, setSelectedShootingMetrics, setSelectedPassingMetrics, setSelectedPossessionMetrics, setSelectedJOGAMetrics, setSelectedDefenseMetrics, setSelectedSetPiecesMetrics, setSelectedOtherMetrics, getDefaultMetricsForCategory]);
 
-  // State for confirmation popup
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-
   // Reset metrics to defaults handler
   const handleResetMetrics = useCallback(() => {
     if (categorizedMetricsRaw['Shooting']) {
@@ -668,7 +665,6 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
     if (categorizedMetricsRaw['Other']) {
       setSelectedOtherMetrics(getDefaultMetricsForCategory('Other', categorizedMetricsRaw['Other']));
     }
-    setShowResetConfirm(false);
   }, [categorizedMetricsRaw, getDefaultMetricsForCategory, setSelectedShootingMetrics, setSelectedPassingMetrics, setSelectedPossessionMetrics, setSelectedJOGAMetrics, setSelectedDefenseMetrics, setSelectedSetPiecesMetrics, setSelectedOtherMetrics]);
 
   // Allow resetting metrics from elsewhere in the app (e.g., User Preferences)
@@ -855,89 +851,6 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
         </div>
       </div>
 
-      {/* Reset Confirmation Popup */}
-      {showResetConfirm && document && createPortal(
-        <>
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-[300]"
-            onClick={() => setShowResetConfirm(false)}
-          />
-          <div 
-            className="fixed inset-0 flex items-center justify-center z-[301] pointer-events-none"
-          >
-            <div 
-              className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Reset Metrics to Defaults?</h3>
-              <p className="text-sm text-gray-600 mb-6">
-                This will reset all metric selections to their default values. Any custom metric selections will be lost.
-              </p>
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowResetConfirm(false);
-                  }}
-                  className="px-4 py-2 text-sm rounded-lg font-medium transition-colors text-white"
-                  style={{
-                    backgroundColor: JOGA_COLORS.valorBlue,
-                    border: `2px solid ${JOGA_COLORS.valorBlue}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#557799'; // Darker valor blue
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = JOGA_COLORS.valorBlue;
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleResetMetrics();
-                  }}
-                  className="px-4 py-2 text-sm rounded-lg font-medium transition-colors text-white"
-                  style={{
-                    backgroundColor: JOGA_COLORS.valorBlue,
-                    border: `2px solid ${JOGA_COLORS.valorBlue}`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#557799'; // Darker valor blue
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = JOGA_COLORS.valorBlue;
-                  }}
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
-          </div>
-        </>,
-        document.body
-      )}
-
-      {/* Reset Button - Bottom Right Corner */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          onClick={() => setShowResetConfirm(true)}
-          className="px-4 py-2 text-sm rounded-lg font-medium transition-colors text-white shadow-lg"
-          style={{
-            backgroundColor: JOGA_COLORS.valorBlue,
-            border: `2px solid ${JOGA_COLORS.valorBlue}`,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#557799'; // Darker valor blue
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = JOGA_COLORS.valorBlue;
-          }}
-        >
-          Reset
-        </button>
-      </div>
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
