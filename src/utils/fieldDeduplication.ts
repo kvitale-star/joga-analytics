@@ -83,6 +83,15 @@ export function normalizeFieldName(fieldName: string): string {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+    
+    // AFTER camelCase conversion, handle "For2nd Half" -> "For (2nd)" patterns
+    // This catches cases like "Goals For2nd Half" that come from camelCase like "goalsFor2ndHalf"
+    normalized = normalized.replace(/([a-z])(1st)\s+half/gi, '$1 ($2)');
+    normalized = normalized.replace(/([a-z])(2nd)\s+half/gi, '$1 ($2)');
+    
+    // Remove any trailing "Half" word after a half indicator in parentheses
+    // This handles cases like "Goals For (2nd) Half" -> "Goals For (2nd)"
+    normalized = normalized.replace(/\s*\(([12]nd|1st)\)\s+half\b/gi, ' ($1)');
   }
   
   // Handle snake_case (e.g., "shots_against" -> "Shots Against")
@@ -91,6 +100,13 @@ export function normalizeFieldName(fieldName: string): string {
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(' ');
+    
+    // AFTER snake_case conversion, handle "For2nd Half" -> "For (2nd)" patterns
+    normalized = normalized.replace(/([a-z])(1st)\s+half/gi, '$1 ($2)');
+    normalized = normalized.replace(/([a-z])(2nd)\s+half/gi, '$1 ($2)');
+    
+    // Remove any trailing "Half" word after a half indicator in parentheses
+    normalized = normalized.replace(/\s*\(([12]nd|1st)\)\s+half\b/gi, ' ($1)');
   }
   
   // Handle lowercase (e.g., "opponent" -> "Opponent")
@@ -122,6 +138,10 @@ export function normalizeFieldName(fieldName: string): string {
   if (specialCases[lowerNormalized]) {
     return specialCases[lowerNormalized];
   }
+  
+  // Final cleanup: remove any trailing "Half" word after a half indicator in parentheses
+  // This catches any remaining cases like "Goals For (2nd) Half" -> "Goals For (2nd)"
+  normalized = normalized.replace(/\s*\(([12]nd|1st)\)\s+half\b/gi, ' ($1)');
   
   // Default: capitalize first letter of each word, preserving parentheses
   // Split on any whitespace (including multiple spaces) and join with single space
