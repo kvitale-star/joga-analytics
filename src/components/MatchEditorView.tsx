@@ -1381,11 +1381,6 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-gray-900 text-sm">#{match.id}</span>
-                          {!hasHalfTimeStats(match) && (
-                            <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded whitespace-nowrap">
-                              Missing Half Stats
-                            </span>
-                          )}
                           <span className="text-sm text-gray-700">
                             {team?.displayName || team?.slug || 'No Team'}
                           </span>
@@ -1415,11 +1410,18 @@ export const MatchEditorView: React.FC<MatchEditorViewProps> = ({ columnKeys }) 
                           )}
                         </div>
                       </div>
-                      {isSelected && (
-                        <div className="flex-shrink-0 text-xs font-medium text-black bg-[#ceff00] px-2 py-1 rounded">
-                          Selected
-                        </div>
-                      )}
+                      <div className="flex-shrink-0 flex items-center gap-2">
+                        {!hasHalfTimeStats(match) && (
+                          <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded whitespace-nowrap">
+                            Missing Half Stats
+                          </span>
+                        )}
+                        {isSelected && (
+                          <div className="text-xs font-medium text-black bg-[#ceff00] px-2 py-1 rounded">
+                            Selected
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
