@@ -6,7 +6,9 @@ import { getAllSeasons } from '../services/seasonService';
 import { Team, Season } from '../types/auth';
 import { JOGA_COLORS } from '../utils/colors';
 import { dateToYYYYMMDD } from '../utils/dateFormatting';
-import { PageLayout } from './PageLayout';
+import { normalizeFieldName } from '../utils/fieldDeduplication';
+import { extractStatsFromImage } from '../services/ocrService';
+import { UserMenu } from './UserMenu';
 
 export const MatchEditorView: React.FC = () => {
   const { user } = useAuth();
@@ -37,10 +39,17 @@ export const MatchEditorView: React.FC = () => {
   const [editedCompetitionType, setEditedCompetitionType] = useState<string>('');
   const [editedResult, setEditedResult] = useState<string>('');
   const [editedIsHome, setEditedIsHome] = useState<string>('');
-  const [editedVenue, setEditedVenue] = useState<string>('');
-  const [editedReferee, setEditedReferee] = useState<string>('');
   const [editedNotes, setEditedNotes] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Stats form state - organized by category
+  const [editedStats, setEditedStats] = useState<Record<string, string | number>>({});
+  
+  // Section upload state
+  const [sectionUploadState, setSectionUploadState] = useState<Record<string, {
+    processing: boolean;
+    message: { type: 'success' | 'error'; text: string } | null;
+  }>>({});
 
   // Load teams and seasons
   useEffect(() => {
@@ -181,6 +190,194 @@ export const MatchEditorView: React.FC = () => {
     }
   };
 
+  // Computed fields that should not be editable (matching UploadGameDataView)
+  const COMPUTED_FIELDS = [
+    'tsr', 'total shots ratio', 'opp tsr', 'opp total shots ratio',
+    'conversion rate', 'opp conversion rate',
+    'spi', 'spi (w)', 'opp spi', 'opp spi (w)',
+    'pass share', 'opp pass share',
+    'ppm', 'passes per minute', 'opp ppm', 'opp passes per minute',
+    'lpc', 'longest pass chain', 'opp lpc', 'opp longest pass chain',
+    'passes completed', 'opp passes completed', 'opp pass completed',
+    'total attempts', 'opp total attempts',
+    'possession', 'possessions won', 'opp possession', 'opp possessions won',
+    'pass strings (3-5)', 'pass strings (3–5)', 'pass strings (6+)', 'pass strings <4', 'pass strings 4+',
+    'inside box attempts %', 'outside box attempts %',
+    'opp inside box attempts %', 'opp outside box attempts %',
+    'corners against', 'corners for',
+    'free kicks against', 'free kicks for',
+    'penalty for', 'penalty against',
+    'penalty', 'penalties',
+    'result',
+  ];
+
+  // Check if a field should be excluded (computed fields)
+  const shouldExcludeField = (fieldName: string): boolean => {
+    const normalizedFieldName = fieldName.replace(/\s+/g, ' ').trim();
+    const lower = normalizedFieldName.toLowerCase();
+    
+    // Check against computed fields list
+    if (COMPUTED_FIELDS.some(computed => {
+      // For "possession" and "possessions won", use exact word match to avoid excluding "possession mins"
+      if (computed === 'possession' || computed === 'possessions won' || 
+          computed === 'opp possession' || computed === 'opp possessions won') {
+        return (lower === computed || lower === `opp ${computed}`) && 
+               !lower.includes('mins') && !lower.includes('minutes');
+      }
+      // For "penalty for" and "penalty against", only exclude if there's no half indicator
+      if (computed === 'penalty for' || computed === 'penalty against' || 
+          computed === 'penalty' || computed === 'penalties') {
+        const hasHalfIndicator = lower.includes('1st') || lower.includes('2nd') || 
+                                lower.includes('first') || lower.includes('second');
+        if (hasHalfIndicator) {
+          return false; // Don't exclude half-specific penalty fields
+        }
+        const isPenaltyFor = lower.includes('penalty for') || lower.includes('penalties for');
+        const isPenaltyAgainst = lower.includes('penalty against') || lower.includes('penalties against');
+        const isJustPenalty = (lower === 'penalty' || lower === 'penalties') && !hasHalfIndicator;
+        return isPenaltyFor || isPenaltyAgainst || isJustPenalty;
+      }
+      // For "corners for", "corners against", "free kicks for", "free kicks against", only exclude if there's no half indicator
+      if (computed === 'corners for' || computed === 'corners against' || 
+          computed === 'free kicks for' || computed === 'free kicks against') {
+        const hasHalfIndicator = lower.includes('1st') || lower.includes('2nd') || 
+                                lower.includes('first') || lower.includes('second');
+        if (hasHalfIndicator) {
+          return false; // Don't exclude half-specific corners/free kicks fields
+        }
+        const isCornersFor = lower.includes('corners for') || lower.includes('corner for');
+        const isCornersAgainst = lower.includes('corners against') || lower.includes('corner against');
+        const isFreeKicksFor = lower.includes('free kicks for') || lower.includes('freekick for');
+        const isFreeKicksAgainst = lower.includes('free kicks against') || lower.includes('freekick against');
+        return isCornersFor || isCornersAgainst || isFreeKicksFor || isFreeKicksAgainst;
+      }
+      // For other computed fields, check if field name includes the computed field name
+      return lower.includes(computed);
+    })) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  // Check if field is opponent field (matching UploadGameDataView)
+  const isOpponentField = (fieldName: string): boolean => {
+    const lower = fieldName.toLowerCase();
+    return lower.includes('opp') || lower.includes('opponent') || 
+           lower.includes('(opp)') || lower.includes('(opponent)') ||
+           lower.includes(' against') || lower.includes('against');
+  };
+
+  // Categorize field helper (matching UploadGameDataView exactly)
+  const categorizeField = (fieldName: string): string => {
+    const lower = fieldName.toLowerCase();
+    
+    // Game Info fields
+    if (lower.includes('team') || lower.includes('opponent') || lower.includes('date') || 
+        lower.includes('competition type') || lower.includes('competition') || 
+        lower.includes('season') || lower.includes('home/away') || lower.includes('home away') ||
+        lower.includes('result') || lower.includes('venue') || lower.includes('referee') || lower.includes('notes')) {
+      return 'Game Info';
+    }
+    
+    // Basic Stats (1st Half)
+    if (lower.includes('1st half') || lower.includes('1st') || lower.includes('first half') || lower.includes('first')) {
+      if (lower.includes('pass string') || lower.includes('passstring')) {
+        return 'Pass Strings';
+      }
+      if (lower.includes('inside box conv rate') || lower.includes('outside box conv rate') || 
+          lower.includes('opp conv rate') || lower.includes('xg') ||
+          lower.includes('% attempts inside box') || lower.includes('% attempts outside box') ||
+          lower.includes('attempts inside box %') || lower.includes('attempts outside box %') ||
+          lower.includes('opp % attempts inside box') || lower.includes('opp % attempts outside box') ||
+          lower.includes('opp attempts inside box %') || lower.includes('opp attempts outside box %')) {
+        return 'Shots Map';
+      }
+      // Corners and free kicks with 1st half indicator go to Basic Stats (1st Half)
+      if (lower.includes('corner') || lower.includes('free kick') || lower.includes('freekick')) {
+        return 'Basic Stats (1st Half)';
+      }
+      // All other 1st half fields go to Basic Stats (1st Half)
+      return 'Basic Stats (1st Half)';
+    }
+    
+    // Basic Stats (2nd Half)
+    if (lower.includes('2nd half') || lower.includes('2nd') || lower.includes('second half') || lower.includes('second')) {
+      if (lower.includes('pass string') || lower.includes('passstring')) {
+        return 'Pass Strings';
+      }
+      if (lower.includes('inside box conv rate') || lower.includes('outside box conv rate') || 
+          lower.includes('opp conv rate') || lower.includes('xg') ||
+          lower.includes('% attempts inside box') || lower.includes('% attempts outside box') ||
+          lower.includes('attempts inside box %') || lower.includes('attempts outside box %') ||
+          lower.includes('opp % attempts inside box') || lower.includes('opp % attempts outside box') ||
+          lower.includes('opp attempts inside box %') || lower.includes('opp attempts outside box %')) {
+        return 'Shots Map';
+      }
+      // Corners and free kicks with 2nd half indicator go to Basic Stats (2nd Half)
+      if (lower.includes('corner') || lower.includes('free kick') || lower.includes('freekick')) {
+        return 'Basic Stats (2nd Half)';
+      }
+      // All other 2nd half fields go to Basic Stats (2nd Half)
+      return 'Basic Stats (2nd Half)';
+    }
+    
+    // Pass Strings (no half indicator means it's a pass string field)
+    // Exclude computed pass string aggregations (they're in COMPUTED_FIELDS)
+    if (lower.includes('pass strings (3-5)') || lower.includes('pass strings (3–5)') || 
+        lower.includes('pass strings (6+)') || lower.includes('pass strings <4') || 
+        lower.includes('pass strings 4+')) {
+      return 'Other'; // Will be excluded by COMPUTED_FIELDS check
+    }
+    if (lower.includes('pass string') || lower.includes('passstring') || 
+        (lower.includes('pass') && (lower.includes('3') || lower.includes('4') || lower.includes('5') || 
+         lower.includes('6') || lower.includes('7') || lower.includes('8') || 
+         lower.includes('9') || lower.includes('10')))) {
+      return 'Pass Strings';
+    }
+    
+    // Shots Map category
+    if (lower.includes('inside box conv rate') || lower.includes('outside box conv rate') || 
+        lower.includes('opp conv rate') || lower.includes('conversion rate') || lower.includes('xg') ||
+        lower.includes('% attempts inside box') || lower.includes('% attempts outside box') ||
+        lower.includes('attempts inside box %') || lower.includes('attempts outside box %') ||
+        lower.includes('opp % attempts inside box') || lower.includes('opp % attempts outside box') ||
+        lower.includes('opp attempts inside box %') || lower.includes('opp attempts outside box %')) {
+      return 'Shots Map';
+    }
+    
+    // Possession Location category - Possess % (Def), (Mid), (Att)
+    if (lower.includes('possess % (def)') || lower.includes('possess % (mid)') || lower.includes('possess % (att)')) {
+      return 'Possession Location';
+    }
+    
+    // Pass Location category - only Pass % By Zone stats (not possess %)
+    if (lower.includes('pass % by zone') || lower.includes('pass % zone')) {
+      return 'Pass Location';
+    }
+    
+    return 'Other';
+  };
+
+  // Extract and organize stats from match (excluding computed fields and specific excluded fields)
+  const organizedStats = useMemo(() => {
+    if (!selectedMatch?.statsJson) return {};
+    const stats: Record<string, Record<string, any>> = {};
+    Object.entries(selectedMatch.statsJson).forEach(([key, value]) => {
+      const normalizedKey = normalizeFieldName(key);
+      // Skip computed fields
+      if (shouldExcludeField(normalizedKey)) return;
+      // Skip Shot Map and Heatmap fields with ((1st)) pattern
+      const lower = normalizedKey.toLowerCase();
+      if (lower.includes('shot map') && lower.includes('(1st)')) return;
+      if (lower.includes('heatmap') && lower.includes('(1st)')) return;
+      const category = categorizeField(normalizedKey);
+      if (!stats[category]) stats[category] = {};
+      stats[category][normalizedKey] = value;
+    });
+    return stats;
+  }, [selectedMatch]);
+
   // Reset form when selected match changes
   useEffect(() => {
     if (selectedMatch) {
@@ -191,11 +388,112 @@ export const MatchEditorView: React.FC = () => {
       setEditedCompetitionType(selectedMatch.competitionType || '');
       setEditedResult(selectedMatch.result || '');
       setEditedIsHome(selectedMatch.isHome !== null && selectedMatch.isHome !== undefined ? (selectedMatch.isHome ? 'true' : 'false') : '');
-      setEditedVenue(selectedMatch.venue || '');
-      setEditedReferee(selectedMatch.referee || '');
       setEditedNotes(selectedMatch.notes || '');
+      
+      // Load stats
+      if (selectedMatch.statsJson) {
+        const stats: Record<string, string | number> = {};
+        Object.entries(selectedMatch.statsJson).forEach(([key, value]) => {
+          const normalizedKey = normalizeFieldName(key);
+          // Convert value to string or number
+          if (typeof value === 'number' || typeof value === 'string') {
+            stats[normalizedKey] = value;
+          } else if (value !== null && value !== undefined) {
+            stats[normalizedKey] = String(value);
+          }
+        });
+        setEditedStats(stats);
+      } else {
+        setEditedStats({});
+      }
     }
   }, [selectedMatch]);
+
+  // Category header colors (matching UploadGameDataView - rotate through JOGA colors)
+  const categoryHeaderColors = [JOGA_COLORS.voltYellow, JOGA_COLORS.valorBlue, JOGA_COLORS.pinkFoam];
+  
+  const getCategoryHeaderColor = (index: number): string => {
+    return categoryHeaderColors[index % categoryHeaderColors.length];
+  };
+
+  // Category order (matching UploadGameDataView)
+  // Category order (matching UploadGameDataView - no 'Other' category)
+  const categoryOrder = [
+    'Game Info',
+    'Basic Stats (1st Half)',
+    'Basic Stats (2nd Half)',
+    'Shots Map',
+    'Possession Location',
+    'Pass Location',
+    'Pass Strings'
+  ];
+
+  // Handle section image upload
+  const handleSectionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, category: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSectionUploadState(prev => ({
+      ...prev,
+      [category]: { processing: true, message: null }
+    }));
+
+    try {
+      const extractedStats = await extractStatsFromImage(file);
+      
+      // Update editedStats with extracted stats
+      setEditedStats(prev => {
+        const updated = { ...prev };
+        Object.entries(extractedStats).forEach(([key, value]) => {
+          const normalizedKey = normalizeFieldName(key);
+          // Convert value to string or number
+          if (typeof value === 'number' || typeof value === 'string') {
+            updated[normalizedKey] = value;
+          } else if (value !== null && value !== undefined) {
+            updated[normalizedKey] = String(value);
+          }
+        });
+        return updated;
+      });
+
+      setSectionUploadState(prev => ({
+        ...prev,
+        [category]: { 
+          processing: false, 
+          message: { type: 'success', text: 'Stats extracted successfully!' } 
+        }
+      }));
+
+      // Clear message after 3 seconds
+      setTimeout(() => {
+        setSectionUploadState(prev => ({
+          ...prev,
+          [category]: { processing: false, message: null }
+        }));
+      }, 3000);
+    } catch (error) {
+      setSectionUploadState(prev => ({
+        ...prev,
+        [category]: { 
+          processing: false, 
+          message: { type: 'error', text: error instanceof Error ? error.message : 'Failed to extract stats' } 
+        }
+      }));
+    }
+  };
+
+  // Get input type for a field
+  const getInputType = (fieldName: string): 'text' | 'number' | 'date' => {
+    const lower = fieldName.toLowerCase();
+    if (lower.includes('date')) return 'date';
+    if (lower.includes('goal') || lower.includes('shot') || lower.includes('attempt') || 
+        lower.includes('pass') || lower.includes('corner') || lower.includes('free kick') ||
+        lower.includes('possession') || lower.includes('poss') || lower.includes('xg') ||
+        lower.includes('string') || lower.includes('penalty') || lower.includes('throw')) {
+      return 'number';
+    }
+    return 'text';
+  };
 
   const handleSave = async () => {
     if (!selectedMatch) return;
@@ -213,8 +511,7 @@ export const MatchEditorView: React.FC = () => {
         result: editedResult.trim() || null,
         isHome: editedIsHome === '' ? null : editedIsHome === 'true',
         notes: editedNotes.trim() || null,
-        venue: editedVenue.trim() || null,
-        referee: editedReferee.trim() || null,
+        rawStats: editedStats, // Include stats in update
       });
       
       setSuccess('Match updated successfully!');
@@ -245,25 +542,47 @@ export const MatchEditorView: React.FC = () => {
 
   if (!user || user.role !== 'admin') {
     return (
-      <PageLayout title="Match Editor" subtitle="Find and edit match information.">
-        <div className="bg-white rounded-lg shadow p-6">
+      <>
+        <header className="bg-white shadow-sm border-b border-gray-200 relative">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Match Editor</h1>
+                <p className="text-sm text-gray-600 mt-1">Find and edit match information.</p>
+              </div>
+              <div className="relative">
+                <UserMenu />
+              </div>
+            </div>
+          </div>
+        </header>
+        <div className="bg-white rounded-lg shadow p-6 m-6">
           <p className="text-gray-600">You must be an admin to access match editing.</p>
         </div>
-      </PageLayout>
+      </>
     );
   }
 
   return (
-    <PageLayout
-      title="Match Editor"
-      subtitle="Find and edit match information. Modify any non-computed field in the database."
-      maxWidth="7xl"
-      contentClassName="-mt-6"
-    >
-      <>
-        {/* Sticky Top Control Bar */}
-        <div className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 shadow-sm -mx-6" style={{ width: '100vw', marginLeft: 'calc(-50vw + 50% - 4rem)', marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}>
-          <div className="max-w-[1600px] mx-auto px-6 py-3">
+    <>
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 relative">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Match Editor</h1>
+              <p className="text-sm text-gray-600 mt-1">Find and edit match information. Modify any non-computed field in the database.</p>
+            </div>
+            <div className="relative">
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Sticky Top Control Bar */}
+      <div className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-6 py-3">
             <div className="flex flex-wrap items-center gap-3 justify-center">
               {/* Season Selector */}
               <div className="flex-shrink-0">
@@ -363,7 +682,10 @@ export const MatchEditorView: React.FC = () => {
           </div>
         </div>
 
-      <div className="space-y-6 mt-6">
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+        <div className="w-full max-w-7xl mx-auto">
+          <div className="space-y-6">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
             {error}
@@ -397,7 +719,7 @@ export const MatchEditorView: React.FC = () => {
                 </div>
               )}
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {paginatedResults.map(match => {
                 const team = teams.find(t => t.id === match.teamId);
                 // Parse date string directly without timezone conversion
@@ -408,30 +730,45 @@ export const MatchEditorView: React.FC = () => {
                   <div
                     key={match.id}
                     onClick={() => handleSelectMatch(match)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    className={`p-2.5 border rounded-lg cursor-pointer transition-colors ${
                       isSelected
                         ? 'border-black bg-gray-50'
                         : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900">
-                          Match #{match.id}
+                    <div className="flex justify-between items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-900 text-sm">#{match.id}</span>
+                          <span className="text-sm text-gray-700">
+                            {team?.displayName || team?.slug || 'No Team'}
+                          </span>
+                          <span className="text-gray-400">vs</span>
+                          <span className="text-sm text-gray-700">{match.opponentName}</span>
+                          <span className="text-gray-400">•</span>
+                          <span className="text-sm text-gray-600">{matchDateStr}</span>
+                          {match.result && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-sm font-medium text-gray-900">{match.result}</span>
+                            </>
+                          )}
+                          {match.competitionType && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-sm text-gray-600">{match.competitionType}</span>
+                            </>
+                          )}
+                          {match.isHome !== null && (
+                            <>
+                              <span className="text-gray-400">•</span>
+                              <span className="text-sm text-gray-600">{match.isHome ? 'Home' : 'Away'}</span>
+                            </>
+                          )}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          <span className="font-medium">Team:</span> {team?.displayName || team?.slug || 'No Team'} |{' '}
-                          <span className="font-medium">Opponent:</span> {match.opponentName} |{' '}
-                          <span className="font-medium">Date:</span> {matchDateStr}
-                        </div>
-                        {match.competitionType && (
-                          <div className="text-sm text-gray-600">
-                            <span className="font-medium">Competition:</span> {match.competitionType}
-                          </div>
-                        )}
                       </div>
                       {isSelected && (
-                        <div className="ml-4 text-sm font-medium text-black">
+                        <div className="flex-shrink-0 text-xs font-medium text-black bg-[#ceff00] px-2 py-1 rounded">
                           Selected
                         </div>
                       )}
@@ -503,151 +840,316 @@ export const MatchEditorView: React.FC = () => {
 
         {/* Edit Form */}
         {selectedMatch && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">
-              Edit Match #{selectedMatch.id}
-            </h3>
+          <div className="space-y-6">
+            {/* Render sections by category */}
+            {categoryOrder.map((category, categoryIndex) => {
+                const categoryColor = getCategoryHeaderColor(categoryIndex);
+                const textColor = categoryColor === JOGA_COLORS.voltYellow ? 'text-gray-900' : 'text-white';
+                
+                // Get fields for this category
+                let fields: Array<{ name: string; value: any }> = [];
+                
+                if (category === 'Game Info') {
+                  // Game Info fields are in separate state
+                  fields = [
+                    { name: 'Team', value: editedTeamId },
+                    { name: 'Opponent Name', value: editedOpponentName },
+                    { name: 'Match Date', value: editedMatchDate },
+                    { name: 'Competition Type', value: editedCompetitionType },
+                    { name: 'Result', value: editedResult },
+                    { name: 'Home/Away', value: editedIsHome },
+                    { name: 'Notes', value: editedNotes },
+                  ];
+                } else {
+                  // Stats fields from organizedStats
+                  const categoryStats = organizedStats[category] || {};
+                  fields = Object.entries(categoryStats).map(([key, value]) => ({
+                    name: key,
+                    value: editedStats[key] ?? (value as string | number),
+                  }));
+                }
+                
+                if (fields.length === 0 && category !== 'Game Info') return null;
+                
+                return (
+                  <div key={category} className="mb-6">
+                    <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+                      <div 
+                        className="px-6 py-4 border-b border-gray-200 flex items-center justify-between"
+                        style={{ backgroundColor: categoryColor }}
+                      >
+                        <h2 className={`text-lg font-semibold ${textColor}`}>
+                          {category}
+                        </h2>
+                        {(category === 'Basic Stats (1st Half)' || category === 'Basic Stats (2nd Half)') && (
+                          <div className="flex items-center gap-2">
+                            {sectionUploadState[category]?.message && (
+                              <span className={`text-xs ${
+                                sectionUploadState[category].message!.type === 'success' 
+                                  ? 'text-green-100' 
+                                  : 'text-red-100'
+                              }`}>
+                                {sectionUploadState[category].message!.text}
+                              </span>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleSectionImageUpload(e, category)}
+                              disabled={sectionUploadState[category]?.processing || false}
+                              className="hidden"
+                              id={`section-upload-${category}`}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById(`section-upload-${category}`)?.click()}
+                              disabled={sectionUploadState[category]?.processing || false}
+                              className={`flex items-center gap-1 px-2 py-1 bg-white text-gray-700 rounded text-xs font-medium hover:bg-gray-50 transition-colors ${
+                                sectionUploadState[category]?.processing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                              }`}
+                              title="Upload screenshot for this section"
+                            >
+                              {sectionUploadState[category]?.processing ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600"></div>
+                                  <span>Processing...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                  <span>Upload</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="p-6">
+                        {/* Game Info - 3 column layout */}
+                        {category === 'Game Info' ? (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {fields.map(field => {
+                              const fieldName = field.name;
+                              const value = field.value ?? '';
+                              
+                              // Special handling for Game Info fields
+                              if (fieldName === 'Team') {
+                                return (
+                                  <div key={fieldName}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                      Team *
+                                    </label>
+                                    <select
+                                      value={editedTeamId}
+                                      onChange={(e) => setEditedTeamId(e.target.value)}
+                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
+                                    >
+                                      <option value="">No Team</option>
+                                      {filteredTeams.map(team => (
+                                        <option key={team.id} value={team.id}>
+                                          {team.displayName || team.slug}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                );
+                              }
+                              if (fieldName === 'Home/Away') {
+                                return (
+                                  <div key={fieldName}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                      Home/Away
+                                    </label>
+                                    <select
+                                      value={editedIsHome}
+                                      onChange={(e) => setEditedIsHome(e.target.value)}
+                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
+                                    >
+                                      <option value="">Not Set</option>
+                                      <option value="true">Home</option>
+                                      <option value="false">Away</option>
+                                    </select>
+                                  </div>
+                                );
+                              }
+                              if (fieldName === 'Notes') {
+                                return (
+                                  <div key={fieldName} className="md:col-span-3">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                      Notes
+                                    </label>
+                                    <textarea
+                                      value={editedNotes}
+                                      onChange={(e) => setEditedNotes(e.target.value)}
+                                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
+                                      rows={3}
+                                      placeholder="Additional notes about the match"
+                                    />
+                                  </div>
+                                );
+                              }
+                              // Other Game Info fields as text inputs
+                              const setterMap: Record<string, (val: string) => void> = {
+                                'Opponent Name': setEditedOpponentName,
+                                'Match Date': setEditedMatchDate,
+                                'Competition Type': setEditedCompetitionType,
+                                'Result': setEditedResult,
+                              };
+                              const setter = setterMap[fieldName];
+                              if (!setter) return null;
+                              
+                              return (
+                                <div key={fieldName}>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {fieldName} {fieldName === 'Opponent Name' || fieldName === 'Match Date' ? '*' : ''}
+                                  </label>
+                                  <input
+                                    type={fieldName === 'Match Date' ? 'date' : 'text'}
+                                    value={String(value)}
+                                    onChange={(e) => setter(e.target.value)}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
+                                    required={fieldName === 'Opponent Name' || fieldName === 'Match Date'}
+                                    placeholder={fieldName === 'Competition Type' ? 'e.g., League, Cup, Friendly' : fieldName === 'Result' ? 'e.g., 2-1, W, L, D' : ''}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          // Stats sections - separate Team and Opponent
+                          <>
+                            {/* Team Fields */}
+                            {fields.filter(f => !isOpponentField(f.name)).length > 0 && (
+                              <>
+                                <div className="mt-4 mb-2">
+                                  <h3 className="text-md font-semibold text-gray-800">Team</h3>
+                                  <div className="border-t border-gray-300 mt-1"></div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                  {fields.filter(f => !isOpponentField(f.name)).map(field => {
+                                    const fieldName = field.name;
+                                    const inputType = getInputType(fieldName);
+                                    const value = field.value ?? '';
+                                    
+                                    return (
+                                      <div key={fieldName} className="flex flex-col">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                          {fieldName}
+                                        </label>
+                                        {inputType === 'number' ? (
+                                          <input
+                                            type="number"
+                                            step="any"
+                                            min="0"
+                                            value={value}
+                                            onChange={(e) => {
+                                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                                              setEditedStats(prev => ({ ...prev, [fieldName]: newValue }));
+                                            }}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
+                                            placeholder="0"
+                                          />
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            value={String(value)}
+                                            onChange={(e) => {
+                                              setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }));
+                                            }}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            )}
+                            
+                            {/* Opponent Fields */}
+                            {fields.filter(f => isOpponentField(f.name)).length > 0 && (
+                              <>
+                                <div className="mt-6 mb-2">
+                                  <h3 className="text-md font-semibold text-gray-800">Opponent</h3>
+                                  <div className="border-t border-gray-300 mt-1"></div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                  {fields.filter(f => isOpponentField(f.name)).map(field => {
+                                    const fieldName = field.name;
+                                    const inputType = getInputType(fieldName);
+                                    const value = field.value ?? '';
+                                    
+                                    return (
+                                      <div key={fieldName} className="flex flex-col">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                          {fieldName}
+                                        </label>
+                                        {inputType === 'number' ? (
+                                          <input
+                                            type="number"
+                                            step="any"
+                                            min="0"
+                                            value={value}
+                                            onChange={(e) => {
+                                              const newValue = e.target.value === '' ? 0 : parseFloat(e.target.value) || 0;
+                                              setEditedStats(prev => ({ ...prev, [fieldName]: newValue }));
+                                            }}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
+                                            placeholder="0"
+                                          />
+                                        ) : (
+                                          <input
+                                            type="text"
+                                            value={String(value)}
+                                            onChange={(e) => {
+                                              setEditedStats(prev => ({ ...prev, [fieldName]: e.target.value }));
+                                            }}
+                                            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] text-black"
+                                          />
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+            })}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Team *
-                </label>
-                <select
-                  value={editedTeamId}
-                  onChange={(e) => setEditedTeamId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                >
-                  <option value="">No Team</option>
-                  {filteredTeams.map(team => (
-                    <option key={team.id} value={team.id}>
-                      {team.displayName || team.slug}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Opponent Name *
-                </label>
-                <input
-                  type="text"
-                  value={editedOpponentName}
-                  onChange={(e) => setEditedOpponentName(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Match Date *
-                </label>
-                <input
-                  type="date"
-                  value={editedMatchDate}
-                  onChange={(e) => setEditedMatchDate(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Competition Type
-                </label>
-                <input
-                  type="text"
-                  value={editedCompetitionType}
-                  onChange={(e) => setEditedCompetitionType(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  placeholder="e.g., League, Cup, Friendly"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Result
-                </label>
-                <input
-                  type="text"
-                  value={editedResult}
-                  onChange={(e) => setEditedResult(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  placeholder="e.g., 2-1, W, L, D"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Home/Away
-                </label>
-                <select
-                  value={editedIsHome}
-                  onChange={(e) => setEditedIsHome(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                >
-                  <option value="">Not Set</option>
-                  <option value="true">Home</option>
-                  <option value="false">Away</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Venue
-                </label>
-                <input
-                  type="text"
-                  value={editedVenue}
-                  onChange={(e) => setEditedVenue(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  placeholder="Venue name"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Referee
-                </label>
-                <input
-                  type="text"
-                  value={editedReferee}
-                  onChange={(e) => setEditedReferee(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  placeholder="Referee name"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
-                <textarea
-                  value={editedNotes}
-                  onChange={(e) => setEditedNotes(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  rows={3}
-                  placeholder="Additional notes about the match"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
+            {/* Save/Cancel buttons - matching UploadGameDataView style (no card, on gray background) */}
+            <div className="flex justify-end gap-4 mt-6">
               <button
                 onClick={() => setSelectedMatch(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+                className="px-6 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSaving}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={isSaving || !editedOpponentName.trim() || !editedMatchDate}
-                className="px-4 py-2 rounded-lg text-black font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-black"
                 style={{
-                  backgroundColor: isSaving || !editedOpponentName.trim() || !editedMatchDate ? '#999' : JOGA_COLORS.voltYellow,
-                  border: `2px solid ${isSaving || !editedOpponentName.trim() || !editedMatchDate ? '#999' : JOGA_COLORS.voltYellow}`,
+                  backgroundColor: isSaving || !editedOpponentName.trim() || !editedMatchDate ? '#9ca3af' : JOGA_COLORS.voltYellow,
+                  border: `2px solid ${JOGA_COLORS.voltYellow}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSaving && editedOpponentName.trim() && editedMatchDate) {
+                    e.currentTarget.style.backgroundColor = '#b8e600';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSaving && editedOpponentName.trim() && editedMatchDate) {
+                    e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+                  }
                 }}
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
@@ -655,8 +1157,9 @@ export const MatchEditorView: React.FC = () => {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </div>
-      </>
-    </PageLayout>
+    </>
   );
 };

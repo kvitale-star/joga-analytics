@@ -941,7 +941,7 @@ export const GameDataView: React.FC<GameDataViewProps> = ({
 
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-        <div className="w-full max-w-[1600px] mx-auto">
+        <div className="w-full max-w-7xl mx-auto">
           {!selectedTeam ? (
             <div 
               className="relative w-full rounded-lg"

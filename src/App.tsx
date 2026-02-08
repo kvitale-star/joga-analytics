@@ -1992,7 +1992,7 @@ function App() {
     return (
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="match-editor" onNavigate={handleNavigation} />
-        <div className="flex-1 ml-16 overflow-hidden">
+        <div className="flex-1 ml-16 flex flex-col overflow-auto">
           <MatchEditorView />
         </div>
         {showWalkthrough && (
