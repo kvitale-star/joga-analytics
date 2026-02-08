@@ -661,6 +661,9 @@ export const MatchEditorView: React.FC = () => {
       
       setSuccess('Match updated successfully!');
       
+      // Scroll to top to show the success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
       // Reload the match to get updated data
       const updatedMatch = await getMatchById(selectedMatch.id);
       setSelectedMatch(updatedMatch);
