@@ -7,6 +7,7 @@ import {
   deleteMatch,
   getMatchEvents,
   createGameEvent,
+  hasHalfTimeStats,
 } from '../services/matchService.js';
 import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
 import { getUserTeamAssignments } from '../services/teamService.js';
@@ -41,6 +42,9 @@ router.get('/', async (req, res) => {
     }
     if (req.query.competitionType) {
       filters.competitionType = req.query.competitionType as string;
+    }
+    if (req.query.missingHalfTimeStats === 'true') {
+      filters.missingHalfTimeStats = true;
     }
 
     // Role-based visibility:

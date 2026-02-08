@@ -24,6 +24,8 @@ export const MatchEditorView: React.FC = () => {
   const [opponentName, setOpponentName] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [missingHalfTimeStats, setMissingHalfTimeStats] = useState<boolean>(false);
+  const [sortBy, setSortBy] = useState<'date' | 'missingHalfTime'>('date');
   
   // Results and selection
   const [searchResults, setSearchResults] = useState<Match[]>([]);
@@ -158,16 +160,55 @@ export const MatchEditorView: React.FC = () => {
     // Debounce the filter to avoid too many API calls
     const timeoutId = setTimeout(filterMatches, 300);
     return () => clearTimeout(timeoutId);
-  }, [selectedSeasonId, selectedTeamId, opponentName, startDate, endDate, teams]);
+  }, [selectedSeasonId, selectedTeamId, opponentName, startDate, endDate, missingHalfTimeStats, teams]);
+
+  // Helper function to check if match has half-time stats
+  const hasHalfTimeStats = (match: Match): boolean => {
+    if (!match.statsJson || typeof match.statsJson !== 'object') {
+      return false;
+    }
+    const stats = match.statsJson;
+    // Check for key half-time indicators
+    return !!(
+      stats.goalsFor1stHalf !== undefined || 
+      stats.shotsFor1stHalf !== undefined || 
+      stats.passesFor1stHalf !== undefined ||
+      stats.attemptsFor1stHalf !== undefined ||
+      stats.goalsFor2ndHalf !== undefined ||
+      stats.shotsFor2ndHalf !== undefined ||
+      stats.passesFor2ndHalf !== undefined ||
+      stats.attemptsFor2ndHalf !== undefined
+    );
+  };
+
+  // Sort results based on sortBy option
+  const sortedResults = useMemo(() => {
+    const results = [...searchResults];
+    if (sortBy === 'missingHalfTime') {
+      return results.sort((a, b) => {
+        const aHasHalfTime = hasHalfTimeStats(a);
+        const bHasHalfTime = hasHalfTimeStats(b);
+        // Missing half-time stats come first
+        if (!aHasHalfTime && bHasHalfTime) return -1;
+        if (aHasHalfTime && !bHasHalfTime) return 1;
+        // Then sort by date (newest first)
+        return new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+      });
+    }
+    // Default: sort by date (newest first)
+    return results.sort((a, b) => 
+      new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime()
+    );
+  }, [searchResults, sortBy]);
 
   // Calculate pagination
   const itemsPerPage = 20;
-  const totalPages = Math.ceil(searchResults.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedResults.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedResults = selectedMatch 
     ? [selectedMatch] // Show only selected match when one is selected
-    : searchResults.slice(startIndex, endIndex); // Show paginated results
+    : sortedResults.slice(startIndex, endIndex); // Show paginated results
 
   // Helper function to parse date string without timezone conversion
   const parseDateString = (dateStr: string): string => {
@@ -678,6 +719,37 @@ export const MatchEditorView: React.FC = () => {
                 style={endDate ? { borderColor: '#ceff00', width: 'auto', minWidth: '140px' } : { width: 'auto', minWidth: '140px' }}
               />
               </div>
+
+              {/* Missing Half-Time Stats Filter */}
+              <div className="flex-shrink-0 flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer pb-1">
+                  <input
+                    type="checkbox"
+                    checked={missingHalfTimeStats}
+                    onChange={(e) => setMissingHalfTimeStats(e.target.checked)}
+                    className="rounded border-gray-300 text-[#ceff00] focus:ring-[#ceff00]"
+                  />
+                  <span className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                    Missing Half-Time Stats
+                  </span>
+                </label>
+              </div>
+
+              {/* Sort Option */}
+              <div className="flex-shrink-0">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Sort By</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'date' | 'missingHalfTime')}
+                  className={`px-3 py-1.5 text-sm border-2 rounded-lg bg-white focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa] whitespace-nowrap text-black ${
+                    sortBy ? 'border-[#ceff00]' : 'border-gray-300'
+                  }`}
+                  style={sortBy ? { borderColor: '#ceff00', width: 'auto', minWidth: '160px' } : { width: 'auto', minWidth: '160px' }}
+                >
+                  <option value="date">Date (Newest First)</option>
+                  <option value="missingHalfTime">Missing Half-Time First</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -707,13 +779,13 @@ export const MatchEditorView: React.FC = () => {
         )}
 
         {/* Search Results */}
-        {!loading && searchResults.length > 0 && (
+        {!loading && sortedResults.length > 0 && (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold text-gray-900">
-                Matches Found ({searchResults.length})
+                Matches Found ({sortedResults.length})
               </h3>
-              {!selectedMatch && searchResults.length > itemsPerPage && (
+              {!selectedMatch && sortedResults.length > itemsPerPage && (
                 <div className="text-sm text-gray-600">
                   Page {currentPage} of {totalPages}
                 </div>
@@ -740,6 +812,11 @@ export const MatchEditorView: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-semibold text-gray-900 text-sm">#{match.id}</span>
+                          {!hasHalfTimeStats(match) && (
+                            <span className="text-xs font-medium text-orange-600 bg-orange-100 px-2 py-0.5 rounded whitespace-nowrap">
+                              Missing Half-Time Stats
+                            </span>
+                          )}
                           <span className="text-sm text-gray-700">
                             {team?.displayName || team?.slug || 'No Team'}
                           </span>
@@ -779,7 +856,7 @@ export const MatchEditorView: React.FC = () => {
             </div>
             
             {/* Pagination Controls */}
-            {!selectedMatch && searchResults.length > itemsPerPage && (
+            {!selectedMatch && sortedResults.length > itemsPerPage && (
               <div className="mt-6 flex items-center justify-center gap-2">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -832,7 +909,7 @@ export const MatchEditorView: React.FC = () => {
         )}
 
         {/* No Results */}
-        {!loading && selectedSeasonId && searchResults.length === 0 && (
+        {!loading && selectedSeasonId && sortedResults.length === 0 && (
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <p className="text-gray-600">No matches found matching your criteria.</p>
           </div>

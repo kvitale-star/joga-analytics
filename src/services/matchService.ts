@@ -57,6 +57,7 @@ export interface MatchFilters {
   startDate?: string;
   endDate?: string;
   competitionType?: string;
+  missingHalfTimeStats?: boolean;
 }
 
 /**
@@ -69,6 +70,7 @@ export async function getMatches(filters?: MatchFilters): Promise<Match[]> {
   if (filters?.startDate) params.append('startDate', filters.startDate);
   if (filters?.endDate) params.append('endDate', filters.endDate);
   if (filters?.competitionType) params.append('competitionType', filters.competitionType);
+  if (filters?.missingHalfTimeStats) params.append('missingHalfTimeStats', 'true');
 
   const queryString = params.toString();
   const endpoint = queryString ? `/matches?${queryString}` : '/matches';

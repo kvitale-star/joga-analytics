@@ -2,6 +2,39 @@ import { db } from '../db/database.js';
 import type { MatchesTable, GameEventsTable } from '../db/schema.js';
 
 /**
+ * Check if a match has half-time statistics (1st and 2nd half data)
+ * Returns true if at least one half-time field exists with a value
+ */
+export function hasHalfTimeStats(statsJson: any): boolean {
+  if (!statsJson || typeof statsJson !== 'object') {
+    return false;
+  }
+  
+  // Check for key half-time indicators
+  // We check for the most common ones that indicate half-time data was entered
+  const halfTimeFields = [
+    'goalsFor1stHalf', 'goalsAgainst1stHalf',
+    'shotsFor1stHalf', 'shotsAgainst1stHalf',
+    'attemptsFor1stHalf', 'attemptsAgainst1stHalf',
+    'passesFor1stHalf', 'passesAgainst1stHalf',
+    'cornersFor1stHalf', 'cornersAgainst1stHalf',
+    'freeKicksFor1stHalf', 'freeKicksAgainst1stHalf',
+    'goalsFor2ndHalf', 'goalsAgainst2ndHalf',
+    'shotsFor2ndHalf', 'shotsAgainst2ndHalf',
+    'attemptsFor2ndHalf', 'attemptsAgainst2ndHalf',
+    'passesFor2ndHalf', 'passesAgainst2ndHalf',
+    'cornersFor2ndHalf', 'cornersAgainst2ndHalf',
+    'freeKicksFor2ndHalf', 'freeKicksAgainst2ndHalf',
+  ];
+  
+  // Check if at least one half-time field exists and has a value
+  return halfTimeFields.some(field => {
+    const value = statsJson[field];
+    return value !== undefined && value !== null && value !== '';
+  });
+}
+
+/**
  * Get all matches with optional filters
  */
 export async function getMatches(filters?: {
@@ -11,6 +44,7 @@ export async function getMatches(filters?: {
   startDate?: string;
   endDate?: string;
   competitionType?: string;
+  missingHalfTimeStats?: boolean;
 }) {
   let query = db
     .selectFrom('matches')
@@ -74,7 +108,7 @@ export async function getMatches(filters?: {
 
   const matches = await query.execute();
 
-  return matches.map(match => {
+  let processedMatches = matches.map(match => {
     // Convert match_date to string format (YYYY-MM-DD) if it's a Date object
     // PostgreSQL may return dates as Date objects even though schema says string
     // IMPORTANT: Use local date methods to avoid timezone shifts (don't use toISOString)
@@ -128,6 +162,15 @@ export async function getMatches(filters?: {
       lastModifiedBy: match.last_modified_by,
     };
   });
+
+  // Filter by missing half-time stats if requested
+  if (filters?.missingHalfTimeStats) {
+    processedMatches = processedMatches.filter(match => {
+      return !hasHalfTimeStats(match.statsJson);
+    });
+  }
+
+  return processedMatches;
 }
 
 /**
