@@ -262,7 +262,25 @@ export async function cleanupTestData() {
       // Continue even if game events cleanup fails
     }
     
-    // 2. Delete test matches (references teams and users)
+    // 2. Delete test insights (references teams and matches)
+    try {
+      const testTeamIds = await db
+        .selectFrom('teams')
+        .select('id')
+        .where('display_name', 'like', 'Test Team%')
+        .execute();
+      
+      if (testTeamIds.length > 0) {
+        await db
+          .deleteFrom('insights')
+          .where('team_id', 'in', testTeamIds.map(t => t.id))
+          .execute();
+      }
+    } catch (error) {
+      // Continue
+    }
+    
+    // 3. Delete test matches (references teams and users)
     try {
       await db
         .deleteFrom('matches')
@@ -289,7 +307,7 @@ export async function cleanupTestData() {
       // Continue
     }
     
-    // 3. Delete test team assignments (references users and teams)
+    // 4. Delete test team assignments (references users and teams)
     try {
       const testTeamIds = await db
         .selectFrom('teams')
@@ -324,7 +342,7 @@ export async function cleanupTestData() {
       // Continue
     }
     
-    // 4. Delete test sessions (references users)
+    // 5. Delete test sessions (references users)
     try {
       const testUserIds = await db
         .selectFrom('users')
@@ -342,7 +360,7 @@ export async function cleanupTestData() {
       // Continue
     }
     
-    // 5. Delete test teams (no dependencies after assignments are deleted)
+    // 6. Delete test teams (no dependencies after assignments are deleted)
     try {
       await db
         .deleteFrom('teams')
@@ -352,7 +370,7 @@ export async function cleanupTestData() {
       // Continue
     }
     
-    // 6. Delete test users last (after all references are removed)
+    // 7. Delete test users last (after all references are removed)
     try {
       await db
         .deleteFrom('users')

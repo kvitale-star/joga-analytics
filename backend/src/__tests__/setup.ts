@@ -20,6 +20,7 @@ beforeEach(async () => {
   // Keep schema_migrations intact so migrations don't re-run every test.
   // NOTE: Sessions are deleted first, then users (to avoid foreign key issues)
   // Test helpers should recreate users and sessions AFTER this cleanup runs
+  await db.deleteFrom('insights').execute();
   await db.deleteFrom('sessions').execute();
   await db.deleteFrom('user_teams').execute();
   await db.deleteFrom('custom_charts').execute();

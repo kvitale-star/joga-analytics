@@ -13,6 +13,7 @@ import { authenticateSession, canModifyMatch } from '../middleware/auth.js';
 import { getUserTeamAssignments } from '../services/teamService.js';
 import { computeMatchStats, normalizeFieldNames } from '../services/matchStatsService.js';
 import { normalizeOpponentName, opponentNamesMatch, findBestOpponentMatch, calculateOpponentSimilarity } from '../utils/opponentMatching.js';
+import { generateInsightsForMatch } from '../services/insightsService.js';
 
 const router = express.Router();
 
@@ -430,6 +431,21 @@ router.post('/', canModifyMatch, async (req, res) => {
       createdBy: req.userId,
     });
 
+    // Generate insights after match creation (async, don't wait)
+    if (teamId && match?.id) {
+      // Get season_id from team if available
+      const { db } = await import('../db/database.js');
+      const team = await db
+        .selectFrom('teams')
+        .select('season_id')
+        .where('id', '=', teamId)
+        .executeTakeFirst();
+      
+      generateInsightsForMatch(teamId, match.id, team?.season_id || null).catch((err) => {
+        console.error('❌ Error generating insights:', err);
+      });
+    }
+
     res.status(201).json(match);
   } catch (error: any) {
     res.status(400).json({ error: error.message || 'Failed to create match' });
@@ -531,6 +547,21 @@ router.put('/:id', canModifyMatch, async (req, res) => {
       referee,
       lastModifiedBy: req.userId,
     });
+
+    // Generate insights after match update (async, don't wait)
+    if (match?.teamId && match?.id) {
+      // Get season_id from team if available
+      const { db } = await import('../db/database.js');
+      const team = await db
+        .selectFrom('teams')
+        .select('season_id')
+        .where('id', '=', match.teamId)
+        .executeTakeFirst();
+      
+      generateInsightsForMatch(match.teamId, match.id, team?.season_id || null).catch((err) => {
+        console.error('❌ Error generating insights:', err);
+      });
+    }
 
     res.json(match);
   } catch (error: any) {

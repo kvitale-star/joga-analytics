@@ -18,6 +18,7 @@ export interface Database {
   images: ImagesTable;
   metric_definitions: MetricDefinitionsTable;
   custom_charts: CustomChartsTable;
+  insights: InsightsTable;
 }
 
 // Schema Migrations
@@ -213,3 +214,26 @@ export type NewSession = Insertable<SessionsTable>;
 export type CustomChartRow = Selectable<CustomChartsTable>;
 export type NewCustomChart = Insertable<CustomChartsTable>;
 export type CustomChartUpdate = Updateable<CustomChartsTable>;
+
+// Insights
+export interface InsightsTable {
+  id: Generated<number>;
+  team_id: number;
+  match_id: number | null;
+  season_id: number | null;
+  insight_type: 'anomaly' | 'trend' | 'half_split' | 'correlation' | 'benchmark';
+  category: 'shooting' | 'possession' | 'passing' | 'defending' | 'general';
+  severity: number;
+  title: string;
+  detail_json: string;   // JSON stored as string
+  narrative: string | null;
+  is_read: Generated<boolean>;
+  is_dismissed: Generated<boolean>;
+  expires_at: string | null;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export type InsightRow = Selectable<InsightsTable>;
+export type NewInsight = Insertable<InsightsTable>;
+export type InsightUpdate = Updateable<InsightsTable>;

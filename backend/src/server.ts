@@ -13,6 +13,7 @@ import sheetsRoutes from './routes/sheets.js';
 import aiRoutes from './routes/ai.js';
 import glossaryRoutes from './routes/glossary.js';
 import customChartsRoutes from './routes/customCharts.js';
+import insightsRoutes from './routes/insights.js';
 
 // Load environment variables
 // Try to load from backend/.env explicitly
@@ -131,6 +132,7 @@ app.use('/api/preferences', preferenceRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/sheets', sheetsRoutes);
 app.use('/api/glossary', glossaryRoutes);
+app.use('/api/insights', insightsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/custom-charts', customChartsRoutes);
 
