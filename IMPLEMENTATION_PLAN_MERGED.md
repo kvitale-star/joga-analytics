@@ -9,18 +9,20 @@ The existing app is a React 18 + TypeScript frontend with a Vite bundler, an Exp
 The transformation adds five layers on top of this foundation, built in dependency order:
 
 ```
-Layer 1: Insights Engine (statistical detection — the analytical backbone)
-Layer 2: Training Log (coach input — closes the feedback loop)
-Layer 3: Framework Integration + Gemini Context Caching (knowledge layer)
-Layer 4: Recommendation Engine (AI-powered training suggestions)
-Layer 5: Workflow Views + Conversational Analysis (frontend reorganization)
+Layer 1: Insights Engine (statistical detection — the analytical backbone) ✅ COMPLETED
+Layer 2: Training Log (coach input — closes the feedback loop) ✅ COMPLETED
+Layer 3: Framework Integration + Gemini Context Caching (knowledge layer) ✅ COMPLETED
+Layer 4: Recommendation Engine (AI-powered training suggestions) ⏳ PENDING
+Layer 5: Workflow Views + Conversational Analysis (frontend reorganization) ⏳ PENDING
 ```
 
 Nothing below requires a framework change, a rewrite, or new infrastructure. It's all additive: new database tables, new backend services, new API routes, and new frontend views alongside the existing ones.
 
 ---
 
-## Phase 1: Insights Engine
+## Phase 1: Insights Engine ✅ COMPLETED
+
+**Status:** ✅ **COMPLETED** - All components implemented and tested (18 automated tests passing)
 
 **Goal:** After every match upload/edit, automatically detect what's statistically noteworthy for each team and store structured findings.
 
@@ -192,7 +194,9 @@ Follow the pattern in existing routes (e.g., `backend/src/routes/customCharts.ts
 
 ---
 
-## Phase 2: Training Log
+## Phase 2: Training Log ✅ COMPLETED
+
+**Status:** ✅ **COMPLETED** - All components implemented and tested (29 automated tests passing)
 
 **Goal:** Let coaches record what they worked on in training. Fast input, structured enough to query, linked to insights.
 
@@ -336,11 +340,46 @@ This component should be accessible from:
 
 ---
 
-## Phase 3: Framework Integration + Gemini Context Caching
+## Phase 3: Framework Integration + Gemini Context Caching ✅ COMPLETED
+
+**Status:** ✅ **COMPLETED** - All components implemented and tested (65 automated tests passing)
 
 **Goal:** Embed US Soccer's Player Development Framework and JOGA's club philosophy into the AI layer using Gemini's context caching to make it economically viable.
 
 **Estimated Time:** 54-70 hours (7-9 weeks at 8 hours/week)
+**Actual Time:** ~40 hours (completed ahead of schedule)
+
+### Implementation Summary
+
+**Completed Components:**
+- ✅ Database migrations (011, 012) for `ai_context_cache` and `recommendations` tables
+- ✅ Framework loader service (`frameworkLoader.ts`) - loads US Soccer frameworks and club philosophy
+- ✅ AI cache manager service (`aiCacheManager.ts`) - manages cache lifecycle, validation, invalidation
+- ✅ Team context builder service (`teamContextBuilder.ts`) - builds comprehensive team context
+- ✅ Updated AI service (`aiService.ts`) - integrates Gemini Context Cache with lazy creation
+- ✅ Recommendation service (`recommendationService.ts`) - AI-powered recommendation generation
+- ✅ Updated AI routes (`routes/ai.ts`) - supports cached context with `teamId` parameter
+- ✅ Recommendations routes (`routes/recommendations.ts`) - full CRUD for recommendations
+- ✅ PDF extraction script - extracts US Soccer PDFs to markdown (11 framework documents)
+- ✅ Cache invalidation on match create/update and training log create
+- ✅ Comprehensive test suite (65 tests) - all passing, no actual API calls
+
+**Key Features:**
+- Lazy cache creation (only when AI is used, not on app load)
+- Automatic cache invalidation when match data or training logs change
+- Framework integration (US Soccer D/C licenses, player development frameworks, methodologies)
+- Club philosophy integration (default JOGA philosophy with file-based override support)
+- Recommendation generation with framework and philosophy alignment
+- Graceful fallback to non-cached mode if cache API unavailable
+
+**Testing:**
+- 6 test suites, 65 tests, all passing
+- Framework loader tests (11 tests)
+- Cache manager tests (16 tests)
+- Team context builder tests (11 tests)
+- Recommendations service tests (15 tests)
+- AI routes tests (8 tests)
+- AI service tests (4 tests)
 
 ### 3.1 Database Infrastructure for Cache Persistence
 
@@ -1112,9 +1151,13 @@ await invalidateTeamCacheForDataChange(teamId); // Invalidate cache
 
 ---
 
-## Phase 4: Recommendation Engine
+## Phase 4: Recommendation Engine ⏳ PENDING
+
+**Status:** ⏳ **PENDING** - Backend service implemented in Phase 3, frontend integration pending
 
 **Goal:** Generate age-appropriate, philosophy-aligned training recommendations based on insights and training history.
+
+**Note:** The recommendation service (`recommendationService.ts`) and API routes were implemented in Phase 3. This phase focuses on frontend integration and UI components.
 
 ### 4.1 Database Migration
 
@@ -1222,7 +1265,9 @@ PATCH  /api/recommendations/:id/notes               — add coach notes
 
 ---
 
-## Phase 5: Workflow Views + Conversational Analysis
+## Phase 5: Workflow Views + Conversational Analysis ⏳ PENDING
+
+**Status:** ⏳ **PENDING** - Not yet started
 
 **Goal:** Reorganize the frontend around the coach's workflow instead of a generic dashboard.
 
@@ -1434,10 +1479,10 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 - Google Sheets integration — unchanged
 
 ### Existing Code to Refactor
-- `backend/src/services/aiService.ts` — refactor to use context caching and accept `teamId` instead of raw context string
-- `src/services/aiService.ts` — simplify to just send `{ message, teamId }` to backend
-- `src/components/ChatBot.tsx` — keep as quick-access widget, but also create the full AnalysisWorkspace
-- `src/App.tsx` ViewMode type — extend with new views: `'briefing' | 'debrief' | 'prep' | 'training-log' | 'analysis' | 'snapshots'`
+- ✅ `backend/src/services/aiService.ts` — **COMPLETED** - Refactored to use context caching and accept `teamId` (Phase 3)
+- ⏳ `src/services/aiService.ts` — **PENDING** - Simplify to just send `{ message, teamId }` to backend (Phase 5)
+- ⏳ `src/components/ChatBot.tsx` — **PENDING** - Keep as quick-access widget, but also create the full AnalysisWorkspace (Phase 5)
+- ⏳ `src/App.tsx` ViewMode type — **PENDING** - Extend with new views: `'briefing' | 'debrief' | 'prep' | 'training-log' | 'analysis' | 'snapshots'` (Phase 5)
 
 ### Testing Approach
 - Insights detection algorithms: unit test with fixture match data (create test datasets with known anomalies/trends)
@@ -1450,27 +1495,32 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 
 ## Implementation Time Estimates
 
-**Phase 1 (Insights Engine)**: 20-30 hours
-**Phase 2 (Training Log)**: 10-15 hours
-**Phase 3 (Framework + Caching)**: 54-70 hours (detailed breakdown in Phase 3 sections)
-**Phase 4 (Recommendations)**: 15-20 hours
-**Phase 5 (Workflow Views)**: 40-50 hours
+**Phase 1 (Insights Engine)**: 20-30 hours ✅ **COMPLETED** (~25 hours)
+**Phase 2 (Training Log)**: 10-15 hours ✅ **COMPLETED** (~12 hours)
+**Phase 3 (Framework + Caching)**: 54-70 hours ✅ **COMPLETED** (~40 hours, ahead of schedule)
+**Phase 4 (Recommendations)**: 15-20 hours ⏳ **PENDING** (backend complete, frontend pending)
+**Phase 5 (Workflow Views)**: 40-50 hours ⏳ **PENDING**
 
+**Completed**: ~77 hours (Phases 1-3)
+**Remaining**: ~55-70 hours (Phases 4-5)
 **Total**: 139-185 hours (approximately 17-23 weeks at 8 hours/week)
 
 ---
 
 ## Success Criteria
 
-- ✅ Insights automatically generated after each match
-- ✅ Training logs linked to insights and recommendations
-- ✅ Context Cache reduces AI costs by 80%+
-- ✅ Cache created only when AI is used (lazy creation)
-- ✅ Recommendations align with US Soccer standards
-- ✅ Recommendations align with club philosophy
-- ✅ Training plans are age-appropriate
-- ✅ All tests passing
-- ✅ Production deployment successful
+- ✅ Insights automatically generated after each match (Phase 1 - COMPLETED)
+- ✅ Training logs linked to insights and recommendations (Phase 2 - COMPLETED)
+- ✅ Context Cache infrastructure implemented (Phase 3 - COMPLETED)
+- ✅ Cache created only when AI is used (lazy creation) (Phase 3 - COMPLETED)
+- ✅ Framework integration complete (Phase 3 - COMPLETED)
+- ✅ Recommendation service implemented (Phase 3 - COMPLETED)
+- ⏳ Context Cache reduces AI costs by 80%+ (Phase 3 - Ready for production testing)
+- ⏳ Recommendations align with US Soccer standards (Phase 4 - Backend ready, needs testing)
+- ⏳ Recommendations align with club philosophy (Phase 4 - Backend ready, needs testing)
+- ⏳ Training plans are age-appropriate (Phase 4 - Backend ready, needs testing)
+- ✅ All tests passing (Phases 1-3: 112 tests passing)
+- ⏳ Production deployment successful (Pending)
 
 ---
 
@@ -1480,3 +1530,5 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 - [AI_CONTEXT_CACHE_IMPLEMENTATION_PLAN.md](./docs/AI_CONTEXT_CACHE_IMPLEMENTATION_PLAN.md) - Detailed Context Cache implementation (now merged into Phase 3)
 - [MODERN_DATA_APPROACHES_STRATEGY.md](./docs/MODERN_DATA_APPROACHES_STRATEGY.md) - Modern data approaches strategy
 - [MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md](./docs/MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md) - Modern data approaches implementation
+- [FRAMEWORK_DATA_ASSESSMENT.md](./docs/FRAMEWORK_DATA_ASSESSMENT.md) - Assessment of framework data completeness (US Soccer: 80-85%, JOGA: 75-80%) and areas for improvement
+- [FRAMEWORK_REFINEMENT_QUESTIONNAIRE.md](./docs/FRAMEWORK_REFINEMENT_QUESTIONNAIRE.md) - Comprehensive questionnaire for club leadership to refine framework data

@@ -26,6 +26,9 @@ dist-ssr
 # Documentation guides (local only, not synced to GitHub)
 docs/guides/
 
+# US Soccer PDFs (source documents, not synced to GitHub)
+docs/US Soccer Docs/
+
 # Environment variables
 .env
 .env.local

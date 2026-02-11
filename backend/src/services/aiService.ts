@@ -1,23 +1,193 @@
 /**
  * Backend AI Service
- * Handles AI API calls using backend credentials
+ * Handles AI API calls using backend credentials with Gemini Context Cache
+ * Uses @google/genai SDK for context caching support
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
+import { getStoredCache, isCacheValid, storeCacheMetadata, invalidateTeamCache } from './aiCacheManager.js';
+import { buildTeamContext, type TeamContextData } from './teamContextBuilder.js';
+import { loadUSSFrameworks, loadClubPhilosophy } from './frameworkLoader.js';
 
-let genAI: GoogleGenerativeAI | null = null;
+const MODEL = 'gemini-2.5-flash';
+
+let genAI: GoogleGenAI | null = null;
 
 // Initialize Gemini with API key from environment
-function initializeGemini() {
+function initializeGemini(): GoogleGenAI | null {
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && !genAI) {
-    genAI = new GoogleGenerativeAI(apiKey);
+    genAI = new GoogleGenAI({ apiKey });
   }
   return genAI;
 }
 
 /**
- * Chat with AI using Gemini
+ * Build system instruction with frameworks and philosophy
+ */
+function buildTeamSystemInstruction(
+  contextData: TeamContextData,
+  usSoccerFrameworks: any,
+  clubPhilosophy: any
+): string {
+  const { developmentStage, clubPhilosophy: club } = contextData;
+  
+  return `You are an AI assistant helping JOGA coaches analyze their match data and provide training recommendations.
+
+US SOCCER DEVELOPMENT FRAMEWORK:
+Development Stage: ${developmentStage.name} (${developmentStage.ageRange})
+Format: ${developmentStage.format}
+
+CLUB PHILOSOPHY:
+Playing Style: ${clubPhilosophy.playingStyle}
+Training Methodology: ${clubPhilosophy.trainingMethodology}
+Club Values: ${clubPhilosophy.clubValues}
+Non-Negotiables:
+${clubPhilosophy.nonNegotiables.map((item: string) => `- ${item}`).join('\n')}
+
+All recommendations must align with BOTH:
+1. US Soccer coaching standards (appropriate for ${developmentStage.ageRange})
+2. JOGA club philosophy and playing style
+
+When there is a conflict, prioritize club philosophy but explain the US Soccer standard.
+
+Provide specific, actionable recommendations based on the team's match data, insights, and training history.`;
+}
+
+/**
+ * Get or create cache - ONLY called when AI feature is used (lazy creation)
+ * Uses @google/genai ai.caches.create for Gemini Context Cache
+ */
+async function getOrCreateCache(teamId: number, contextData: TeamContextData): Promise<string | null> {
+  const ai = initializeGemini();
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY environment variable is not set');
+  }
+
+  // 1. Check database for existing cache
+  const existingCache = await getStoredCache(teamId, 'combined');
+  
+  // 2. Check if cache is still valid
+  if (existingCache && isCacheValid(existingCache, contextData.dataHash)) {
+    // Cache valid - return it (NO API CALL, NO COST)
+    console.log('✅ Using existing cache:', existingCache.cache_id);
+    return existingCache.cache_id;
+  }
+  
+  // 3. Cache expired or missing - create new one (ONLY NOW)
+  console.log('🔄 Cache expired or missing - creating new cache for team', teamId);
+  
+  try {
+    // Load frameworks (already loaded in contextData, but we need them for system instruction)
+    const [usSoccerFrameworks, clubPhilosophy] = await Promise.all([
+      loadUSSFrameworks(),
+      loadClubPhilosophy(),
+    ]);
+    
+    // Build the system instruction from framework + philosophy
+    const systemInstruction = buildTeamSystemInstruction(contextData, usSoccerFrameworks, clubPhilosophy);
+    
+    // Build the contents array — this is the "heavy" context that gets cached
+    // Minimum 1024 tokens required for Gemini 2.5 Flash context caching
+    const contents = [
+      {
+        role: 'user' as const,
+        parts: [{ text: contextData.formattedMatchData }],
+      },
+      {
+        role: 'model' as const,
+        parts: [{ text: 'I have received and understood the team data, development framework, insights, and training history. I am ready to answer questions about this team.' }],
+      },
+    ];
+    
+    const cachedContent = await ai.caches.create({
+      model: MODEL,
+      config: {
+        contents,
+        systemInstruction,
+        displayName: `joga-team-${teamId}`,
+        ttl: '3600s', // 1 hour
+      },
+    });
+    
+    const cacheId = cachedContent?.name ?? null;
+    
+    if (!cacheId) {
+      console.log('⚠️  Cache creation returned no cache ID, using non-cached mode');
+      return null;
+    }
+    
+    // Store cache metadata in database
+    const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+    await storeCacheMetadata({
+      teamId,
+      cacheType: 'combined',
+      cacheId,
+      expiresAt,
+      dataHash: contextData.dataHash,
+    });
+    
+    console.log('✅ Cache created and stored:', cacheId);
+    return cacheId;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Error creating cache:', msg);
+    // Fall back to non-cached mode
+    return null;
+  }
+}
+
+/**
+ * Chat with AI using Gemini Context Cache (lazy creation)
+ * Falls back to non-cached mode if cache is unavailable
+ */
+export async function chatWithCachedContext(
+  teamId: number,
+  message: string
+): Promise<string> {
+  const ai = initializeGemini();
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY environment variable is not set');
+  }
+
+  try {
+    // Build team context
+    const contextData = await buildTeamContext(teamId);
+    
+    // Get or create cache (lazy creation)
+    const cacheId = await getOrCreateCache(teamId, contextData);
+    
+    if (cacheId) {
+      try {
+        const response = await ai.models.generateContent({
+          model: MODEL,
+          contents: message,
+          config: {
+            cachedContent: cacheId,
+          },
+        });
+        const text = response?.text;
+        if (text !== undefined && text !== '') {
+          return text;
+        }
+      } catch (cacheError: unknown) {
+        const msg = cacheError instanceof Error ? cacheError.message : 'Unknown error';
+        console.error('❌ Error using cache:', msg);
+        // Fall back to non-cached mode
+      }
+    }
+    
+    // Fallback: Non-cached mode (original behavior)
+    return await chatWithAI(message, contextData.formattedMatchData);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('AI service error:', msg);
+    throw new Error(`AI service error: ${msg}`);
+  }
+}
+
+/**
+ * Chat with AI using Gemini (non-cached mode - fallback)
  * @param message User's question
  * @param context Pre-formatted context string (includes match data and system prompt)
  */
@@ -25,68 +195,37 @@ export async function chatWithAI(
   message: string,
   context: string
 ): Promise<string> {
-  const gemini = initializeGemini();
-
-  if (!gemini) {
+  const ai = initializeGemini();
+  if (!ai) {
     throw new Error('GEMINI_API_KEY environment variable is not set');
   }
 
   try {
-    // Use Gemini 2.5 Flash (latest stable version as of 2025)
-    // If unavailable, API will return an error and can be handled
-    const model = gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    // Use the pre-formatted context from frontend (includes system prompt and match data)
-    const prompt = context || `You are a helpful soccer analytics assistant. You help coaches analyze match data.
+    const prompt = context
+      ? `${context}\n\n---\n\n${message}`
+      : `You are a helpful soccer analytics assistant. You help coaches analyze match data.
 
 User's question: ${message}
 
 Please provide a helpful response.`;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
-
-    return text;
-  } catch (error: any) {
-    console.error('AI service error:', error);
-    if (error.message?.includes('API_KEY')) {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+    });
+    const text = response?.text;
+    if (text !== undefined && text !== '') {
+      return text;
+    }
+    throw new Error('Empty response from AI');
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('AI service error:', msg);
+    if (msg.includes('API_KEY')) {
       throw new Error('Invalid or missing Gemini API key');
     }
-    throw new Error(`AI service error: ${error.message || 'Unknown error'}`);
+    throw new Error(`AI service error: ${msg}`);
   }
-}
-
-/**
- * Format match data into a readable string for the AI
- */
-function formatMatchDataForAI(data: any[], columnKeys: string[]): string {
-  if (data.length === 0) {
-    return 'No match data available.';
-  }
-
-  const sample = data[0];
-  const availableColumns = columnKeys.filter(key => {
-    const value = sample[key];
-    return value !== undefined && value !== null && value !== '';
-  });
-
-  let formatted = `Total matches: ${data.length}\n`;
-  formatted += `Available columns: ${availableColumns.join(', ')}\n\n`;
-
-  // Include all match data
-  data.forEach((match, index) => {
-    formatted += `Match ${index + 1}:\n`;
-    availableColumns.forEach(key => {
-      const value = match[key];
-      if (value !== undefined && value !== null && value !== '') {
-        formatted += `  ${key}: ${value}\n`;
-      }
-    });
-    formatted += '\n';
-  });
-
-  return formatted;
 }
 
 /**
@@ -100,15 +239,12 @@ export async function extractStatsFromImage(
   mimeType: string,
   period: '1st' | '2nd' = '1st'
 ): Promise<Record<string, number>> {
-  const gemini = initializeGemini();
-
-  if (!gemini) {
+  const ai = initializeGemini();
+  if (!ai) {
     throw new Error('GEMINI_API_KEY environment variable is not set');
   }
 
   try {
-    const model = gemini.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
     const prompt = `Extract soccer match statistics from this image. This is ${period} half data.
 
 The image shows basic stats with Team on the left and Opponent on the right.
@@ -162,19 +298,16 @@ Example format:
   ...
 }`;
 
-    // Create image part for Gemini API
-    const imagePart = {
-      inlineData: {
-        data: imageBase64,
-        mimeType: mimeType,
-      },
-    };
+    const contents = [
+      { inlineData: { data: imageBase64, mimeType } },
+      { text: prompt },
+    ];
 
-    const textPart = { text: prompt };
-
-    const result = await model.generateContent([imagePart, textPart]);
-    const response = result.response;
-    const text = response.text();
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents,
+    });
+    const text = response?.text ?? '';
 
     // Extract JSON from response (may have markdown code blocks)
     let jsonText = text.trim();
@@ -207,13 +340,21 @@ Example format:
     }
 
     throw new Error('Could not parse JSON from Gemini response');
-  } catch (error: any) {
-    console.error('📸 Gemini vision error:', error);
-    if (error.message?.includes('API_KEY')) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('📸 Gemini vision error:', msg);
+    if (msg.includes('API_KEY')) {
       throw new Error('Invalid or missing Gemini API key');
     }
-    throw new Error(`Failed to extract stats from image: ${error.message || 'Unknown error'}`);
+    throw new Error(`Failed to extract stats from image: ${msg}`);
   }
+}
+
+/**
+ * Invalidate a team's cache (call after match upload, training log entry, etc.)
+ */
+export async function invalidateTeamCacheForDataChange(teamId: number): Promise<void> {
+  await invalidateTeamCache(teamId, 'combined');
 }
 
 /**

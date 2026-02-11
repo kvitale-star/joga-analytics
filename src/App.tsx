@@ -48,13 +48,14 @@ import { SettingsView } from './components/SettingsView';
 import { Glossary } from './components/Glossary';
 import { MatchEditorView } from './components/MatchEditorView';
 import { WalkthroughOverlay } from './components/WalkthroughOverlay';
+import { RecommendationsView } from './components/RecommendationsView';
 import { getAllTeams } from './services/teamService';
 import { Team } from './types/auth';
 import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from './utils/teamMapping';
 import { formatDateWithUserPreference, dateToYYYYMMDD } from './utils/dateFormatting';
 import { JOGA_COLORS } from './utils/colors';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
+type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
 
 function App() {
   const { user, isLoading, isSetupRequired } = useAuth();
@@ -1756,7 +1757,7 @@ function App() {
   // This prevents empty charts from being auto-filled and written to URL
 
   // Handle navigation from sidebar
-  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor') => {
+  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations') => {
     if (view === 'chat') {
       setViewMode('chat');
     } else if (view === 'team-data') {
@@ -1774,6 +1775,8 @@ function App() {
       setViewMode('glossary');
     } else if (view === 'match-editor') {
       setViewMode('match-editor');
+    } else if (view === 'recommendations') {
+      setViewMode('recommendations');
     } else {
       setViewMode('dashboard');
     }
@@ -2047,6 +2050,18 @@ function App() {
         {showWalkthrough && (
           <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />
         )}
+      </div>
+    );
+  }
+
+  // Render Recommendations view if selected
+  if (viewMode === 'recommendations') {
+    return (
+      <div className="flex h-screen bg-gray-50 relative">
+        <Sidebar currentView="recommendations" onNavigate={handleNavigation} />
+        <div className="flex-1 ml-16 flex flex-col overflow-auto p-6">
+          <RecommendationsView />
+        </div>
       </div>
     );
   }

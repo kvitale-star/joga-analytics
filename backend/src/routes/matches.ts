@@ -14,6 +14,7 @@ import { getUserTeamAssignments } from '../services/teamService.js';
 import { computeMatchStats, normalizeFieldNames } from '../services/matchStatsService.js';
 import { normalizeOpponentName, opponentNamesMatch, findBestOpponentMatch, calculateOpponentSimilarity } from '../utils/opponentMatching.js';
 import { generateInsightsForMatch } from '../services/insightsService.js';
+import { invalidateTeamCacheForDataChange } from '../services/aiService.js';
 
 const router = express.Router();
 
@@ -443,6 +444,11 @@ router.post('/', canModifyMatch, async (req, res) => {
       
       generateInsightsForMatch(teamId, match.id, team?.season_id || null).catch((err) => {
         console.error('❌ Error generating insights:', err);
+      });
+
+      // Invalidate AI cache (data changed)
+      invalidateTeamCacheForDataChange(teamId).catch((err) => {
+        console.error('❌ Error invalidating cache:', err);
       });
     }
 

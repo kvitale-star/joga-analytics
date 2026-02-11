@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
+type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
+  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
   onNavigate: (view: ViewType) => void;
 }
 
@@ -285,6 +285,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 }`}
               >
                 Metric Glossary
+              </span>
+            </button>
+            <button
+              onClick={() => onNavigate('recommendations')}
+              className={`w-full flex items-center py-3 text-sm transition-colors ${
+                isExpanded ? 'px-4 justify-start' : 'justify-center'
+              } ${
+                currentView === 'recommendations'
+                  ? 'bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300'
+              }`}
+              title={!isExpanded ? 'Recommendations' : undefined}
+            >
+              <svg
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                />
+              </svg>
+              <span 
+                className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
+                  isExpanded 
+                    ? 'opacity-100 max-w-[200px]' 
+                    : 'opacity-0 max-w-0 overflow-hidden'
+                }`}
+              >
+                Recommendations
               </span>
             </button>
           </div>
