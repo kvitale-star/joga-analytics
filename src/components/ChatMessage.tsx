@@ -197,9 +197,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ role, content, timesta
       <div
         className={`max-w-[90%] rounded-lg p-5 ${
           role === 'user'
-            ? 'bg-blue-600 text-white'
+            ? 'text-white'
             : 'bg-white text-gray-800 border border-gray-200 shadow-sm'
         }`}
+        style={role === 'user' ? { backgroundColor: '#6787aa' } : undefined}
       >
         {role === 'assistant' && (
           <div>

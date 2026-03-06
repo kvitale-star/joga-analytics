@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-type ViewType = 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
+type ViewType = 'briefing' | 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'training-log' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
 
 interface SidebarProps {
-  currentView: 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
+  currentView: 'briefing' | 'dashboard' | 'chat' | 'game-data' | 'club-data' | 'upload-game-data' | 'training-log' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
   onNavigate: (view: ViewType) => void;
 }
 
@@ -65,6 +65,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
             Reporting
           </div>
           <div className="space-y-1">
+            <button
+              data-tour="briefing-nav"
+              onClick={() => onNavigate('briefing')}
+              className={`w-full flex items-center py-3 text-sm transition-colors ${
+                isExpanded ? 'px-4 justify-start' : 'justify-center'
+              } ${
+                currentView === 'briefing' && !isExpanded
+                  ? 'bg-gray-700 text-white'
+                  : currentView === 'briefing'
+                  ? 'hover:bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300'
+              }`}
+              title={!isExpanded ? 'Briefing' : undefined}
+            >
+              <svg
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                />
+              </svg>
+              <span 
+                className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
+                  isExpanded 
+                    ? 'opacity-100 max-w-[200px]' 
+                    : 'opacity-0 max-w-0 overflow-hidden'
+                }`}
+              >
+                Briefing
+              </span>
+            </button>
             <button
               data-tour="team-data-nav"
               onClick={() => onNavigate('team-data')}
@@ -170,17 +207,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
           </div>
         </div>
 
-        {/* Tools Section */}
+        {/* Coaching Section */}
         <div className="mb-6">
           <div 
-            data-tour="sidebar-tools-section"
+            data-tour="sidebar-coaching-section"
             className={`px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap transition-all duration-300 ease-in-out ${
               isExpanded 
                 ? 'opacity-100 max-h-8' 
                 : 'opacity-0 max-h-0 overflow-hidden py-0'
             }`}
           >
-            Tools
+            Coaching
           </div>
           <div className="space-y-1">
             <button
@@ -220,6 +257,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               </span>
             </button>
             <button
+              onClick={() => onNavigate('training-log')}
+              className={`w-full flex items-center py-3 text-sm transition-colors ${
+                isExpanded ? 'px-4 justify-start' : 'justify-center'
+              } ${
+                currentView === 'training-log'
+                  ? 'bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300'
+              }`}
+              title={!isExpanded ? 'Training Log' : undefined}
+            >
+              <svg
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                />
+              </svg>
+              <span 
+                className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
+                  isExpanded 
+                    ? 'opacity-100 max-w-[200px]' 
+                    : 'opacity-0 max-w-0 overflow-hidden'
+                }`}
+              >
+                Training Log
+              </span>
+            </button>
+            <button
               onClick={() => onNavigate('upload-game-data')}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
@@ -254,40 +325,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
               </span>
             </button>
             <button
-              onClick={() => onNavigate('glossary')}
-              className={`w-full flex items-center py-3 text-sm transition-colors ${
-                isExpanded ? 'px-4 justify-start' : 'justify-center'
-              } ${
-                currentView === 'glossary'
-                  ? 'bg-gray-700 text-white'
-                  : 'hover:bg-gray-700 text-gray-300'
-              }`}
-              title={!isExpanded ? 'Metric Glossary' : undefined}
-            >
-              <svg
-                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              <span 
-                className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
-                  isExpanded 
-                    ? 'opacity-100 max-w-[200px]' 
-                    : 'opacity-0 max-w-0 overflow-hidden'
-                }`}
-              >
-                Metric Glossary
-              </span>
-            </button>
-            <button
               onClick={() => onNavigate('recommendations')}
               className={`w-full flex items-center py-3 text-sm transition-colors ${
                 isExpanded ? 'px-4 justify-start' : 'justify-center'
@@ -319,6 +356,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 }`}
               >
                 Recommendations
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Reference Section */}
+        <div className="mb-6">
+          <div 
+            className={`px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap transition-all duration-300 ease-in-out ${
+              isExpanded 
+                ? 'opacity-100 max-h-8' 
+                : 'opacity-0 max-h-0 overflow-hidden py-0'
+            }`}
+          >
+            Reference
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={() => onNavigate('glossary')}
+              className={`w-full flex items-center py-3 text-sm transition-colors ${
+                isExpanded ? 'px-4 justify-start' : 'justify-center'
+              } ${
+                currentView === 'glossary'
+                  ? 'bg-gray-700 text-white'
+                  : 'hover:bg-gray-700 text-gray-300'
+              }`}
+              title={!isExpanded ? 'Metric Glossary' : undefined}
+            >
+              <svg
+                className={`w-5 h-5 flex-shrink-0 ${!isExpanded ? 'mx-auto' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                />
+              </svg>
+              <span 
+                className={`ml-3 whitespace-nowrap transition-all duration-300 ease-in-out ${
+                  isExpanded 
+                    ? 'opacity-100 max-w-[200px]' 
+                    : 'opacity-0 max-w-0 overflow-hidden'
+                }`}
+              >
+                Metric Glossary
               </span>
             </button>
           </div>

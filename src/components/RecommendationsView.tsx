@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { JOGA_COLORS } from '../utils/colors';
 import { RecommendationList } from './RecommendationList';
 import { GenerateRecommendationModal } from './GenerateRecommendationModal';
 import { markRecommendationAsApplied } from '../services/recommendationService';
@@ -148,7 +149,7 @@ export const RecommendationsView: React.FC<RecommendationsViewProps> = ({
               <select
                 value={selectedTeamId}
                 onChange={(e) => setSelectedTeamId(parseInt(e.target.value))}
-                className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
               >
                 {teams.map((team) => (
                   <option key={team.id} value={team.id}>
@@ -164,7 +165,17 @@ export const RecommendationsView: React.FC<RecommendationsViewProps> = ({
             <button
               onClick={handleGenerateGeneral}
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium text-black rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: loading ? '#9ca3af' : JOGA_COLORS.voltYellow,
+                border: `2px solid ${loading ? '#9ca3af' : JOGA_COLORS.voltYellow}`,
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) e.currentTarget.style.backgroundColor = '#b8e600';
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+              }}
             >
               Generate Recommendations
             </button>

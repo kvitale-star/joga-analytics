@@ -493,8 +493,22 @@ async function saveInsight(insight: Omit<NewInsight, 'id' | 'created_at' | 'upda
     })
     .returningAll()
     .executeTakeFirstOrThrow();
-  
+
   return result;
+}
+
+/**
+ * Update an insight's narrative (Phase 1.4)
+ */
+async function updateInsightNarrative(insightId: number, narrative: string): Promise<void> {
+  await db
+    .updateTable('insights')
+    .set({
+      narrative,
+      updated_at: new Date().toISOString(),
+    })
+    .where('id', '=', insightId)
+    .execute();
 }
 
 /**
@@ -586,18 +600,35 @@ export async function generateInsightsForMatch(
     });
   }
   
-  // Save all insights
+  // Save all insights and generate narratives (Phase 1.4)
   let savedCount = 0;
+  let narratedCount = 0;
   for (const insight of insights) {
     try {
-      await saveInsight(insight);
+      const saved = await saveInsight(insight);
       savedCount++;
+
+      // Generate coach-friendly narrative via Gemini (Phase 1.4) — skipped in test env
+      if (process.env.NODE_ENV !== 'test') {
+        try {
+          const { generateInsightNarrative } = await import('./aiService.js');
+          const narrative = await generateInsightNarrative(
+            insight.title,
+            insight.detail_json,
+            insight.insight_type
+          );
+          await updateInsightNarrative(saved.id, narrative);
+          narratedCount++;
+        } catch (narrError) {
+          console.warn(`⚠️  Narrative generation failed for insight ${saved.id}, keeping narrative null:`, narrError);
+        }
+      }
     } catch (error) {
       console.error(`❌ Error saving insight:`, error);
     }
   }
-  
-  console.log(`✅ Generated ${insights.length} insights, saved ${savedCount}`);
+
+  console.log(`✅ Generated ${insights.length} insights, saved ${savedCount}, narrated ${narratedCount}`);
 }
 
 /**

@@ -1,6 +1,6 @@
 import express from 'express';
 import { authenticateSession } from '../middleware/auth.js';
-import { getUserTeamAssignments } from '../services/teamService.js';
+import { getUserTeamAssignments, getAllTeams } from '../services/teamService.js';
 import { generateInsightsForMatch, getActiveInsights } from '../services/insightsService.js';
 import { db } from '../db/database.js';
 
@@ -23,8 +23,14 @@ router.get('/', async (req, res) => {
     const { teamId } = req.query;
     const userId = req.userId;
 
-    // Get user's team assignments
-    const userTeamIds = await getUserTeamAssignments(userId);
+    // Admins have access to all teams; coaches use their assignments
+    let userTeamIds: number[];
+    if (req.userRole === 'admin') {
+      const teams = await getAllTeams();
+      userTeamIds = teams.map((t) => t.id);
+    } else {
+      userTeamIds = await getUserTeamAssignments(userId);
+    }
 
     if (userTeamIds.length === 0) {
       return res.json([]);
@@ -44,7 +50,7 @@ router.get('/', async (req, res) => {
 
     // Get insights for all user's teams
     const allInsights = await Promise.all(
-      userTeamIds.map(teamId => getActiveInsights(teamId))
+      userTeamIds.map((tid) => getActiveInsights(tid))
     );
 
     // Flatten and sort by severity, then date
@@ -73,12 +79,13 @@ router.get('/team/:teamId', async (req, res) => {
     }
 
     const teamId = parseInt(req.params.teamId);
-    const userId = req.userId;
 
-    // Verify user has access to this team
-    const userTeamIds = await getUserTeamAssignments(userId);
-    if (!userTeamIds.includes(teamId)) {
-      return res.status(403).json({ error: 'Access denied to this team' });
+    // Admins have access to all teams
+    if (req.userRole !== 'admin') {
+      const userTeamIds = await getUserTeamAssignments(req.userId!);
+      if (!userTeamIds.includes(teamId)) {
+        return res.status(403).json({ error: 'Access denied to this team' });
+      }
     }
 
     const insights = await getActiveInsights(teamId);
@@ -100,7 +107,6 @@ router.get('/match/:matchId', async (req, res) => {
     }
 
     const matchId = parseInt(req.params.matchId);
-    const userId = req.userId;
 
     // Get match to verify team access
     const match = await db
@@ -113,10 +119,12 @@ router.get('/match/:matchId', async (req, res) => {
       return res.status(404).json({ error: 'Match not found' });
     }
 
-    // Verify user has access to this team
-    const userTeamIds = await getUserTeamAssignments(userId);
-    if (!userTeamIds.includes(match.team_id)) {
-      return res.status(403).json({ error: 'Access denied to this team' });
+    // Admins have access to all teams
+    if (req.userRole !== 'admin') {
+      const userTeamIds = await getUserTeamAssignments(req.userId!);
+      if (!userTeamIds.includes(match.team_id)) {
+        return res.status(403).json({ error: 'Access denied to this team' });
+      }
     }
 
     // Get insights for this match
@@ -147,7 +155,6 @@ router.patch('/:id/read', async (req, res) => {
     }
 
     const insightId = parseInt(req.params.id);
-    const userId = req.userId;
 
     // Get insight to verify team access
     const insight = await db
@@ -160,10 +167,12 @@ router.patch('/:id/read', async (req, res) => {
       return res.status(404).json({ error: 'Insight not found' });
     }
 
-    // Verify user has access to this team
-    const userTeamIds = await getUserTeamAssignments(userId);
-    if (!userTeamIds.includes(insight.team_id)) {
-      return res.status(403).json({ error: 'Access denied to this team' });
+    // Admins have access to all teams
+    if (req.userRole !== 'admin') {
+      const userTeamIds = await getUserTeamAssignments(req.userId!);
+      if (!userTeamIds.includes(insight.team_id)) {
+        return res.status(403).json({ error: 'Access denied to this team' });
+      }
     }
 
     // Update insight
@@ -194,7 +203,6 @@ router.patch('/:id/dismiss', async (req, res) => {
     }
 
     const insightId = parseInt(req.params.id);
-    const userId = req.userId;
 
     // Get insight to verify team access
     const insight = await db
@@ -207,10 +215,12 @@ router.patch('/:id/dismiss', async (req, res) => {
       return res.status(404).json({ error: 'Insight not found' });
     }
 
-    // Verify user has access to this team
-    const userTeamIds = await getUserTeamAssignments(userId);
-    if (!userTeamIds.includes(insight.team_id)) {
-      return res.status(403).json({ error: 'Access denied to this team' });
+    // Admins have access to all teams
+    if (req.userRole !== 'admin') {
+      const userTeamIds = await getUserTeamAssignments(req.userId!);
+      if (!userTeamIds.includes(insight.team_id)) {
+        return res.status(403).json({ error: 'Access denied to this team' });
+      }
     }
 
     // Update insight
@@ -241,7 +251,6 @@ router.post('/generate/:teamId', async (req, res) => {
     }
 
     const teamId = parseInt(req.params.teamId);
-    const userId = req.userId;
 
     // Get team's season_id first (before access check, so we can return 404 if team doesn't exist)
     const team = await db
@@ -254,10 +263,12 @@ router.post('/generate/:teamId', async (req, res) => {
       return res.status(404).json({ error: 'Team not found' });
     }
 
-    // Verify user has access to this team
-    const userTeamIds = await getUserTeamAssignments(userId);
-    if (!userTeamIds.includes(teamId)) {
-      return res.status(403).json({ error: 'Access denied to this team' });
+    // Admins have access to all teams
+    if (req.userRole !== 'admin') {
+      const userTeamIds = await getUserTeamAssignments(req.userId!);
+      if (!userTeamIds.includes(teamId)) {
+        return res.status(403).json({ error: 'Access denied to this team' });
+      }
     }
 
     // Get latest match for this team

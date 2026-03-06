@@ -229,6 +229,52 @@ Please provide a helpful response.`;
 }
 
 /**
+ * Generate a coach-friendly narrative for an insight (Phase 1.4)
+ * Takes the technical insight data and produces 2-3 sentences in plain coaching language
+ * (no statistical jargon like σ, z-score, anomaly)
+ */
+export async function generateInsightNarrative(
+  title: string,
+  detailJson: string,
+  insightType: 'anomaly' | 'trend' | 'half_split' | 'correlation' | 'benchmark'
+): Promise<string> {
+  const ai = initializeGemini();
+  if (!ai) {
+    throw new Error('GEMINI_API_KEY environment variable is not set');
+  }
+
+  const prompt = `You are helping a youth soccer coach understand a match data finding. Translate this technical insight into 2-3 short sentences they can quickly read and act on.
+
+INSIGHT TYPE: ${insightType}
+TECHNICAL SUMMARY: ${title}
+DATA: ${detailJson}
+
+Write a brief narrative that:
+- Uses plain language a coach would use with their team (no σ, z-score, standard deviation, or statistical jargon)
+- Explains what the finding means in practical terms (e.g., "Your team had much more possession than usual this game" not "z-score 3.8")
+- Is 2-3 sentences max
+- Focuses on what matters for coaching decisions
+
+Output ONLY the narrative text, no quotes or labels.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL,
+      contents: prompt,
+    });
+    const text = response?.text?.trim();
+    if (text && text.length > 0) {
+      return text;
+    }
+    throw new Error('Empty response from AI');
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Narrative generation error:', msg);
+    throw error;
+  }
+}
+
+/**
  * Extract stats from image using Gemini vision
  * @param imageBase64 Base64-encoded image string (without data URL prefix)
  * @param mimeType MIME type of the image (e.g., 'image/png', 'image/jpeg')

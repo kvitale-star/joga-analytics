@@ -2,7 +2,7 @@
  * Phase 4 - Frontend Recommendation Service Unit Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   parseActionItems,
   parseTrainingPlan,

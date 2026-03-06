@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
+import { JOGA_COLORS } from '../utils/colors';
 import { generateRecommendations, GenerateRecommendationRequest, Recommendation } from '../services/recommendationService';
 import { RecommendationCard } from './RecommendationCard';
 
@@ -72,7 +73,7 @@ export const GenerateRecommendationModal: React.FC<GenerateRecommendationModalPr
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
                 disabled={isGenerating}
               >
                 <option value="all">All Categories</option>
@@ -91,7 +92,7 @@ export const GenerateRecommendationModal: React.FC<GenerateRecommendationModalPr
               <select
                 value={recommendationType}
                 onChange={(e) => setRecommendationType(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
                 disabled={isGenerating}
               >
                 <option value="all">All Types</option>
@@ -128,10 +129,20 @@ export const GenerateRecommendationModal: React.FC<GenerateRecommendationModalPr
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 text-sm font-medium text-black rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                style={{
+                  backgroundColor: isGenerating ? '#9ca3af' : JOGA_COLORS.voltYellow,
+                  border: `2px solid ${isGenerating ? '#9ca3af' : JOGA_COLORS.voltYellow}`,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isGenerating) e.currentTarget.style.backgroundColor = '#b8e600';
+                }}
+                onMouseLeave={(e) => {
+                  if (!isGenerating) e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+                }}
               >
                 {isGenerating && (
-                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-gray-800"></div>
                 )}
                 {isGenerating ? 'Generating...' : 'Generate Recommendations'}
               </button>
@@ -160,7 +171,17 @@ export const GenerateRecommendationModal: React.FC<GenerateRecommendationModalPr
             <div className="flex items-center justify-end pt-4 border-t border-gray-200">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors"
+                className="px-4 py-2 text-sm font-medium text-black rounded transition-colors"
+                style={{
+                  backgroundColor: JOGA_COLORS.voltYellow,
+                  border: `2px solid ${JOGA_COLORS.voltYellow}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#b8e600';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+                }}
               >
                 Close
               </button>

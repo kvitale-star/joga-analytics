@@ -7,6 +7,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { RecommendationsView } from '../components/RecommendationsView';
 import * as teamService from '../services/teamService';
 import * as recommendationService from '../services/recommendationService';
+import type { Recommendation } from '../services/recommendationService';
 
 // Mock useAuth to avoid AuthProvider/DB complexity
 vi.mock('../contexts/AuthContext', () => ({
@@ -31,14 +32,14 @@ const mockTeams = [
   },
 ];
 
-const mockRecommendations = [
+const mockRecommendations: Recommendation[] = [
   {
     id: 1,
     team_id: 10,
     insight_id: null,
-    recommendation_type: 'tactical',
-    category: 'possession',
-    priority: 'high',
+    recommendation_type: 'tactical' as const,
+    category: 'possession' as const,
+    priority: 'high' as const,
     title: 'Test Recommendation',
     description: 'Test description',
     action_items: JSON.stringify([]),

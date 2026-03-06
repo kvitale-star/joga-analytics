@@ -139,7 +139,14 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
             setCategoryFilter('all');
             setTypeFilter('all');
           }}
-          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+          className="text-sm font-medium transition-colors"
+          style={{ color: '#6787aa' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#5a7590';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#6787aa';
+          }}
         >
           Clear filters
         </button>
@@ -158,7 +165,7 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
             >
               <option value="all">All</option>
               <option value="active">Active</option>
@@ -172,7 +179,7 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as FilterCategory)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
             >
               <option value="all">All</option>
               <option value="shooting">Shooting</option>
@@ -189,7 +196,7 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as FilterType)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
             >
               <option value="all">All</option>
               <option value="tactical">Tactical</option>
@@ -204,7 +211,7 @@ export const RecommendationList: React.FC<RecommendationListProps> = ({
             <select
               value={sortOption}
               onChange={(e) => setSortOption(e.target.value as SortOption)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-[#6787aa] focus:border-[#6787aa]"
             >
               <option value="priority">Priority</option>
               <option value="date-newest">Newest First</option>

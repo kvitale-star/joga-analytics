@@ -49,13 +49,15 @@ import { Glossary } from './components/Glossary';
 import { MatchEditorView } from './components/MatchEditorView';
 import { WalkthroughOverlay } from './components/WalkthroughOverlay';
 import { RecommendationsView } from './components/RecommendationsView';
+import { BriefingFeedView } from './components/BriefingFeedView';
+import { TrainingLogView } from './components/TrainingLogView';
 import { getAllTeams } from './services/teamService';
 import { Team } from './types/auth';
 import { createTeamSlugMap, getTeamsForDropdown, getDisplayNameForSlug } from './utils/teamMapping';
 import { formatDateWithUserPreference, dateToYYYYMMDD } from './utils/dateFormatting';
 import { JOGA_COLORS } from './utils/colors';
 
-type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
+type ViewMode = 'briefing' | 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'training-log' | 'settings' | 'glossary' | 'match-editor' | 'recommendations';
 
 function App() {
   const { user, isLoading, isSetupRequired } = useAuth();
@@ -126,7 +128,11 @@ function App() {
   }, []);
 
   // URL-persisted state - view mode is global (not scoped)
-  const [viewMode, setViewMode] = useURLState<ViewMode>('view', 'dashboard');
+  const [viewMode, setViewMode] = useURLState<ViewMode>('view', 'briefing');
+
+  // Cross-navigation params for Briefing -> Training Log / Recommendations
+  const [trainingLogParams, setTrainingLogParams] = useState<{ teamId?: number; preSelectedCategory?: string }>({});
+  const [recommendationsParams, setRecommendationsParams] = useState<{ teamId?: number }>({});
 
   // Load custom charts when on dashboard view
   useEffect(() => {
@@ -1757,8 +1763,10 @@ function App() {
   // This prevents empty charts from being auto-filled and written to URL
 
   // Handle navigation from sidebar
-  const handleNavigation = (view: 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor' | 'recommendations') => {
-    if (view === 'chat') {
+  const handleNavigation = (view: 'briefing' | 'dashboard' | 'chat' | 'team-data' | 'club-data' | 'game-data' | 'upload-game-data' | 'training-log' | 'settings' | 'glossary' | 'match-editor' | 'recommendations') => {
+    if (view === 'briefing') {
+      setViewMode('briefing');
+    } else if (view === 'chat') {
       setViewMode('chat');
     } else if (view === 'team-data') {
       setViewMode('dashboard');
@@ -1769,6 +1777,9 @@ function App() {
       setViewMode('club-data');
     } else if (view === 'upload-game-data') {
       setViewMode('upload-game-data');
+    } else if (view === 'training-log') {
+      setViewMode('training-log');
+      setTrainingLogParams({});
     } else if (view === 'settings') {
       setViewMode('settings');
     } else if (view === 'glossary') {
@@ -1777,6 +1788,7 @@ function App() {
       setViewMode('match-editor');
     } else if (view === 'recommendations') {
       setViewMode('recommendations');
+      setRecommendationsParams({});
     } else {
       setViewMode('dashboard');
     }
@@ -1911,7 +1923,17 @@ function App() {
           </div>
           <button
             onClick={loadData}
-            className="mt-4 w-full bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+            className="mt-4 w-full font-medium py-2 px-4 rounded-lg text-black transition-colors"
+            style={{
+              backgroundColor: JOGA_COLORS.voltYellow,
+              border: `2px solid ${JOGA_COLORS.voltYellow}`,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#b8e600';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+            }}
           >
             Retry
           </button>
@@ -1938,6 +1960,42 @@ function App() {
           >
             Reload
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Render Briefing view if selected (default landing)
+  if (viewMode === 'briefing') {
+    return (
+      <div className="flex h-screen bg-gray-50 relative">
+        <Sidebar currentView="briefing" onNavigate={handleNavigation} />
+        <div className="flex-1 ml-16 flex flex-col overflow-auto p-6">
+          <BriefingFeedView
+            onNavigateToTrainingLog={(teamId, preSelectedCategory) => {
+              setTrainingLogParams({ teamId, preSelectedCategory });
+              setViewMode('training-log');
+            }}
+            onNavigateToRecommendations={(teamId) => {
+              setRecommendationsParams({ teamId });
+              setViewMode('recommendations');
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Render Training Log view if selected
+  if (viewMode === 'training-log') {
+    return (
+      <div className="flex h-screen bg-gray-50 relative">
+        <Sidebar currentView="training-log" onNavigate={handleNavigation} />
+        <div className="flex-1 ml-16 flex flex-col overflow-auto p-6">
+          <TrainingLogView
+            teamId={trainingLogParams.teamId}
+            preSelectedCategory={trainingLogParams.preSelectedCategory}
+          />
         </div>
       </div>
     );
@@ -2060,7 +2118,7 @@ function App() {
       <div className="flex h-screen bg-gray-50 relative">
         <Sidebar currentView="recommendations" onNavigate={handleNavigation} />
         <div className="flex-1 ml-16 flex flex-col overflow-auto p-6">
-          <RecommendationsView />
+          <RecommendationsView teamId={recommendationsParams.teamId} />
         </div>
       </div>
     );

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { JOGA_COLORS } from '../utils/colors';
 import { Recommendation, parseActionItems, parseTrainingPlan, getPriorityColor, getPriorityBadge } from '../services/recommendationService';
 
 interface RecommendationCardProps {
@@ -203,7 +204,17 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           {onViewDetail && (
             <button
               onClick={() => onViewDetail(recommendation.id)}
-              className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+              className="px-3 py-1.5 text-sm font-medium rounded transition-colors"
+              style={{
+                color: JOGA_COLORS.valorBlue,
+                backgroundColor: 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgb(103 135 170 / 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               View Details
             </button>
@@ -213,7 +224,17 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           {!recommendation.is_applied && onAccept && (
             <button
               onClick={() => onAccept(recommendation.id)}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded transition-colors"
+              className="px-4 py-2 text-sm font-medium text-black rounded transition-colors"
+              style={{
+                backgroundColor: JOGA_COLORS.voltYellow,
+                border: `2px solid ${JOGA_COLORS.voltYellow}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#b8e600';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = JOGA_COLORS.voltYellow;
+              }}
             >
               Accept & Log Training
             </button>

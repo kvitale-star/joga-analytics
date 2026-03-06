@@ -12,7 +12,7 @@ The transformation adds five layers on top of this foundation, built in dependen
 Layer 1: Insights Engine (statistical detection — the analytical backbone) ✅ COMPLETED
 Layer 2: Training Log (coach input — closes the feedback loop) ✅ COMPLETED
 Layer 3: Framework Integration + Gemini Context Caching (knowledge layer) ✅ COMPLETED
-Layer 4: Recommendation Engine (AI-powered training suggestions) ⏳ PENDING
+Layer 4: Recommendation Engine (AI-powered training suggestions) ✅ COMPLETED
 Layer 5: Workflow Views + Conversational Analysis (frontend reorganization) ⏳ PENDING
 ```
 
@@ -165,17 +165,13 @@ This method runs detections A, B, C against the team's data and writes results t
 
 ### 1.4 Narrative Generation (async)
 
-After detection writes raw insights, queue a separate pass to generate narratives via Gemini. This can be a background job or triggered lazily (when a coach first views their insights feed).
+After detection writes raw insights, generate narratives via Gemini and save to the insight row. Runs synchronously after each insight is saved (or in batch) — no lazy loading.
 
-```typescript
-async function narrateInsight(insight: InsightRow): Promise<string> {
-  // Build a short prompt with the structured finding data
-  // Use Gemini to produce a 2-3 sentence coaching-language explanation
-  // Save narrative back to the insight row
-}
-```
-
-This is where Gemini context caching (Phase 3) will pay off — the framework/philosophy context is cached, and each narration is a short generation.
+**Implementation:**
+- `generateInsightNarrative(title, detailJson, insightType)` in `aiService.ts` — calls Gemini with a prompt to produce 2–3 sentences in coaching language (no stats jargon like σ, z-score).
+- Prompt: given the technical title and `detail_json`, output plain-English explanation a youth soccer coach would understand.
+- `updateInsightNarrative(insightId, narrative)` in `insightsService.ts` — updates the `narrative` column.
+- In `generateInsightsForMatch`, after saving each insight: call narrative generation, then update the row. On failure, leave `narrative: null` (frontend falls back to title).
 
 ### 1.5 API Routes
 
@@ -1151,13 +1147,30 @@ await invalidateTeamCacheForDataChange(teamId); // Invalidate cache
 
 ---
 
-## Phase 4: Recommendation Engine ⏳ PENDING
+## Phase 4: Recommendation Engine ✅ COMPLETED
 
-**Status:** ⏳ **PENDING** - Backend service implemented in Phase 3, frontend integration pending
+**Status:** ✅ **COMPLETED** - Full stack implemented and tested (51 Phase 4 tests passing)
 
 **Goal:** Generate age-appropriate, philosophy-aligned training recommendations based on insights and training history.
 
-**Note:** The recommendation service (`recommendationService.ts`) and API routes were implemented in Phase 3. This phase focuses on frontend integration and UI components.
+### Implementation Summary
+
+**Completed Components:**
+- ✅ Database schema and migrations for `recommendations` table
+- ✅ Recommendation service (`recommendationService.ts`) with AI-powered generation via Gemini context cache
+- ✅ Recommendations API routes (`routes/recommendations.ts`) — list, generate, get, apply
+- ✅ AI service migration to `@google/genai` with content caching (`ai.caches.create`, `cachedContent` config)
+- ✅ Frontend: RecommendationsView, RecommendationList, RecommendationCard components
+- ✅ Frontend: GenerateRecommendationModal for on-demand AI recommendation generation
+- ✅ Frontend: recommendationService API client
+- ✅ Test suite: 19 backend + 32 frontend Phase 4 tests passing
+
+**Key Features:**
+- Generate recommendations from insights or team analysis (no insight required)
+- Gemini content cache for cost-efficient AI calls
+- Team dropdown filtered by active season
+- Status filters (active/applied), category and type filters, sort options
+- Mark recommendation as applied with optional applied_at timestamp
 
 ### 4.1 Database Migration
 
@@ -1288,10 +1301,15 @@ This replaces the dashboard as the default view when a coach logs in.
 - Sidebar or top filter: team selector (coach may have multiple teams)
 
 **Insight card component:** `src/components/InsightCard.tsx`
-- Renders the narrative text
-- On expand: renders a Recharts visualization of the specific finding (e.g., trend line, half-split comparison)
+- Renders the narrative text (from Phase 1.4 AI generation — never show raw `detail_json` to coaches)
+- On expand: renders a Recharts visualization of the specific finding (e.g., trend line, half-split comparison), or a human-readable summary — **never raw JSON**
 - Uses the existing chart components where applicable, or a lightweight inline chart for simple findings
 - "Log Training" button pre-populates TrainingLogEntry with relevant tags
+
+**Briefing Feed Refinements (coach-friendly UX):**
+- **Narrative required:** Phase 1.4 must populate `insight.narrative` for every insight. The feed shows narrative, never technical title as fallback for the main copy.
+- **No raw JSON:** The expandable "details" section must NOT dump `detail_json` as JSON. Instead: render a Recharts visualization, or a short human-readable summary (e.g., "Possession was 72% this game vs your 54% season average").
+- **Coaching language in titles:** Backend insight titles should avoid statistical jargon when possible. Prefer "well above your usual" over "3.8σ from season average"; prefer "single-game standout" over "anomaly" in user-facing labels.
 
 **Recommendation card component:** `src/components/RecommendationCard.tsx`
 - Renders the training recommendation text
@@ -1442,12 +1460,12 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 
 **Recommended build order for maximum incremental value:**
 
-1. Phase 1.1-1.3 (insights tables + detection algorithms + triggers) — this is the core
-2. Phase 2.1-2.3 (training log tables + CRUD + seed data) — simple, unblocks the feedback loop
+1. ✅ Phase 1.1-1.3 (insights tables + detection algorithms + triggers) — COMPLETED
+2. ✅ Phase 2.1-2.3 (training log tables + CRUD + seed data) — COMPLETED
 3. Phase 5 partial: Training Log UI + Briefing Feed (basic, showing insights without narration)
-4. Phase 3 (framework + caching) — the AI quality jump
-5. Phase 1.4 (narrative generation using cached context)
-6. Phase 4 (recommendations) — the payoff
+4. ✅ Phase 3 (framework + caching) — COMPLETED
+5. ✅ Phase 1.4 (narrative generation using cached context) — COMPLETED
+6. ✅ Phase 4 (recommendations) — COMPLETED
 7. Phase 5 remainder: Debrief, Prep, Analysis Workspace, Snapshots
 
 ---
@@ -1498,11 +1516,11 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 **Phase 1 (Insights Engine)**: 20-30 hours ✅ **COMPLETED** (~25 hours)
 **Phase 2 (Training Log)**: 10-15 hours ✅ **COMPLETED** (~12 hours)
 **Phase 3 (Framework + Caching)**: 54-70 hours ✅ **COMPLETED** (~40 hours, ahead of schedule)
-**Phase 4 (Recommendations)**: 15-20 hours ⏳ **PENDING** (backend complete, frontend pending)
+**Phase 4 (Recommendations)**: 15-20 hours ✅ **COMPLETED** (~18 hours)
 **Phase 5 (Workflow Views)**: 40-50 hours ⏳ **PENDING**
 
-**Completed**: ~77 hours (Phases 1-3)
-**Remaining**: ~55-70 hours (Phases 4-5)
+**Completed**: ~95 hours (Phases 1-4)
+**Remaining**: ~40-50 hours (Phase 5)
 **Total**: 139-185 hours (approximately 17-23 weeks at 8 hours/week)
 
 ---
@@ -1516,10 +1534,10 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 - ✅ Framework integration complete (Phase 3 - COMPLETED)
 - ✅ Recommendation service implemented (Phase 3 - COMPLETED)
 - ⏳ Context Cache reduces AI costs by 80%+ (Phase 3 - Ready for production testing)
-- ⏳ Recommendations align with US Soccer standards (Phase 4 - Backend ready, needs testing)
-- ⏳ Recommendations align with club philosophy (Phase 4 - Backend ready, needs testing)
-- ⏳ Training plans are age-appropriate (Phase 4 - Backend ready, needs testing)
-- ✅ All tests passing (Phases 1-3: 112 tests passing)
+- ✅ Recommendations align with US Soccer standards (Phase 4 - COMPLETED)
+- ✅ Recommendations align with club philosophy (Phase 4 - COMPLETED)
+- ✅ Training plans are age-appropriate (Phase 4 - COMPLETED)
+- ✅ All tests passing (Phases 1-4: 163+ tests passing)
 - ⏳ Production deployment successful (Pending)
 
 ---
@@ -1532,3 +1550,4 @@ Phase 5 (Workflow Views)       — depends on all above for full functionality, 
 - [MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md](./docs/MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md) - Modern data approaches implementation
 - [FRAMEWORK_DATA_ASSESSMENT.md](./docs/FRAMEWORK_DATA_ASSESSMENT.md) - Assessment of framework data completeness (US Soccer: 80-85%, JOGA: 75-80%) and areas for improvement
 - [FRAMEWORK_REFINEMENT_QUESTIONNAIRE.md](./docs/FRAMEWORK_REFINEMENT_QUESTIONNAIRE.md) - Comprehensive questionnaire for club leadership to refine framework data
+- [LEAGUE_RESULTS_INTEGRATION_PLAN.md](./docs/LEAGUE_RESULTS_INTEGRATION_PLAN.md) - Plan for integrating public league results into team context and recommendation engine (post-Phase 5)
