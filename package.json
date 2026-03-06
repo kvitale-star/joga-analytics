@@ -21,7 +21,9 @@
     "lint:fix": "eslint src --ext ts,tsx --fix",
     "check": "npm run type-check && npm run lint",
     "test": "npm --prefix backend test",
-    "test:watch": "npm --prefix backend test:watch"
+    "test:watch": "npm --prefix backend test:watch",
+    "test:frontend": "vitest run",
+    "test:frontend:watch": "vitest"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -35,6 +37,9 @@
     "sql.js": "^1.13.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@types/sql.js": "^1.4.9",
@@ -46,9 +51,11 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^28.0.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^4.0.18"
   }
 }

@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateSession } from '../middleware/auth.js';
-import { chatWithAI, isAIConfigured, extractStatsFromImage } from '../services/aiService.js';
+import { chatWithCachedContext, chatWithAI, isAIConfigured, extractStatsFromImage } from '../services/aiService.js';
+import { getUserTeamAssignments } from '../services/teamService.js';
 
 const router = express.Router();
 
@@ -9,27 +10,58 @@ router.use(authenticateSession);
 
 /**
  * POST /api/ai/chat
- * Chat with AI using Gemini
- * Body: { message: string, context: string }
- * Note: context is pre-formatted on frontend to avoid sending large matchData arrays
+ * Chat with AI using Gemini Context Cache (lazy creation)
+ * Body: { message: string, teamId: number }
+ * 
+ * BREAKING CHANGE: Previously accepted { message: string, context: string }
+ * Context building now happens on backend using teamId
+ * 
+ * Backward compatibility: If context is provided, use non-cached mode
  */
 router.post('/chat', async (req, res) => {
   try {
-    const { message, context } = req.body;
+    const { message, teamId, context } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
     if (!isAIConfigured()) {
-      return res.status(503).json({ error: 'AI service is not configured. Please set GEMINI_API_KEY environment variable.' });
+      return res.status(503).json({ 
+        error: 'AI service is not configured. Please set GEMINI_API_KEY environment variable.' 
+      });
     }
 
-    // Use the pre-formatted context from frontend
-    const response = await chatWithAI(message, context || '');
+    // Backward compatibility: If context is provided, use non-cached mode
+    if (context) {
+      const response = await chatWithAI(message, context);
+      return res.json({ response });
+    }
+
+    // New mode: Use teamId for cached context
+    if (!teamId) {
+      return res.status(400).json({ error: 'teamId is required (or provide context for backward compatibility)' });
+    }
+
+    // Verify user has access to this team
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const userTeamIds = await getUserTeamAssignments(req.userId);
+    if (!userTeamIds.includes(teamId)) {
+      return res.status(403).json({ error: 'Access denied to this team' });
+    }
+
+    // LAZY CACHE CREATION - Only here, when AI is actually used
+    const response = await chatWithCachedContext(teamId, message);
+    
     res.json({ response });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to get AI response' });
+    console.error('AI chat error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to get AI response' 
+    });
   }
 });
 

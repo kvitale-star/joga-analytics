@@ -18,6 +18,11 @@ export interface Database {
   images: ImagesTable;
   metric_definitions: MetricDefinitionsTable;
   custom_charts: CustomChartsTable;
+  insights: InsightsTable;
+  training_focus_tags: TrainingFocusTagsTable;
+  training_logs: TrainingLogsTable;
+  ai_context_cache: AIContextCacheTable;
+  recommendations: RecommendationsTable;
 }
 
 // Schema Migrations
@@ -213,3 +218,100 @@ export type NewSession = Insertable<SessionsTable>;
 export type CustomChartRow = Selectable<CustomChartsTable>;
 export type NewCustomChart = Insertable<CustomChartsTable>;
 export type CustomChartUpdate = Updateable<CustomChartsTable>;
+
+// Insights
+export interface InsightsTable {
+  id: Generated<number>;
+  team_id: number;
+  match_id: number | null;
+  season_id: number | null;
+  insight_type: 'anomaly' | 'trend' | 'half_split' | 'correlation' | 'benchmark';
+  category: 'shooting' | 'possession' | 'passing' | 'defending' | 'general';
+  severity: number;
+  title: string;
+  detail_json: string;   // JSON stored as string
+  narrative: string | null;
+  is_read: Generated<boolean>;
+  is_dismissed: Generated<boolean>;
+  expires_at: string | null;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export type InsightRow = Selectable<InsightsTable>;
+export type NewInsight = Insertable<InsightsTable>;
+export type InsightUpdate = Updateable<InsightsTable>;
+
+// Training Focus Tags
+export interface TrainingFocusTagsTable {
+  id: Generated<number>;
+  name: string;
+  category: string;
+  display_name: string;
+  sort_order: Generated<number>;
+  is_active: Generated<boolean>;
+}
+
+// Training Logs
+export interface TrainingLogsTable {
+  id: Generated<number>;
+  team_id: number;
+  user_id: number;
+  session_date: string;
+  session_type: string;
+  focus_tags: string;       // JSON array stored as string
+  notes: string | null;
+  insight_id: number | null;
+  recommendation_id: number | null;
+  duration_minutes: number | null;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export type TrainingFocusTagRow = Selectable<TrainingFocusTagsTable>;
+export type NewTrainingFocusTag = Insertable<TrainingFocusTagsTable>;
+export type TrainingFocusTagUpdate = Updateable<TrainingFocusTagsTable>;
+
+export type TrainingLogRow = Selectable<TrainingLogsTable>;
+export type NewTrainingLog = Insertable<TrainingLogsTable>;
+export type TrainingLogUpdate = Updateable<TrainingLogsTable>;
+
+// AI Context Cache
+export interface AIContextCacheTable {
+  id: Generated<number>;
+  team_id: number;
+  cache_type: 'combined' | 'framework_only' | 'data_only';
+  cache_id: string; // Gemini's cachedContent name
+  data_hash: string; // Hash of match data to detect changes
+  expires_at: string;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export type AIContextCacheRow = Selectable<AIContextCacheTable>;
+export type NewAIContextCache = Insertable<AIContextCacheTable>;
+export type AIContextCacheUpdate = Updateable<AIContextCacheTable>;
+
+// Recommendations
+export interface RecommendationsTable {
+  id: Generated<number>;
+  team_id: number;
+  insight_id: number | null;
+  recommendation_type: 'tactical' | 'training' | 'general';
+  category: 'shooting' | 'possession' | 'passing' | 'defending' | 'general';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  title: string;
+  description: string;
+  action_items: string | null; // JSON array
+  training_plan_json: string | null; // JSON object
+  framework_alignment: string | null;
+  club_philosophy_alignment: string | null;
+  is_applied: Generated<boolean>;
+  applied_at: string | null;
+  created_at: Generated<string>;
+  updated_at: Generated<string>;
+}
+
+export type RecommendationRow = Selectable<RecommendationsTable>;
+export type NewRecommendation = Insertable<RecommendationsTable>;
+export type RecommendationUpdate = Updateable<RecommendationsTable>;

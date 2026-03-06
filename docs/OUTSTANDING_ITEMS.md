@@ -10,10 +10,12 @@
 1. [Code TODOs](#code-todos)
 2. [Chart Customization (Phase 0.5)](#chart-customization-phase-05)
 3. [User Agency Features](#user-agency-features)
-4. [Team Management Enhancements](#team-management-enhancements)
-5. [Security & Testing](#security--testing)
-6. [Infrastructure & Deployment](#infrastructure--deployment)
-7. [Future Enhancements](#future-enhancements)
+4. [AI Context Cache & Recommendations System](#ai-context-cache--recommendations-system)
+5. [Modern Data Approaches](#modern-data-approaches)
+6. [Team Management Enhancements](#team-management-enhancements)
+7. [Security & Testing](#security--testing)
+8. [Infrastructure & Deployment](#infrastructure--deployment)
+9. [Future Enhancements](#future-enhancements)
 
 ---
 
@@ -194,6 +196,127 @@ Basic SPI is implemented, but weighted versions (`spi (w)` and `opp spi (w)`) ne
   - Template system
 
 **Reference:** [ROADMAP_USER_AGENCY.md](./ROADMAP_USER_AGENCY.md), [STRATEGY_USER_AGENCY.md](./STRATEGY_USER_AGENCY.md), [VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md](./VIEW_STATE_MANAGEMENT_RECOMMENDATIONS.md)
+
+---
+
+## AI Context Cache & Recommendations System
+
+**Status:** 📋 PLANNED  
+**Priority:** HIGH  
+**Estimated Time:** 54-70 hours (7-9 weeks at 8 hours/week)
+
+**Goal:** Implement Gemini Context Cache to enable cost-effective AI-powered recommendations and training plans that align with both US Soccer coaching frameworks and JOGA club philosophy.
+
+### Features
+
+- **Lazy Cache Creation**: Cache created only when AI features are used, not on app load
+- **Cost Optimization**: 90% cost savings using cached tokens vs regular tokens
+- **Comprehensive Context**: Include match data, US Soccer frameworks, club philosophy, and performance patterns
+- **Standards-Aligned Recommendations**: Generate tactical suggestions and training plans aligned with:
+  - US Soccer coaching license standards (D, C, B, A, Pro)
+  - US Soccer player development plans
+  - JOGA club philosophy and playing style
+
+### Implementation Phases
+
+#### Phase 1: Database & Infrastructure
+- [ ] Create `ai_cache` database table
+- [ ] Create cache manager service
+- [ ] Implement cache validation logic
+- [ ] Add data hash detection for changes
+
+#### Phase 2: Framework Document Setup
+- [ ] Extract US Soccer PDFs to markdown files
+- [ ] Create club philosophy documents
+- [ ] Set up framework directory structure
+- [ ] Create framework loader service
+
+#### Phase 3: Context Builder Enhancement
+- [ ] Enhance context builder with frameworks
+- [ ] Add half-time pattern analysis
+- [ ] Add performance pattern identification
+- [ ] Add win/loss pattern analysis
+
+#### Phase 4: Context Cache API Integration
+- [ ] Integrate Gemini Context Cache API
+- [ ] Implement cache creation
+- [ ] Implement cached chat functionality
+- [ ] Add error handling and fallbacks
+
+#### Phase 5: Lazy Cache Integration
+- [ ] Update AI chat route with lazy cache
+- [ ] Update frontend AI service
+- [ ] Implement cache lifecycle management
+- [ ] Add cache invalidation on data changes
+
+#### Phase 6: Recommendations System
+- [ ] Create recommendations service
+- [ ] Create recommendations API endpoint
+- [ ] Build frontend recommendations UI
+- [ ] Format recommendations with US Soccer/club alignment
+
+#### Phase 7: Testing & Optimization
+- [ ] Unit tests for cache manager
+- [ ] Integration tests for cache flow
+- [ ] Performance testing and cost analysis
+- [ ] Error scenario testing
+
+#### Phase 8: Deployment & Monitoring
+- [ ] Production deployment
+- [ ] Monitoring setup
+- [ ] User documentation
+- [ ] Feedback collection
+
+### Key Benefits
+
+- **Cost Savings**: 90% reduction in AI API costs using cached tokens
+- **Lazy Creation**: Only pay when AI is actually used
+- **Standards Alignment**: Recommendations follow US Soccer and club standards
+- **Comprehensive Context**: Full season data + frameworks + patterns
+
+**References:**
+- [AI_CONTEXT_CACHE_STRATEGY.md](./AI_CONTEXT_CACHE_STRATEGY.md) - Complete strategy and architecture
+- [AI_CONTEXT_CACHE_IMPLEMENTATION_PLAN.md](./AI_CONTEXT_CACHE_IMPLEMENTATION_PLAN.md) - Detailed implementation plan with phases and tasks
+
+---
+
+## Modern Data Approaches
+
+**Status:** 📋 PLANNED  
+**Priority:** HIGH  
+**Estimated Time:** 107-132 hours (13-16 weeks at 8 hours/week)
+
+**Goal:** Move beyond traditional static charts to create an interactive, insight-driven analytics platform with half-time analysis, pattern recognition, and contextual intelligence.
+
+### Features
+
+#### Phase 1: Quick Wins (3-4 weeks)
+- **Half-Time Comparison Dashboard**: Side-by-side 1st vs 2nd half metrics with insights
+- **Contextual Insights Layer**: Smart annotations and anomaly detection on charts
+- **Opponent Strength Tagging**: 4-point scale (Weak → Average → Strong → Elite) for contextual analysis
+
+#### Phase 2: Medium-Term (4-5 weeks)
+- **Performance Pattern Recognition**: Match clustering, anomaly detection, performance fingerprints
+- **Match Story Mode**: Chronological narrative walkthrough using half-time data
+- **Interactive Correlation Explorer**: Click metrics to discover relationships
+
+#### Phase 3: Advanced (6-7 weeks)
+- **Actionable Recommendations Engine**: AI-powered tactical and training suggestions (uses Context Cache)
+- **Performance Fingerprint Visualization**: Unique visual signatures for matches
+- **Enhanced AI Chat**: Natural language to visualization generation
+- **Smart Dashboards**: Context-adaptive dashboards (pre-match, post-match, training, form)
+
+### Key Benefits
+
+- **Half-Time Intelligence**: Leverage 1st vs 2nd half data for tactical insights
+- **Pattern Discovery**: Automatically identify performance patterns and anomalies
+- **Contextual Insights**: Smart annotations that appear when relevant
+- **Actionable Intelligence**: Move from "what happened" to "what to do"
+- **Interactive Exploration**: Click-to-correlate, pattern matching, fingerprint comparison
+
+**References:**
+- [MODERN_DATA_APPROACHES_STRATEGY.md](./MODERN_DATA_APPROACHES_STRATEGY.md) - Complete strategy and feature descriptions
+- [MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md](./MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md) - Detailed 3-phase implementation plan
 
 ---
 
@@ -406,3 +529,11 @@ Basic SPI is implemented, but weighted versions (`spi (w)` and `opp spi (w)`) ne
 - [TESTING_TODOS.md](./TESTING_TODOS.md) - Testing infrastructure improvements and remaining tasks
 - [TEST_FAILURES.md](./TEST_FAILURES.md) - Test suite status and known failures
 - [TEAM_MANAGEMENT.md](./TEAM_MANAGEMENT.md) - Team management features and documentation
+
+### AI & Context Cache
+- [AI_CONTEXT_CACHE_STRATEGY.md](./AI_CONTEXT_CACHE_STRATEGY.md) - Context Cache strategy, architecture, and cost analysis
+- [AI_CONTEXT_CACHE_IMPLEMENTATION_PLAN.md](./AI_CONTEXT_CACHE_IMPLEMENTATION_PLAN.md) - Detailed 8-phase implementation plan
+
+### Modern Data Approaches
+- [MODERN_DATA_APPROACHES_STRATEGY.md](./MODERN_DATA_APPROACHES_STRATEGY.md) - Modern approaches strategy, features, and use cases
+- [MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md](./MODERN_DATA_APPROACHES_IMPLEMENTATION_PLAN.md) - Detailed 3-phase implementation plan (107-132 hours)

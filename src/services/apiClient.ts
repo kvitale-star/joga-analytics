@@ -299,6 +299,16 @@ export async function apiPut<T = any>(endpoint: string, body?: any): Promise<T> 
 }
 
 /**
+ * PATCH request
+ */
+export async function apiPatch<T = any>(endpoint: string, body?: any): Promise<T> {
+  return apiRequest<T>(endpoint, {
+    method: 'PATCH',
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+
+/**
  * DELETE request
  */
 export async function apiDelete<T = any>(endpoint: string): Promise<T> {

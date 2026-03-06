@@ -1,0 +1,38 @@
+# grassroots roadmap
+
+> **Category:** methodology
+> **Source:** US Soccer Framework Documents
+> **Extracted:** 2026-02-10
+
+---
+
+## GRASSROOTS
+ROADMAPS
+U.S. Soccer GRASSROOTS ROADMAP
+AT TACKING
+build-up
+scoring goals
+DEFENDING
+prevent the build-up
+prevent scoring
+## LOSING
+THE BALL
+WINNING
+THE BALL
+### 1.
+
+ATTACKING GRASSROOTS ROADMA.
+
+TRAINING SESSION GOALS - ATTACKING
+### 3.
+
+DEFENDING GRASSROOTS ROADMA.
+
+TRAINING SESSION GOALS - DEFENDING
+5.
+
+## KEY QUALITIESOFAGRASSROOTS PLAYER
+### 6.
+
+PLAYER ACTIONS
+7.
