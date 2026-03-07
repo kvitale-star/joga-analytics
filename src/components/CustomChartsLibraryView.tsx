@@ -4,6 +4,7 @@ import type { CustomChart } from '../types/customCharts';
 import { CustomChartBuilder } from './CustomChartBuilder';
 import { PageLayout } from './PageLayout';
 import { JOGA_COLORS } from '../utils/colors';
+import { useToast } from '../contexts/ToastContext';
 
 interface CustomChartsLibraryViewProps {
   sheetConfig: { range: string };
@@ -16,6 +17,7 @@ export const CustomChartsLibraryView: React.FC<CustomChartsLibraryViewProps> = (
   columnKeys,
   matchData,
 }) => {
+  const { showToast } = useToast();
   const [charts, setCharts] = useState<CustomChart[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export const CustomChartsLibraryView: React.FC<CustomChartsLibraryViewProps> = (
       await deleteCustomChart(chartId);
       await loadCharts();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete chart');
+      showToast(err.message || 'Failed to delete chart', 'error');
     }
   };
 

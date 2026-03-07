@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+/// <reference types="vitest" />
 
 // Plugin to stub bcryptjs in production builds (not used when backend API is enabled)
 const stubBcryptjs = () => ({
@@ -37,6 +38,12 @@ const stubBcryptjs = () => ({
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), stubBcryptjs()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['backend/**', 'node_modules/**'],
+  },
   server: {
     port: 3000,
     open: true

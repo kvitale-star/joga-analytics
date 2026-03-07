@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getMetricDefinitions, getMetricCategories, syncMetricDefinitions, MetricDefinition } from '../services/glossaryService';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { JOGA_COLORS } from '../utils/colors';
 import { PageLayout } from './PageLayout';
 
 export const Glossary: React.FC = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [definitions, setDefinitions] = useState<MetricDefinition[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export const Glossary: React.FC = () => {
       setSyncing(true);
       setError(null);
       const result = await syncMetricDefinitions();
-      alert(`Successfully synced ${result.count} metric definitions from Google Sheets.`);
+      showToast(`Successfully synced ${result.count} metric definitions from Google Sheets.`, 'success');
       await loadData();
     } catch (err: any) {
       console.error('Error syncing glossary:', err);

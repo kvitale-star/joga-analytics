@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getCustomCharts, deleteCustomChart } from '../services/customChartsService';
 import type { CustomChart } from '../types/customCharts';
 import { JOGA_COLORS } from '../utils/colors';
+import { useToast } from '../contexts/ToastContext';
 
 interface CustomChartsManagementProps {
   onEditChart: (chart: CustomChart) => void;
@@ -10,6 +11,7 @@ interface CustomChartsManagementProps {
 export const CustomChartsManagement: React.FC<CustomChartsManagementProps> = ({
   onEditChart,
 }) => {
+  const { showToast } = useToast();
   const [charts, setCharts] = useState<CustomChart[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export const CustomChartsManagement: React.FC<CustomChartsManagementProps> = ({
       await deleteCustomChart(chartId);
       setCharts(charts.filter(c => c.id !== chartId));
     } catch (err: any) {
-      alert(err.message || 'Failed to delete chart');
+      showToast(err.message || 'Failed to delete chart', 'error');
     } finally {
       setDeletingId(null);
     }

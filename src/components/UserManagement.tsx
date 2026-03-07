@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { getAllUsers, createUserByAdmin, updateUser, deleteUser, resetUserPassword } from '../services/userService';
 import { User, UserRole } from '../types/auth';
 import { JOGA_COLORS } from '../utils/colors';
@@ -428,6 +429,7 @@ const ResetPasswordModal: React.FC<{ userId: number; onClose: () => void }> = ({
   userId,
   onClose,
 }) => {
+  const { showToast } = useToast();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string>('');
@@ -452,7 +454,7 @@ const ResetPasswordModal: React.FC<{ userId: number; onClose: () => void }> = ({
     try {
       await resetUserPassword(userId, password);
       onClose();
-      alert('Password reset successfully');
+      showToast('Password reset successfully', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
       setIsLoading(false);
