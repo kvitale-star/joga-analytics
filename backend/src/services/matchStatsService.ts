@@ -299,35 +299,42 @@ export function computeMatchStats(raw: RawMatchStats): ComputedMatchStats {
   
   // Sum 1st and 2nd half stats to get full game stats
   // Priority: compute from halves if available, otherwise use direct input
+  // Use !== undefined to detect whether half fields were provided (handles zero goals correctly)
   const goalsFor1st = raw.goalsFor1stHalf ?? 0;
   const goalsFor2nd = raw.goalsFor2ndHalf ?? 0;
-  const goalsForSum = goalsFor1st + goalsFor2nd;
-  const goalsFor = (goalsFor1st > 0 || goalsFor2nd > 0) ? goalsForSum : (raw.goalsFor ?? undefined);
-  
+  const goalsFor = (raw.goalsFor1stHalf !== undefined || raw.goalsFor2ndHalf !== undefined)
+    ? (goalsFor1st + goalsFor2nd)
+    : (raw.goalsFor ?? undefined);
+
   const goalsAgainst1st = raw.goalsAgainst1stHalf ?? 0;
   const goalsAgainst2nd = raw.goalsAgainst2ndHalf ?? 0;
-  const goalsAgainstSum = goalsAgainst1st + goalsAgainst2nd;
-  const goalsAgainst = (goalsAgainst1st > 0 || goalsAgainst2nd > 0) ? goalsAgainstSum : (raw.goalsAgainst ?? undefined);
-  
+  const goalsAgainst = (raw.goalsAgainst1stHalf !== undefined || raw.goalsAgainst2ndHalf !== undefined)
+    ? (goalsAgainst1st + goalsAgainst2nd)
+    : (raw.goalsAgainst ?? undefined);
+
   const shotsFor1st = raw.shotsFor1stHalf ?? 0;
   const shotsFor2nd = raw.shotsFor2ndHalf ?? 0;
-  const shotsForSum = shotsFor1st + shotsFor2nd;
-  const shotsFor = (shotsFor1st > 0 || shotsFor2nd > 0) ? shotsForSum : (raw.shotsFor ?? undefined);
-  
+  const shotsFor = (raw.shotsFor1stHalf !== undefined || raw.shotsFor2ndHalf !== undefined)
+    ? (shotsFor1st + shotsFor2nd)
+    : (raw.shotsFor ?? undefined);
+
   const shotsAgainst1st = raw.shotsAgainst1stHalf ?? 0;
   const shotsAgainst2nd = raw.shotsAgainst2ndHalf ?? 0;
-  const shotsAgainstSum = shotsAgainst1st + shotsAgainst2nd;
-  const shotsAgainst = (shotsAgainst1st > 0 || shotsAgainst2nd > 0) ? shotsAgainstSum : (raw.shotsAgainst ?? undefined);
-  
+  const shotsAgainst = (raw.shotsAgainst1stHalf !== undefined || raw.shotsAgainst2ndHalf !== undefined)
+    ? (shotsAgainst1st + shotsAgainst2nd)
+    : (raw.shotsAgainst ?? undefined);
+
   const attemptsFor1st = raw.attemptsFor1stHalf ?? 0;
   const attemptsFor2nd = raw.attemptsFor2ndHalf ?? 0;
-  const attemptsForSum = attemptsFor1st + attemptsFor2nd;
-  const attemptsFor = (attemptsFor1st > 0 || attemptsFor2nd > 0) ? attemptsForSum : (raw.attemptsFor ?? undefined);
-  
+  const attemptsFor = (raw.attemptsFor1stHalf !== undefined || raw.attemptsFor2ndHalf !== undefined)
+    ? (attemptsFor1st + attemptsFor2nd)
+    : (raw.attemptsFor ?? undefined);
+
   const attemptsAgainst1st = raw.attemptsAgainst1stHalf ?? 0;
   const attemptsAgainst2nd = raw.attemptsAgainst2ndHalf ?? 0;
-  const attemptsAgainstSum = attemptsAgainst1st + attemptsAgainst2nd;
-  const attemptsAgainst = (attemptsAgainst1st > 0 || attemptsAgainst2nd > 0) ? attemptsAgainstSum : (raw.attemptsAgainst ?? undefined);
+  const attemptsAgainst = (raw.attemptsAgainst1stHalf !== undefined || raw.attemptsAgainst2ndHalf !== undefined)
+    ? (attemptsAgainst1st + attemptsAgainst2nd)
+    : (raw.attemptsAgainst ?? undefined);
   
   // Calculate Total Attempts (Veo-specific: attempts = shots + goals)
   // Total Attempts = goals + shots (since shots are non-goal shots)
@@ -361,35 +368,41 @@ export function computeMatchStats(raw: RawMatchStats): ComputedMatchStats {
   // Sum 1st and 2nd half passes to get full game passes
   const passesFor1st = raw.passesFor1stHalf ?? 0;
   const passesFor2nd = raw.passesFor2ndHalf ?? 0;
-  const passesForSum = passesFor1st + passesFor2nd;
-  const passesFor = (passesFor1st > 0 || passesFor2nd > 0) ? passesForSum : (raw.passesFor ?? undefined);
-  
+  const passesFor = (raw.passesFor1stHalf !== undefined || raw.passesFor2ndHalf !== undefined)
+    ? (passesFor1st + passesFor2nd)
+    : (raw.passesFor ?? undefined);
+
   const passesAgainst1st = raw.passesAgainst1stHalf ?? 0;
   const passesAgainst2nd = raw.passesAgainst2ndHalf ?? 0;
-  const passesAgainstSum = passesAgainst1st + passesAgainst2nd;
-  const passesAgainst = (passesAgainst1st > 0 || passesAgainst2nd > 0) ? passesAgainstSum : (raw.passesAgainst ?? undefined);
-  
+  const passesAgainst = (raw.passesAgainst1stHalf !== undefined || raw.passesAgainst2ndHalf !== undefined)
+    ? (passesAgainst1st + passesAgainst2nd)
+    : (raw.passesAgainst ?? undefined);
+
   // Sum 1st and 2nd half corners to get full game corners
   const cornersFor1st = raw.cornersFor1stHalf ?? 0;
   const cornersFor2nd = raw.cornersFor2ndHalf ?? 0;
-  const cornersForSum = cornersFor1st + cornersFor2nd;
-  const cornersFor = (cornersFor1st > 0 || cornersFor2nd > 0) ? cornersForSum : (raw.cornersFor ?? undefined);
-  
+  const cornersFor = (raw.cornersFor1stHalf !== undefined || raw.cornersFor2ndHalf !== undefined)
+    ? (cornersFor1st + cornersFor2nd)
+    : (raw.cornersFor ?? undefined);
+
   const cornersAgainst1st = raw.cornersAgainst1stHalf ?? 0;
   const cornersAgainst2nd = raw.cornersAgainst2ndHalf ?? 0;
-  const cornersAgainstSum = cornersAgainst1st + cornersAgainst2nd;
-  const cornersAgainst = (cornersAgainst1st > 0 || cornersAgainst2nd > 0) ? cornersAgainstSum : (raw.cornersAgainst ?? undefined);
-  
+  const cornersAgainst = (raw.cornersAgainst1stHalf !== undefined || raw.cornersAgainst2ndHalf !== undefined)
+    ? (cornersAgainst1st + cornersAgainst2nd)
+    : (raw.cornersAgainst ?? undefined);
+
   // Sum 1st and 2nd half free kicks to get full game free kicks
   const freeKicksFor1st = raw.freeKicksFor1stHalf ?? 0;
   const freeKicksFor2nd = raw.freeKicksFor2ndHalf ?? 0;
-  const freeKicksForSum = freeKicksFor1st + freeKicksFor2nd;
-  const freeKicksFor = (freeKicksFor1st > 0 || freeKicksFor2nd > 0) ? freeKicksForSum : (raw.freeKicksFor ?? undefined);
-  
+  const freeKicksFor = (raw.freeKicksFor1stHalf !== undefined || raw.freeKicksFor2ndHalf !== undefined)
+    ? (freeKicksFor1st + freeKicksFor2nd)
+    : (raw.freeKicksFor ?? undefined);
+
   const freeKicksAgainst1st = raw.freeKicksAgainst1stHalf ?? 0;
   const freeKicksAgainst2nd = raw.freeKicksAgainst2ndHalf ?? 0;
-  const freeKicksAgainstSum = freeKicksAgainst1st + freeKicksAgainst2nd;
-  const freeKicksAgainst = (freeKicksAgainst1st > 0 || freeKicksAgainst2nd > 0) ? freeKicksAgainstSum : (raw.freeKicksAgainst ?? undefined);
+  const freeKicksAgainst = (raw.freeKicksAgainst1stHalf !== undefined || raw.freeKicksAgainst2ndHalf !== undefined)
+    ? (freeKicksAgainst1st + freeKicksAgainst2nd)
+    : (raw.freeKicksAgainst ?? undefined);
   
   // Pass Share - using full game stats
   if (passesFor !== undefined && passesAgainst !== undefined) {
