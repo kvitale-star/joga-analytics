@@ -13,10 +13,12 @@ interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   isSetupRequired: boolean;
+  backendError: string | null;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => Promise<void>;
   setupAdmin: (data: SetupWizardData) => Promise<void>;
   refreshSession: () => Promise<void>;
+  retryConnection: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSetupRequired, setIsSetupRequired] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -33,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAuth = async () => {
+    setBackendError(null);
     try {
       setIsLoading(true);
       
@@ -92,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setSession(null);
           // Store error for display
-          (window as any).__JOGA_BACKEND_ERROR__ = error.message;
+          setBackendError(error.message);
           return;
         }
         
@@ -223,6 +227,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const retryConnection = useCallback(async () => {
+    await checkAuth();
+  }, []);
+
   const refreshSession = useCallback(async () => {
     const USE_BACKEND_API = import.meta.env.VITE_USE_BACKEND_API === 'true';
     if (USE_BACKEND_API) {
@@ -269,10 +277,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     isLoading,
     isSetupRequired,
+    backendError,
     login,
     logout,
     setupAdmin,
     refreshSession,
+    retryConnection,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

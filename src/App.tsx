@@ -57,7 +57,7 @@ import { JOGA_COLORS } from './utils/colors';
 type ViewMode = 'chat' | 'dashboard' | 'game-data' | 'club-data' | 'upload-game-data' | 'settings' | 'glossary' | 'match-editor';
 
 function App() {
-  const { user, isLoading, isSetupRequired } = useAuth();
+  const { user, isLoading, isSetupRequired, backendError, retryConnection } = useAuth();
   const [matchData, setMatchData] = useState<MatchData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1793,7 +1793,6 @@ function App() {
   }
 
   // Check for backend unreachable error
-  const backendError = (window as any).__JOGA_BACKEND_ERROR__;
   if (backendError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -1808,10 +1807,7 @@ function App() {
             <li>API URL configuration</li>
           </ul>
           <button
-            onClick={() => {
-              delete (window as any).__JOGA_BACKEND_ERROR__;
-              window.location.reload();
-            }}
+            onClick={() => retryConnection()}
             className="font-medium py-2 px-4 rounded-lg transition-colors text-black"
             style={{
               backgroundColor: JOGA_COLORS.voltYellow,
